@@ -1,0 +1,292 @@
+"""pyGCC backend.
+
+Implementation notes, all verified against pyGCC 1.5.3:
+
+* pyGCC exposes no arbitrary-reaction API. ``calcRxnlogK`` only evaluates a
+  species' database-defined formation reaction, so this backend supplies
+  per-species formation energies via ``species_eos.supcrtaq`` and the reaction
+  layer above assembles ``sum(nu_i * dGf_i)`` itself.
+* ``supcrtaq`` returns an ``ndarray`` of shape (1,) in calories per mole, not a
+  float.
+* Water is *not* in ``dbaccessdic`` -- HKF parameterises solutes, not the
+  solvent -- so H2O is a required special case handled through ``iapws95``.
+* At exactly 100 C, P = 1 bar lies below the saturation pressure, water would be
+  steam, and ``supcrtaq`` returns NaN. Only pyGCC's ``P='T'`` saturation
+  sentinel is reliable on that boundary; a literal 1.013 also fails.
+* A single evaluation costs roughly 28 ms, and passing a vector of temperatures
+  is *slower* than looping. Hence scalar calls behind a cache, and precomputed
+  grids for anything interactive.
+"""
+
+from __future__ import annotations
+
+import difflib
+import warnings
+from typing import Any
+
+import numpy as np
+
+from ..exceptions import MissingDataError, OutOfRangeError, SpeciesNotFoundError
+from ..units import CAL_PER_MOL, KJ_PER_MOL_STR, Quantity
+from .base import SpeciesRecord, ThermoBackend
+
+#: Above this temperature, pressure must follow the saturation curve.
+_SATURATION_THRESHOLD_C = 99.0
+
+#: The IAPWS-95 water EOS fails at exactly 0 C.
+_MIN_TEMPERATURE_C = 0.01
+_MAX_TEMPERATURE_C = 100.0
+
+#: Aqueous HKF entries carry 13 parameters; gases and minerals carry a
+#: different, shorter set and must be routed through ``heatcap`` instead.
+_HKF_ENTRY_LENGTH = 13
+
+#: Names for liquid water, which never appears in the species database.
+_WATER_NAMES = {"H2O", "H2O(l)", "water", "WATER"}
+
+#: Helgeson ion-size parameters (Angstrom) for the extended Debye-Huckel term.
+#: Only ions this library routinely encounters are tabulated; anything else
+#: falls back to _DEFAULT_ION_SIZE, which is the usual practice.
+ION_SIZE_ANGSTROM: dict[str, float] = {
+    "H+": 9.0,
+    "OH-": 3.5,
+    "Na+": 4.0,
+    "K+": 3.0,
+    "Ca++": 6.0,
+    "Mg++": 8.0,
+    "Cl-": 3.0,
+    "SO4--": 4.0,
+    "HCO3-": 4.0,
+    "CO3--": 4.5,
+    "HS-": 3.5,
+    "S--": 5.0,
+    "NO3-": 3.0,
+    "NO2-": 3.0,
+    "NH4+": 2.5,
+    "Fe++": 6.0,
+    "Fe+++": 9.0,
+    "Mn++": 6.0,
+    "HPO4--": 4.0,
+    "H2PO4-": 4.0,
+    "Acetate": 4.5,
+    "Formate(aq)": 3.5,
+    "Lactate(aq)": 4.5,
+}
+_DEFAULT_ION_SIZE = 4.5
+
+
+class PygccBackend(ThermoBackend):
+    """Formation energies and solvent properties from pyGCC."""
+
+    name = "pygcc"
+
+    def __init__(self, database: str | None = None, dielectric_method: str = "JN91"):
+        self._database = database
+        self._dielectric_method = dielectric_method
+        self._db: Any = None
+        self._species: dict[str, Any] | None = None
+        self._gibbs_cache: dict[tuple[str, float, Any], float] = {}
+        self._solvent_cache: dict[tuple[float, Any], dict] = {}
+
+    # --- lazy database loading -------------------------------------------------
+
+    @property
+    def species_dict(self) -> dict[str, Any]:
+        if self._species is None:
+            from pygcc.pygcc_utils import db_reader
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                self._db = (
+                    db_reader() if self._database is None else db_reader(dbaccess=self._database)
+                )
+            self._species = self._db.dbaccessdic
+        return self._species
+
+    @property
+    def version(self) -> str:
+        import importlib.metadata as md
+
+        try:
+            return md.version("pygcc")
+        except md.PackageNotFoundError:  # pragma: no cover
+            return "unknown"
+
+    @property
+    def database_name(self) -> str:
+        return self._database or "speq21.dat (pyGCC default)"
+
+    # --- species resolution ----------------------------------------------------
+
+    def resolve(self, name: str) -> SpeciesRecord:
+        if name in _WATER_NAMES:
+            return SpeciesRecord(name=name, backend_name="H2O", source="IAPWS-95 via pygcc.iapws95")
+        species = self.species_dict
+        if name in species:
+            return SpeciesRecord(name=name, backend_name=name, source=f"pyGCC {self.database_name}")
+        raise SpeciesNotFoundError(name, suggestions=self.suggest(name))
+
+    def suggest(self, name: str, n: int = 5) -> list[str]:
+        """Closest species names, for error messages."""
+        return difflib.get_close_matches(name, list(self.species_dict), n=n, cutoff=0.6)
+
+    def available_species(self) -> list[str]:
+        return sorted(self.species_dict)
+
+    def search(self, pattern: str) -> list[str]:
+        """Case-insensitive substring search over species names."""
+        needle = pattern.lower()
+        return sorted(s for s in self.species_dict if needle in s.lower())
+
+    # --- temperature and pressure policy ---------------------------------------
+
+    def _check_temperature(self, temperature_c: float) -> float:
+        t = float(temperature_c)
+        if not (_MIN_TEMPERATURE_C <= t <= _MAX_TEMPERATURE_C):
+            raise OutOfRangeError(
+                f"temperature {t} C is outside the supported range "
+                f"{_MIN_TEMPERATURE_C}-{_MAX_TEMPERATURE_C} C. "
+                "The IAPWS-95 water equation of state fails at exactly 0 C."
+            )
+        return t
+
+    def _pressure_for(self, temperature_c: float, pressure_bar) -> Any:
+        """Resolve the pressure argument passed to pyGCC.
+
+        Defaults to 1 bar, switching to pyGCC's saturation sentinel at and above
+        99 C where 1 bar would put water in the vapour field and yield NaN.
+        Below that threshold the two differ by well under 1 cal/mol.
+        """
+        if pressure_bar is not None:
+            return pressure_bar
+        return "T" if temperature_c >= _SATURATION_THRESHOLD_C else 1.0
+
+    # --- the single numerical primitive ----------------------------------------
+
+    def delta_Gf(self, name: str, temperature_c: float, pressure_bar=None) -> Quantity:
+        """Standard-state formation free energy of ``name`` at T, P, in kJ/mol."""
+        t = self._check_temperature(temperature_c)
+        p = self._pressure_for(t, pressure_bar)
+        key = (name, round(t, 6), p)
+        if key not in self._gibbs_cache:
+            self._gibbs_cache[key] = self._compute_gibbs_cal(name, t, p)
+        value_cal = self._gibbs_cache[key]
+        return (Quantity(value_cal, CAL_PER_MOL)).to(KJ_PER_MOL_STR)
+
+    def _compute_gibbs_cal(self, name: str, temperature_c: float, pressure) -> float:
+        if name in _WATER_NAMES:
+            return self._water_gibbs_cal(temperature_c, pressure)
+
+        species = self.species_dict
+        if name not in species:
+            raise SpeciesNotFoundError(name, suggestions=self.suggest(name))
+
+        entry = species[name]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            if len(entry) == _HKF_ENTRY_LENGTH:
+                from pygcc.species_eos import supcrtaq
+
+                raw = supcrtaq(temperature_c, pressure, entry)
+            else:
+                # Gases and minerals are not HKF solutes; they carry
+                # Maier-Kelley heat-capacity coefficients instead and go
+                # through pyGCC's heatcap class.
+                from pygcc import heatcap
+
+                raw = heatcap(
+                    T=temperature_c,
+                    P=pressure,
+                    Species_ppt=entry,
+                    Species=name,
+                    method="SUPCRT",
+                ).dG
+        value = float(np.asarray(raw, dtype=float).ravel()[0])
+        if not np.isfinite(value):
+            raise MissingDataError(
+                f"pyGCC returned a non-finite free energy for {name!r} at "
+                f"{temperature_c} C, P={pressure!r}. This usually means the "
+                "state point falls outside the equation of state's valid region."
+            )
+        return value
+
+    def _water_gibbs_cal(self, temperature_c: float, pressure) -> float:
+        from pygcc import iapws95
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            water = iapws95(T=temperature_c, P=pressure)
+        value = float(np.asarray(water.G, dtype=float).ravel()[0])
+        density = float(np.asarray(water.rho, dtype=float).ravel()[0])
+        if density < 500.0:
+            raise OutOfRangeError(
+                f"water is not liquid at {temperature_c} C, P={pressure!r} "
+                f"(density {density:.1f} kg/m3)"
+            )
+        return value
+
+    # --- solvent properties ----------------------------------------------------
+
+    def solvent_properties(self, temperature_c: float, pressure_bar=None) -> dict:
+        """Debye-Huckel A, B, the b-dot parameter, dielectric constant, density."""
+        t = self._check_temperature(temperature_c)
+        p = self._pressure_for(t, pressure_bar)
+        key = (round(t, 6), p)
+        if key in self._solvent_cache:
+            return self._solvent_cache[key]
+
+        from pygcc import water_dielec
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            w = water_dielec(T=t, P=p, Dielec_method=self._dielectric_method)
+
+        def scalar(attr):
+            return float(np.asarray(getattr(w, attr), dtype=float).ravel()[0])
+
+        props = {
+            "A": scalar("Ah"),
+            "B": scalar("Bh"),
+            "bdot": scalar("bdot"),
+            "dielectric_constant": scalar("E"),
+            "density_kg_m3": scalar("rho"),
+            "temperature_c": t,
+            "pressure": p,
+        }
+        self._solvent_cache[key] = props
+        return props
+
+    def activity_coefficient(
+        self,
+        charge: int,
+        ionic_strength: float,
+        temperature_c: float,
+        pressure_bar=None,
+        ion_size: float | None = None,
+        species_name: str | None = None,
+    ) -> float:
+        """Extended Debye-Huckel (B-dot) activity coefficient.
+
+        .. math::
+            \\log_{10}\\gamma = \\frac{-A z^2 \\sqrt{I}}{1 + B \\mathring{a} \\sqrt{I}}
+            + \\dot{b} I
+
+        Neutral species are assigned gamma = 1. That is the usual Helgeson
+        convention and avoids inventing Setchenow coefficients we do not have;
+        it does mean dissolved-gas activities are treated as ideal.
+        """
+        if charge == 0:
+            return 1.0
+        if ionic_strength <= 0:
+            return 1.0
+
+        props = self.solvent_properties(temperature_c, pressure_bar)
+        if ion_size is None:
+            ion_size = ION_SIZE_ANGSTROM.get(species_name or "", _DEFAULT_ION_SIZE)
+
+        sqrt_i = float(np.sqrt(ionic_strength))
+        log_gamma = (
+            -props["A"] * charge**2 * sqrt_i / (1.0 + props["B"] * ion_size * sqrt_i)
+            + props["bdot"] * ionic_strength
+        )
+        return float(10.0**log_gamma)

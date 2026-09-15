@@ -1,0 +1,28 @@
+# Environment for microbial_thermo
+# Recreate with:  mamba env create -f environment.yaml
+name: microbial-thermo
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy>=1.21
+  - pandas>=1.5,<3.0
+  - scipy>=1.7,!=1.14.0
+  - chempy>=0.10
+  - sympy>=1.12
+  - pint>=0.24
+  - matplotlib>=3.8
+  - seaborn>=0.13
+  - plotly>=6.0
+  - rdkit>=2024.03
+  - click>=8.1
+  - jupytext>=1.16
+  - pyyaml>=6.0
+  - ipykernel
+  - ipywidgets
+  - ruff
+  - pip
+  - pip:
+      # pygcc is not available on conda-forge; PyPI is its only distribution channel.
+      # This is the one sanctioned use of pip in this project.
+      - pygcc==1.5.3

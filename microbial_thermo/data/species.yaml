@@ -1,0 +1,73 @@
+# Species registry: maps pyGCC's legacy SUPCRT/GWB database names onto real
+# chemical formulas, display strings, and friendly aliases.
+#
+# This layer exists because pyGCC species names are not parseable formulas
+# ("Methane(aq)", "Acetate", "Lactate(aq)") and because the database uses
+# doubled-sign charge notation ("SO4--") that differs from the "SO4-2" form
+# most users type.
+#
+# Fields:
+#   backend  - exact species string pyGCC expects (the lookup key)
+#   formula  - parseable chemical formula, used for balancing and oxidation states
+#   display  - LaTeX-ish label for figures
+#   aliases  - anything a user might reasonably type
+#   phase    - aq | g | s | l
+#   smiles   - optional, enables per-atom oxidation states
+
+species:
+  # --- solvent and proton ---
+  - {backend: "H2O",  formula: "H2O", display: "H_2O", phase: l, aliases: [water, "H2O(l)"]}
+  - {backend: "H+",   formula: "H+",  display: "H^+",  phase: aq, aliases: [proton, hydrogen ion]}
+  - {backend: "OH-",  formula: "OH-", display: "OH^-", phase: aq, aliases: [hydroxide]}
+
+  # --- oxygen and hydrogen ---
+  - {backend: "O2(aq)", formula: "O2", display: "O_2(aq)", phase: aq, aliases: [O2, oxygen, dioxygen]}
+  - {backend: "O2(g)",  formula: "O2", display: "O_2(g)",  phase: g,  aliases: ["O2(g)"]}
+  - {backend: "H2(aq)", formula: "H2", display: "H_2(aq)", phase: aq, aliases: ["H2(aq)", dihydrogen]}
+  - {backend: "H2(g)",  formula: "H2", display: "H_2(g)",  phase: g,  aliases: [H2, hydrogen, "H2(g)"]}
+
+  # --- sulfur ---
+  - {backend: "SO4--",    formula: "SO4-2",   display: "SO_4^{2-}",   phase: aq, aliases: [sulfate, "SO4-2", "SO42-"]}
+  - {backend: "SO3--",    formula: "SO3-2",   display: "SO_3^{2-}",   phase: aq, aliases: [sulfite, "SO3-2"]}
+  - {backend: "S2O3--",   formula: "S2O3-2",  display: "S_2O_3^{2-}", phase: aq, aliases: [thiosulfate, "S2O3-2"]}
+  - {backend: "HS-",      formula: "HS-",     display: "HS^-",        phase: aq, aliases: [bisulfide, hydrosulfide]}
+  - {backend: "H2S(aq)",  formula: "H2S",     display: "H_2S(aq)",    phase: aq, aliases: [H2S, "hydrogen sulfide"]}
+  - {backend: "S--",      formula: "S-2",     display: "S^{2-}",      phase: aq, aliases: [sulfide ion, "S-2"]}
+  - {backend: "Sulfur(s)", formula: "S",      display: "S^0",         phase: s,  aliases: [sulfur, "S(0)", S8, "elemental sulfur"]}
+
+  # --- nitrogen ---
+  - {backend: "NO3-",    formula: "NO3-",  display: "NO_3^-",  phase: aq, aliases: [nitrate]}
+  - {backend: "NO2-",    formula: "NO2-",  display: "NO_2^-",  phase: aq, aliases: [nitrite]}
+  - {backend: "N2(aq)",  formula: "N2",    display: "N_2(aq)", phase: aq, aliases: [N2, dinitrogen, "nitrogen gas"]}
+  - {backend: "N2(g)",   formula: "N2",    display: "N_2(g)",  phase: g,  aliases: ["N2(g)"]}
+  - {backend: "NH4+",    formula: "NH4+",  display: "NH_4^+",  phase: aq, aliases: [ammonium]}
+  - {backend: "NH3(aq)", formula: "NH3",   display: "NH_3(aq)", phase: aq, aliases: [NH3, ammonia]}
+
+  # --- carbon, inorganic ---
+  - {backend: "CO2(aq)",     formula: "CO2",  display: "CO_2(aq)", phase: aq, aliases: [CO2, "carbon dioxide"]}
+  - {backend: "CO2(g)",      formula: "CO2",  display: "CO_2(g)",  phase: g,  aliases: ["CO2(g)"]}
+  - {backend: "HCO3-",       formula: "HCO3-", display: "HCO_3^-", phase: aq, aliases: [bicarbonate]}
+  - {backend: "CO3--",       formula: "CO3-2", display: "CO_3^{2-}", phase: aq, aliases: [carbonate, "CO3-2"]}
+  - {backend: "Methane(aq)", formula: "CH4",  display: "CH_4(aq)", phase: aq, aliases: [CH4, methane, "CH4(aq)"]}
+  - {backend: "CH4(g)",      formula: "CH4",  display: "CH_4(g)",  phase: g,  aliases: ["CH4(g)"]}
+
+  # --- carbon, organic ---
+  - {backend: "Acetate",         formula: "C2H3O2-", display: "CH_3COO^-",  phase: aq, smiles: "CC(=O)[O-]", aliases: [acetate, "CH3COO-", "C2H3O2-"]}
+  - {backend: "Acetic_acid(aq)", formula: "C2H4O2",  display: "CH_3COOH",   phase: aq, smiles: "CC(=O)O",    aliases: ["acetic acid", "CH3COOH"]}
+  - {backend: "Formate(aq)",     formula: "CHO2-",   display: "HCOO^-",     phase: aq, smiles: "[O-]C=O",    aliases: [formate, "HCOO-", "CHO2-"]}
+  - {backend: "Formic_acid(aq)", formula: "CH2O2",   display: "HCOOH",      phase: aq, smiles: "OC=O",       aliases: ["formic acid", HCOOH]}
+  - {backend: "Lactate(aq)",     formula: "C3H5O3-", display: "lactate^-",  phase: aq, smiles: "CC(O)C(=O)[O-]", aliases: [lactate]}
+  - {backend: "Lactic_acid(aq)", formula: "C3H6O3",  display: "lactic\\ acid", phase: aq, smiles: "CC(O)C(=O)O", aliases: ["lactic acid"]}
+  - {backend: "Propanoate(aq)",  formula: "C3H5O2-", display: "propionate^-", phase: aq, smiles: "CCC(=O)[O-]", aliases: [propionate, propanoate]}
+  - {backend: "Butanoate(aq)",   formula: "C4H7O2-", display: "butyrate^-", phase: aq, smiles: "CCCC(=O)[O-]", aliases: [butyrate, butanoate]}
+  - {backend: "Methanol(aq)",    formula: "CH4O",    display: "CH_3OH",     phase: aq, smiles: "CO",         aliases: [methanol, "CH3OH"]}
+  - {backend: "Ethanol(aq)",     formula: "C2H6O",   display: "C_2H_5OH",   phase: aq, smiles: "CCO",        aliases: [ethanol, "C2H5OH"]}
+
+  # --- iron and manganese ---
+  - {backend: "Fe++",      formula: "Fe+2", display: "Fe^{2+}",  phase: aq, aliases: ["Fe+2", "Fe(II)", ferrous]}
+  - {backend: "Fe+++",     formula: "Fe+3", display: "Fe^{3+}",  phase: aq, aliases: ["Fe+3", "Fe(III)", ferric]}
+  - {backend: "Goethite",  formula: "FeOOH", display: "FeOOH",   phase: s,  aliases: [goethite]}
+  - {backend: "Hematite",  formula: "Fe2O3", display: "Fe_2O_3", phase: s,  aliases: [hematite]}
+  - {backend: "Magnetite", formula: "Fe3O4", display: "Fe_3O_4", phase: s,  aliases: [magnetite]}
+  - {backend: "Mn++",      formula: "Mn+2", display: "Mn^{2+}",  phase: aq, aliases: ["Mn+2", "Mn(II)"]}
+  - {backend: "Pyrolusite", formula: "MnO2", display: "MnO_2",   phase: s,  aliases: [pyrolusite, MnO2]}
