@@ -315,6 +315,38 @@ values. Three consequences worth knowing:
   saturation pressure and water would be steam, so `supcrtaq` returns `NaN`.
   Pressure follows the saturation curve at and above 99 °C.
 
+### Are the databases mutually comparable?
+
+Numbers come from four places: `speq21.dat` (HKF aqueous solutes), `speq21.dat`
+again via `heatcap` (gases and some minerals), `thermo.com.dat` (minerals the
+others lack, through log K), and `iapws95` (water). The mineral route *mixes*
+sources — log K from one file, basis-species energies from another — so it has
+to be justified rather than assumed.
+
+It was checked directly. For the 900-odd species present in **both** databases,
+the tabulated log K was compared against the log K predicted from the HKF
+parameters. The median discrepancy is 0.0000 log K and 809/939 agree within
+0.1, so the two files are the same SUPCRT lineage and may be combined. The
+basis species the mineral route actually leans on (Fe³⁺, HS⁻, CO₂(aq), OH⁻)
+agree to better than 0.15 kJ/mol.
+
+The audit found one real inconsistency, now corrected. IAPWS-95 puts liquid
+water at −237.140 kJ/mol while the rest of the data assumes the SUPCRT
+convention of −237.18 — a 9 cal/mol reference-state difference, not an error
+(−237.14 is modern CODATA). Back-calculating the water energy implied by the
+OH⁻, Fe³⁺ and CO₂(aq) reactions gives −56687.7 cal/mol every time. Water is
+therefore shifted by a constant onto the SUPCRT datum, which preserves the
+IAPWS-95 temperature dependence exactly and removes a systematic 0.041 kJ/mol
+error *per mole of water* from every reaction. Pass
+`PygccBackend(water_convention="iapws")` to opt out.
+
+Three genuine inter-database disagreements survive and are documented rather
+than hidden: rhodochrosite (2.5 kJ/mol — we use the `speq21` value, which is
+nearer the published one), FeOH⁺ (1.1 kJ/mol), and the Mn(III)/Mn(VII) set
+(0.4 kJ/mol). All are held to declared tolerances by
+`tests/test_database_consistency.py`, so a database change that widened them
+would fail the suite.
+
 ### Validation
 
 Checked against independent published values:
@@ -340,7 +372,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 138 tests
+python -m unittest discover -s tests     # 153 tests
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```

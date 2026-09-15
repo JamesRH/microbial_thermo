@@ -44,6 +44,24 @@ _HKF_ENTRY_LENGTH = 13
 #: Names for liquid water, which never appears in the species database.
 _WATER_NAMES = {"H2O", "H2O(l)", "water", "WATER"}
 
+#: Formation energy of liquid water at 25 C, 1 bar, on the SUPCRT92 convention
+#: (Helgeson & Kirkham), in cal/mol.
+#:
+#: pyGCC's IAPWS-95 routine returns -56677.9 cal/mol instead. The 9 cal/mol
+#: difference is a reference-state convention, not an error: -237.14 kJ/mol is
+#: the modern CODATA value while -237.18 is the older SUPCRT one.
+#:
+#: It matters because every other number in this library descends from the
+#: SUPCRT lineage. Back-calculating the water energy implied by log K values in
+#: thermo.com.dat -- independently from the OH-, Fe+++ and CO2(aq) reactions --
+#: gives -56687.7 cal/mol every time, agreeing with the SUPCRT convention to
+#: within the rounding of the tabulated log K. Using the IAPWS value instead
+#: leaves a systematic 0.041 kJ/mol error per mole of water in every reaction.
+#:
+#: So water is shifted by a constant onto the SUPCRT reference. The constant
+#: preserves the IAPWS-95 temperature dependence exactly; only the datum moves.
+SUPCRT_WATER_GIBBS_CAL_25C = -56687.0
+
 #: Helgeson ion-size parameters (Angstrom) for the extended Debye-Huckel term.
 #: Only ions this library routinely encounters are tabulated; anything else
 #: falls back to _DEFAULT_ION_SIZE, which is the usual practice.
@@ -86,7 +104,15 @@ class PygccBackend(ThermoBackend):
         dielectric_method: str = "JN91",
         mineral_database: str | None = None,
         use_minerals: bool = True,
+        water_convention: str = "supcrt",
     ):
+        if water_convention not in ("supcrt", "iapws"):
+            raise ValueError(
+                "water_convention must be 'supcrt' (consistent with the rest of "
+                "the database) or 'iapws' (pyGCC's raw IAPWS-95 value)"
+            )
+        self._water_convention = water_convention
+        self._water_offset_cal: float | None = None
         self._database = database
         self._dielectric_method = dielectric_method
         self._mineral_database = mineral_database
@@ -256,19 +282,39 @@ class PygccBackend(ThermoBackend):
         return mineral_gibbs_cal(self.minerals[name], temperature_c, basis)
 
     def _water_gibbs_cal(self, temperature_c: float, pressure) -> float:
-        from pygcc import iapws95
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            water = iapws95(T=temperature_c, P=pressure)
-        value = float(np.asarray(water.G, dtype=float).ravel()[0])
-        density = float(np.asarray(water.rho, dtype=float).ravel()[0])
+        value, density = self._raw_water(temperature_c, pressure)
         if density < 500.0:
             raise OutOfRangeError(
                 f"water is not liquid at {temperature_c} C, P={pressure!r} "
                 f"(density {density:.1f} kg/m3)"
             )
-        return value
+        return value + self._water_offset()
+
+    def _raw_water(self, temperature_c: float, pressure):
+        """IAPWS-95 Gibbs energy and density, before any datum shift."""
+        from pygcc import iapws95
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            water = iapws95(T=temperature_c, P=pressure)
+        return (
+            float(np.asarray(water.G, dtype=float).ravel()[0]),
+            float(np.asarray(water.rho, dtype=float).ravel()[0]),
+        )
+
+    def _water_offset(self) -> float:
+        """Constant shift putting water on the same datum as everything else.
+
+        Computed once from the 25 C reference point, so the IAPWS-95
+        temperature dependence is preserved and only the datum moves. See
+        :data:`SUPCRT_WATER_GIBBS_CAL_25C`.
+        """
+        if self._water_convention == "iapws":
+            return 0.0
+        if self._water_offset_cal is None:
+            raw, _ = self._raw_water(25.0, 1.0)
+            self._water_offset_cal = SUPCRT_WATER_GIBBS_CAL_25C - raw
+        return self._water_offset_cal
 
     # --- solvent properties ----------------------------------------------------
 
