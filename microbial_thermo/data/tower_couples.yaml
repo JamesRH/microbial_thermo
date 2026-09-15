@@ -1,0 +1,23 @@
+# Reference redox couples for the tower figure.
+#
+# Each entry is written reduced/oxidized, matching the Couple convention used
+# throughout the library. Potentials are NOT stored here: they are computed
+# from the backend at the requested pH and temperature, so the tower stays
+# correct when those are changed rather than reproducing a table pinned to
+# pH 7 and 25 C.
+#
+# key_element is given only where the automatic detection needs help.
+
+couples:
+  - {label: "CO2/acetate",      reduced: "acetate",     oxidized: "CO2(aq)", key_element: C, group: carbon}
+  - {label: "2H+/H2",           reduced: "H2(g)",       oxidized: "H+",      group: hydrogen}
+  - {label: "CO2/CH4",          reduced: "methane",     oxidized: "CO2(aq)", group: carbon}
+  - {label: "S0/HS-",           reduced: "HS-",         oxidized: "Sulfur(s)", group: sulfur}
+  - {label: "SO4-2/HS-",        reduced: "HS-",         oxidized: "SO4-2",   group: sulfur}
+  - {label: "SO4-2/SO3-2",      reduced: "SO3-2",       oxidized: "SO4-2",   group: sulfur}
+  - {label: "Fe3+/Fe2+",        reduced: "Fe+2",        oxidized: "Fe+3",    group: metal}
+  - {label: "NO3-/NO2-",        reduced: "NO2-",        oxidized: "NO3-",    group: nitrogen}
+  - {label: "NO3-/NH4+",        reduced: "NH4+",        oxidized: "NO3-",    group: nitrogen}
+  - {label: "NO2-/NH4+",        reduced: "NH4+",        oxidized: "NO2-",    group: nitrogen}
+  - {label: "NO3-/N2",          reduced: "N2(aq)",      oxidized: "NO3-",    group: nitrogen}
+  - {label: "O2/H2O",           reduced: "H2O",         oxidized: "O2(g)",   group: oxygen}
