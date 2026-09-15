@@ -249,3 +249,68 @@ class TestEnergyScaleBar(unittest.TestCase):
         from_bar = gap_v / volts_per_kilojoule(reaction.n_electrons) / 50.0
         from_panel = atp_equivalents(reaction.delta_G_standard_prime, mt.Quantity(-50.0, "kJ/mol"))
         self.assertAlmostEqual(from_bar, from_panel, places=6)
+
+
+class TestAffinityLadder(unittest.TestCase):
+    """The ladder over the curated library."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.conditions = mt.Conditions(
+            temperature_c=12.0,
+            pH=7.4,
+            activity_model="ideal",
+            total_concentrations={"sulfide": 1e-5, "DIC": 3e-3},
+            concentrations={"SO4-2": 2.0e-2, "acetate": 1e-5, "O2(aq)": 1e-6},
+            partial_pressures={"H2(g)": 5e-6, "CH4(g)": 1e-3},
+        )
+
+    def test_ladder_renders_and_saves(self):
+        import warnings
+
+        from microbial_thermo.figures import plot_affinity_ladder
+
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory) / "ladder"
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                plot_affinity_ladder(self.conditions, save=base)
+            self.assertTrue(base.with_suffix(".svg").exists())
+            self.assertTrue(base.with_suffix(".png").exists())
+
+    def test_ladder_accepts_a_precomputed_table(self):
+        import warnings
+
+        from microbial_thermo.figures import plot_affinity_ladder
+        from microbial_thermo.library import energy_table
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            table = energy_table(self.conditions)
+            figure = plot_affinity_ladder(self.conditions, table=table)
+        # One bar per evaluable metabolism. Count the bar container rather than
+        # every patch, since the shaded energy-quantum band is a patch too.
+        bars = figure.axes[0].containers[0]
+        self.assertEqual(len(bars), len(table[table["problem"] == ""]))
+
+    def test_ladder_has_a_true_atp_axis(self):
+        """The x axis is kJ/mol here, so ATP really is a second axis --
+        unlike the tower, where the axis is a potential."""
+        import warnings
+
+        from microbial_thermo.figures import plot_affinity_ladder
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            figure = plot_affinity_ladder(self.conditions)
+        self.assertGreaterEqual(len(figure.axes), 2)
+        twin = figure.axes[-1]
+        self.assertIn("ATP", twin.get_xlabel())
+
+    def test_empty_selection_raises(self):
+        from microbial_thermo.figures import plot_affinity_ladder
+        from microbial_thermo.library import energy_table
+
+        empty = energy_table(self.conditions).iloc[0:0]
+        with self.assertRaises(ValueError):
+            plot_affinity_ladder(self.conditions, table=empty)

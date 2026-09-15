@@ -33,6 +33,7 @@ from .exceptions import (
     SpeciesNotFoundError,
     ThermodynamicConsistencyError,
 )
+from .library import default_library, energy_table, metabolism
 from .oxidation import atom_oxidation_states, mean_oxidation_state, nosc
 from .reaction import Couple, HalfReactionResult, Reaction
 from .speciation import (
@@ -108,6 +109,9 @@ def versions() -> dict[str, str]:
 
 __all__ = [
     "Conditions",
+    "default_library",
+    "energy_table",
+    "metabolism",
     "default_families",
     "dominant",
     "fractions",

@@ -1,0 +1,218 @@
+# Curated microbial metabolisms.
+#
+# Each entry is a donor couple and an acceptor couple, both written
+# (reduced, oxidized) as everywhere else in this library. Potentials and free
+# energies are computed from the backend, not stored, so this file carries only
+# chemistry and context.
+#
+# Doubles as the regression corpus: every entry is balanced and put through the
+# two-path cross-check by the test suite.
+#
+# LIMITATION: a couple names one reduced and one oxidized species, so
+# metabolisms whose oxidation yields *two* carbon products cannot be expressed
+# here. Syntrophic propionate oxidation (propionate -> acetate + CO2 + H2) is
+# the important case. Complete oxidations to CO2 are fine; incomplete ones are
+# not. See the Future work note in the README.
+
+metabolisms:
+  # --- aerobic ---
+  - name: aerobic_acetate_oxidation
+    label: Aerobic acetate oxidation
+    group: aerobic respiration
+    donor: [acetate, "CO2(aq)"]
+    acceptor: ["H2O", "O2(aq)"]
+    key_element: C
+    note: Complete heterotrophic oxidation; the reference high-yield metabolism.
+
+  - name: knallgas
+    label: Aerobic hydrogen oxidation (Knallgas)
+    group: aerobic respiration
+    donor: ["H2(g)", "H+"]
+    acceptor: ["H2O", "O2(aq)"]
+    organisms: Cupriavidus, Hydrogenovibrio
+
+  - name: aerobic_methanotrophy
+    label: Aerobic methanotrophy
+    group: aerobic respiration
+    donor: [methane, "CO2(aq)"]
+    acceptor: ["H2O", "O2(aq)"]
+    organisms: Methylococcus, Methylosinus
+
+  - name: sulfide_oxidation_oxygen
+    label: Sulfide oxidation with oxygen
+    group: sulfur oxidation
+    donor: ["HS-", "SO4-2"]
+    acceptor: ["H2O", "O2(aq)"]
+    organisms: Beggiatoa, Thiobacillus
+
+  - name: sulfur_oxidation_oxygen
+    label: Elemental sulfur oxidation with oxygen
+    group: sulfur oxidation
+    donor: ["Sulfur(s)", "SO4-2"]
+    acceptor: ["H2O", "O2(aq)"]
+
+  - name: ammonia_oxidation
+    label: Ammonia oxidation (nitritation)
+    group: nitrification
+    donor: ["NH4+", "NO2-"]
+    acceptor: ["H2O", "O2(aq)"]
+    organisms: Nitrosomonas, Nitrosopumilus
+
+  - name: nitrite_oxidation
+    label: Nitrite oxidation (nitratation)
+    group: nitrification
+    donor: ["NO2-", "NO3-"]
+    acceptor: ["H2O", "O2(aq)"]
+    organisms: Nitrobacter, Nitrospira
+
+  - name: comammox
+    label: Complete ammonia oxidation (comammox)
+    group: nitrification
+    donor: ["NH4+", "NO3-"]
+    acceptor: ["H2O", "O2(aq)"]
+    organisms: Nitrospira inopinata
+
+  - name: iron_oxidation_oxygen
+    label: Iron(II) oxidation with oxygen
+    group: metal oxidation
+    donor: ["Fe+2", goethite]
+    acceptor: ["H2O", "O2(aq)"]
+    organisms: Gallionella, Mariprofundus
+
+  - name: manganese_oxidation_oxygen
+    label: Manganese(II) oxidation with oxygen
+    group: metal oxidation
+    donor: ["Mn+2", pyrolusite]
+    acceptor: ["H2O", "O2(aq)"]
+
+  # --- nitrogen ---
+  - name: denitrification_acetate
+    label: Denitrification with acetate
+    group: denitrification
+    donor: [acetate, "CO2(aq)"]
+    acceptor: ["N2(aq)", "NO3-"]
+    key_element: C
+
+  - name: denitrification_hydrogen
+    label: Denitrification with hydrogen
+    group: denitrification
+    donor: ["H2(g)", "H+"]
+    acceptor: ["N2(aq)", "NO3-"]
+
+  - name: denitrification_step_nitrate_nitrite
+    label: "Denitrification step: nitrate to nitrite"
+    group: denitrification
+    donor: ["H2(g)", "H+"]
+    acceptor: ["NO2-", "NO3-"]
+
+  - name: dnra
+    label: Dissimilatory nitrate reduction to ammonium (DNRA)
+    group: nitrogen
+    donor: ["H2(g)", "H+"]
+    acceptor: ["NH4+", "NO3-"]
+
+  - name: anammox
+    label: Anaerobic ammonium oxidation (anammox)
+    group: nitrogen
+    donor: ["NH4+", "N2(aq)"]
+    acceptor: ["N2(aq)", "NO2-"]
+    organisms: Brocadia, Kuenenia
+
+  - name: sulfide_oxidation_nitrate
+    label: Sulfide oxidation with nitrate
+    group: sulfur oxidation
+    donor: ["HS-", "SO4-2"]
+    acceptor: ["N2(aq)", "NO3-"]
+    organisms: Thiobacillus denitrificans
+
+  # --- metal reduction ---
+  - name: ferrihydrite_reduction_acetate
+    label: Ferrihydrite reduction with acetate
+    group: metal reduction
+    donor: [acetate, "CO2(aq)"]
+    acceptor: ["Fe+2", ferrihydrite]
+    key_element: C
+    organisms: Geobacter, Shewanella
+
+  - name: goethite_reduction_hydrogen
+    label: Goethite reduction with hydrogen
+    group: metal reduction
+    donor: ["H2(g)", "H+"]
+    acceptor: ["Fe+2", goethite]
+    note: Crystalline Fe(III) is far less favourable than ferrihydrite.
+
+  - name: manganese_reduction_acetate
+    label: Manganese(IV) reduction with acetate
+    group: metal reduction
+    donor: [acetate, "CO2(aq)"]
+    acceptor: ["Mn+2", pyrolusite]
+    key_element: C
+
+  # --- sulfate reduction ---
+  - name: hydrogenotrophic_sulfate_reduction
+    label: Hydrogenotrophic sulfate reduction
+    group: sulfate reduction
+    donor: ["H2(g)", "H+"]
+    acceptor: ["HS-", "SO4-2"]
+    organisms: Desulfovibrio, Archaeoglobus
+
+  - name: acetotrophic_sulfate_reduction
+    label: Acetotrophic sulfate reduction
+    group: sulfate reduction
+    donor: [acetate, "CO2(aq)"]
+    acceptor: ["HS-", "SO4-2"]
+    key_element: C
+    organisms: Desulfobacter
+
+  - name: lactate_sulfate_reduction
+    label: Lactate oxidation with sulfate
+    group: sulfate reduction
+    donor: [lactate, "CO2(aq)"]
+    acceptor: ["HS-", "SO4-2"]
+    key_element: C
+
+  - name: sulfur_reduction_hydrogen
+    label: Elemental sulfur reduction with hydrogen
+    group: sulfur reduction
+    donor: ["H2(g)", "H+"]
+    acceptor: ["HS-", "Sulfur(s)"]
+
+  # --- methanogenesis and methane oxidation ---
+  - name: hydrogenotrophic_methanogenesis
+    label: Hydrogenotrophic methanogenesis
+    group: methanogenesis
+    donor: ["H2(g)", "H+"]
+    acceptor: [methane, "CO2(aq)"]
+    organisms: Methanobacterium, Methanocaldococcus
+
+  - name: acetoclastic_methanogenesis
+    label: Acetoclastic methanogenesis
+    group: methanogenesis
+    donor: [acetate, "CO2(aq)"]
+    acceptor: [methane, "CO2(aq)"]
+    key_element: C
+    organisms: Methanosarcina, Methanosaeta
+
+  - name: methylotrophic_methanogenesis
+    label: Methylotrophic methanogenesis from methanol
+    group: methanogenesis
+    donor: [methanol, "CO2(aq)"]
+    acceptor: [methane, "CO2(aq)"]
+    key_element: C
+
+  - name: anaerobic_methane_oxidation
+    label: Anaerobic oxidation of methane with sulfate
+    group: methane oxidation
+    donor: [methane, "CO2(aq)"]
+    acceptor: ["HS-", "SO4-2"]
+    organisms: ANME archaea with sulfate-reducing partners
+    note: Operates within a few kJ/mol of equilibrium in situ.
+
+  # --- acetogenesis ---
+  - name: acetogenesis
+    label: Homoacetogenesis from H2 and CO2
+    group: acetogenesis
+    donor: ["H2(g)", "H+"]
+    acceptor: [acetate, "CO2(aq)"]
+    key_element: C
+    organisms: Acetobacterium, Clostridium ljungdahlii

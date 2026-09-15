@@ -46,6 +46,14 @@ Then pick **microbial-thermo** as the notebook kernel. Notebooks in
 `notebooks/` are paired to `.py` scripts with jupytext in `percent` format;
 edit the `.py` and run `jupytext --sync <notebook>.ipynb`.
 
+| notebook | covers |
+|---|---|
+| `01_half_reactions` | couples, balancing, oxidation states, show-your-work, the half-reaction figure |
+| `02_redox_tower_and_energy` | the tower and its scale bar, hydrogen and temperature sweeps, the interactive explorer |
+| `03_environmental_affinity` | pH speciation, the curated library, and the affinity ladder for a real porewater |
+
+All three are committed with their outputs and execute clean end to end.
+
 ---
 
 ## Library usage
@@ -185,6 +193,31 @@ routes to the same number. They agree with each other and with published values
 to within 1–3 kJ/mol, which is what licenses trusting the manganese oxides,
 where only one route exists.
 
+### The curated metabolism library
+
+Twenty-eight named metabolisms, so you need not remember which couples to pair.
+Nothing thermodynamic is stored — energies are computed at whatever conditions
+you ask for.
+
+```python
+from microbial_thermo.library import default_library, energy_table, reaction
+
+reaction("anammox", conditions)
+energy_table(conditions)          # every metabolism, sorted by energy per electron
+default_library().groups()        # methanogenesis, sulfate reduction, nitrification, ...
+```
+
+At pH 7 and 25 °C the table reproduces canonical redox zonation unprompted:
+oxygen (−109 kJ/mol e⁻) > denitrification (−96) > Mn(IV) (−65) > Fe(III) (−13)
+> sulfate (−5) > methanogenesis (−1.4). Acetoclastic methanogenesis and AOM land
+at the famously marginal −1.4 and −3.7 kJ/mol e⁻. The zonation order is asserted
+in the test suite: if it broke, the thermodynamics would be wrong.
+
+*Limitation:* a couple names one reduced and one oxidized species, so
+metabolisms whose oxidation yields two carbon products cannot be catalogued.
+Syntrophic propionate oxidation (propionate → acetate + CO₂ + H₂) is the case
+that matters. Complete oxidations to CO₂ are fine.
+
 ### Figures
 
 ```python
@@ -194,8 +227,14 @@ from microbial_thermo.figures import (
 
 plot_half_reactions(reaction, save="figures/sulfate")     # SVG + PNG
 plot_redox_tower(reaction, save="figures/tower")          # SVG + PNG
+plot_affinity_ladder(conditions, save="figures/ladder")   # SVG + PNG
 fig = plot_energy_explorer(reaction, save_html="figures/explorer")
 ```
+
+The **affinity ladder** is the counterpart to the tower: where the tower shows
+what is possible from standard potentials, the ladder shows what actually pays
+under one measured water chemistry, with the energy-quantum band drawn across
+it. Its x axis is kJ/mol, so ATP equivalents are a genuine second axis there.
 
 Both static figures normalise to **an electron pair** by default, whatever
 electron count the reaction was built with; pass `n_electrons=None` to draw it
@@ -372,7 +411,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 153 tests
+python -m unittest discover -s tests     # 175 tests
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```
@@ -410,23 +449,53 @@ items unblock later ones.
 
 ### Tier 1 — small, and builds directly on what exists
 
-1. **Transformed (Legendre) standard state**, in the manner of eQuilibrator:
-   reactions balanced without explicit H⁺, and a ΔG′ defined over each
-   pseudoisomer group. The activity-level speciation now implemented handles
-   in-situ ΔG correctly; this would additionally make tabulated ΔG°′ values
-   directly comparable with the biochemical literature.
+1. **Ionic-strength convention for literature comparison** *(small, worthwhile)*.
+   Alberty-convention biochemical tables are quoted at I = 0.25 M rather than
+   I = 0. Defaulting `Conditions` to that when someone is comparing against such
+   a table would close most of the remaining gap, and the B-dot machinery for it
+   already exists.
+
+   **Not** recommended: the full transformed (Legendre) standard state. It was
+   evaluated and deliberately declined. The reasoning, so it does not get
+   relitigated:
+
+   - There are two conventions, not one. The *microbial bioenergetics*
+     literature — Thauer, Jungermann & Decker; Amend & Shock; LaRowe & Amend —
+     writes reactions with explicit species and explicit protons. **That is
+     already what this library computes**, and our −152.2 kJ/mol for
+     hydrogenotrophic sulfate reduction sits on the ≈−152 kJ/mol tabulated
+     there. The *biochemical* convention (Alberty, IUBMB, eQuilibrator) is the
+     one we do not match.
+   - The two agree more than expected. For a reaction whose every reactant is a
+     single species, hydrogen conservation forces the transformed result to
+     equal our species-level ΔG°′ *exactly*; the transform is pure rebookkeeping
+     there. They diverge only through pseudoisomer grouping, bounded by the
+     mixing entropy $RT\ln(\text{populated forms})$ — at most ≈1.7 kJ/mol, for a
+     diprotic reactant sitting exactly on its p$K_a$.
+   - Ionic strength is the larger discrepancy, and item 1 above addresses it
+     without touching anything structural.
+   - The cost is not small: a second balancing path (dropping both the hydrogen
+     and charge rows from the conservation matrix), a transformed analogue of
+     the two-path cross-check, group identities throughout the reaction layer,
+     and figures that lose their H⁺ terms — which for a biogeochemistry course
+     is a regression, since proton stoichiometry is precisely what teaches why
+     pH moves the energetics.
+
+   Revisit only to interoperate with eQuilibrator values or to do
+   metabolic-pathway thermodynamics, where everything upstream is in Alberty's
+   convention and mixing conventions silently corrupts a pathway sum.
 2. **Supplemental formation-energy table** for species pyGCC lacks, chiefly
    glucose and pyruvate. Every entry carries a provenance string and a
    `verified` flag, and unverified values warn on use. Designed in `SPEC.md` §2.1.
-3. **Curated reaction library** as YAML: denitrification step by step, DNRA,
-   anammox, comammox, sulfur disproportionation, the four methanogenesis
-   routes, AOM, acetogenesis, syntrophic propionate and butyrate oxidation,
-   photoferrotrophy. Doubles as a much larger regression corpus.
-4. **Jupytext-paired teaching notebooks** in `notebooks/`, one per figure type.
-5. **Affinity ladder**: sorted bar chart of $\Delta G$ per electron for many
-   metabolisms under one measured condition. Nearly free given `sweep`.
-6. **Provenance export**: per-result record of pyGCC version, database file
+3. **Multi-product couples**, so incomplete oxidations can be catalogued —
+   syntrophic propionate and butyrate oxidation, which yield acetate *and* CO₂.
+   The `Couple` abstraction currently names one species each side, which is what
+   blocks them. This is the main thing missing from the metabolism library.
+4. **Provenance export**: per-result record of pyGCC version, database file
    hash, and per-species source, dumpable as BibTeX.
+5. **Sulfur disproportionation** and other reactions whose balancing is
+   genuinely underdetermined — currently detected and refused, rather than
+   solved by asking which products are intended.
 
 ### Tier 2 — moderate, mostly new figures over existing machinery
 
