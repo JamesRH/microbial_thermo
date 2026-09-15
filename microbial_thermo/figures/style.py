@@ -95,3 +95,39 @@ def atp_ruler_text(n_electrons, delta_g, delta_g_atp=None) -> str:
     count = atp_equivalents(delta_g, delta_g_atp)
     per_atp = as_magnitude(delta_g_atp or DEFAULT_DELTA_G_ATP, KJ_PER_MOL_STR)
     return f"{count:.1f} ATP equivalents per {n_electrons} e$^-$\n(at {per_atp:g} kJ/mol per ATP)"
+
+
+def unverified_footnote(reaction) -> str | None:
+    """Warning line for a figure that rests on a hand-entered value.
+
+    SPEC section 2.1 requires that a figure depending on an unverified
+    supplemental number say so. A reader looking at a rendered figure has no
+    other way to know, since the console warning is long gone by then.
+    """
+    from ..supplemental import uses_unverified
+
+    names = uses_unverified(s.backend for s in reaction.coefficients)
+    if not names:
+        return None
+    return (
+        "Depends on hand-entered, unverified formation energies for "
+        + ", ".join(names)
+        + " — check them before relying on this figure."
+    )
+
+
+def add_unverified_footnote(figure, reaction) -> None:
+    """Draw :func:`unverified_footnote` along the bottom of a figure."""
+    text = unverified_footnote(reaction)
+    if text is None:
+        return
+    figure.text(
+        0.5,
+        0.005,
+        text,
+        fontsize=SIZES["annotation"] - 1,
+        color=PALETTE["endergonic"],
+        ha="center",
+        va="bottom",
+        wrap=True,
+    )

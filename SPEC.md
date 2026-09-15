@@ -3,7 +3,11 @@
 A Python library for microbial physiological thermodynamic calculations, built for
 teaching first and research calculations second.
 
-**Status:** draft v0.1 · **Branch:** `ai/claude/thermo-core`
+**Status:** implemented · **Branch:** `ai/claude/thermo-core`
+
+This began as a design document and is now maintained as a description of what
+exists. Section 15 records where the implementation deliberately departed from
+the original design, and why — those are the interesting parts.
 
 ---
 
@@ -86,8 +90,11 @@ unknown origin — for a teaching tool that is worse than failing.
 
 Supplemental entries are 25 °C only and do not carry HKF parameters, so they cannot be
 extrapolated in T. Requesting a supplemented species at T ≠ 25 °C raises unless the
-caller passes `allow_isothermal_extrapolation=True`, which applies a van 't Hoff
-correction if $\Delta H_f$ is known and otherwise refuses.
+caller constructs the backend with `allow_extrapolation=True`, which applies a
+van 't Hoff correction if $\Delta H_f$ is known and otherwise refuses.
+
+Implemented in `supplemental.py`. All three shipped entries — hydroxylamine,
+glucose, pyruvate — are currently `verified: false`.
 
 ---
 
@@ -95,31 +102,38 @@ correction if $\Delta H_f$ is known and otherwise refuses.
 
 ```
 microbial_thermo/
-  __init__.py            configure(), get_backend(), __version__
+  __init__.py            configure(), get_backend(), versions(), re-exports
   units.py               pint registry, F, R, physical constants
+  exceptions.py          the error hierarchy
   formula.py             formula string -> element counts + charge
-  oxidation.py           per-atom oxidation states, NOSC
-  species.py             Species dataclass, alias resolution, supplemental data
-  speciation.py          acid-base families, pH-weighted transform, pKa from backend
-  balance.py             full-reaction balancing, half-reaction splitting, normalization
-  reaction.py            Reaction / HalfReaction; dG, E, Q; the two-path cross-check
-  energetics.py          per-electron normalization, ATP yield, biological energy quantum
+  oxidation.py           mean and per-atom oxidation states, NOSC
+  species.py             Species dataclass, alias resolution, registry
+  speciation.py          acid-base families, pKa from the backend, abundances
+  supplemental.py        hand-entered values for species pyGCC lacks
+  balance.py             balancing, half-reaction splitting, couple inference
+  reaction.py            Couple / Reaction; dG, E, Q; the two-path cross-check
+  library.py             the curated metabolism catalogue
+  sweep.py               evaluation across pH, temperature, concentrations
+  tower.py               reference couples, computed not tabulated
   showwork.py            LaTeX derivation emitter
   typeset.py             equation -> positioned token model (renderer-agnostic)
+  cli.py                 click entry points
   backends/
     base.py              ThermoBackend ABC
-    pygcc_backend.py     pyGCC implementation + caching
+    pygcc_backend.py     pyGCC implementation, caching, water datum
+    gwb.py               minerals from GWB log K values
   figures/
     halfreaction.py      stacked aligned half-reaction diagram (matplotlib)
-    tower.py             redox tower, static (matplotlib) + interactive (plotly)
+    tower.py             redox tower with the energy scale bar (matplotlib)
+    ladder.py            affinity ladder across the library (matplotlib)
     explorer.py          gapminder-style dG explorer (plotly)
-    style.py             shared palette, ATP/BEQ axis helper
+    style.py             palette, ATP helpers, unverified-value footnote
   data/
-    aliases.yaml         friendly name <-> pyGCC species string
+    species.yaml         friendly name <-> pyGCC species string
     acid_base.yaml       acid-base families and members
     supplemental_gibbs.yaml
     reactions.yaml       curated microbial metabolisms
-  cli.py                 click entry points
+    tower_couples.yaml   reference couples for the tower
 ```
 
 Dependency rule: `figures/` may import from the core; the core must never import
@@ -201,23 +215,43 @@ fractions, not decimals.
 
 ---
 
-## 6. pH speciation (answers user question 1)
+## 6. pH speciation
 
-The caller never defines an acid-base group by hand. Writing `H2S` or `sulfide` both
-resolve to the sulfide family. At the requested pH and T:
+**This section was rewritten after implementation; the original design is in
+section 15.**
 
-1. Look up the family in `acid_base.yaml`.
-2. Get each $pK_a$ at T from the backend (verified path: $\Delta G_f$ difference).
-3. Compute fractional abundance $f_i$ of each member.
-4. Default `speciation="weighted"`: use the abundance-weighted group free energy —
-   the correct treatment when pH ≈ p$K_a$.
-5. `speciation="dominant"`: pick the majority species; a warning fires when the pH is
-   within 1 unit of a p$K_a$, where this approximation is worst.
-6. `speciation="explicit"`: use exactly the species the user typed, no transform.
+The caller never defines an acid–base group by hand. Twelve families ship in
+`acid_base.yaml`, and any member resolves to its family.
 
-The figure prints the dominant form with its percentage, and footnotes the reaction when
-pH is within 1 unit of a p$K_a$. Sulfide at pH 7 is the motivating case — it is nearly
-50/50 H₂S/HS⁻, so "pick the dominant one" is a coin flip there.
+What speciation acts on is **activities**, not the standard state. The problem
+it solves is that analytical measurements come as totals — total sulfide, DIC,
+total ammonia — while a reaction is written with one specific form:
+
+```python
+Conditions(pH=7.0, total_concentrations={"sulfide": 1e-6, "DIC": 2.2e-3})
+```
+
+The pH- and temperature-dependent fraction belonging to each member is applied
+to give that species' activity. H⁺ stays explicit and balanced throughout, so
+nothing about the existing convention changes and the two-path cross-check
+still holds. A per-species entry in `concentrations` takes precedence, and doing
+that within one pH unit of a p$K_a$ warns and says which fraction you are
+getting.
+
+p$K_a$ values are computed from the backend at the working temperature, never
+tabulated, so sulfide falls from 6.99 at 25 °C to 6.65 at 60 °C. At 25 °C all
+twelve families reproduce the literature to within 0.03.
+
+Two things would silently break a naive implementation, both covered by tests:
+
+* The carbonate first step is $\mathrm{CO_2(aq)} + \mathrm{H_2O}
+  \rightleftharpoons \mathrm{HCO_3^-} + \mathrm{H^+}$, not a bare proton
+  loss. Balancing it with water is what turns a nonsensical −35.2 into 6.34.
+* Relative abundances are accumulated in log space; a triprotic acid at pH 0
+  overflows otherwise.
+
+Sulfide at pH 7 is the motivating case: nearly 50/50 H₂S/HS⁻, so treating a
+measured total as all one form is wrong by about a factor of two.
 
 ---
 
@@ -317,9 +351,19 @@ pygcc, numpy, pandas, scipy, matplotlib, and plotly versions for traceability.
 
 ## 12. Provenance
 
-Every computed result carries a `provenance` record: pyGCC version, database file name
-and hash, per-species data source, and whether any supplemental or unverified value was
-used. Dumpable as text or BibTeX.
+**Partly implemented.** What exists:
+
+* `versions()` and `mthermo --version` report the library and every computational
+  dependency, including the pyGCC version.
+* `SpeciesRecord.source` names where a species' data came from — which pyGCC
+  database, the log K route, or the supplemental table — and carries a `verified`
+  flag.
+* `show_work()` names the backend and database in its formation-energy table.
+* Any figure resting on an unverified supplemental value is footnoted, and every
+  use of one warns.
+
+What does not exist: a per-result provenance object, database file hashing, and
+BibTeX export. That remains Future work item 4 in the README.
 
 ---
 
@@ -328,12 +372,23 @@ used. Dumpable as text or BibTeX.
 Standard library `unittest`. Ground-truth fixtures:
 
 - NOSC values for CO₂, CH₄, acetate, glucose (LaRowe & Van Cappellen table).
-- p$K_a$ of H₂S at 25 °C = 6.99 (verified reproducible from pyGCC to 4 s.f.).
+- p$K_a$ for all twelve acid–base families at 25 °C, against published values.
 - Balancing: a set of hand-balanced microbial metabolisms.
 - The two-path cross-check acts as a property test across the whole curated
-  reaction library.
+  library — all 31 metabolisms.
 - Oxidation-state conservation: per-atom sum equals molecular charge, over a set of
   organics.
+- Redox zonation: the library must reproduce the oxygen → nitrate → manganese →
+  iron → sulfate → CO₂ ordering. If it did not, the thermodynamics would be wrong
+  rather than the ordering.
+- Cross-database consistency: for the ~900 species present in both `speq21.dat`
+  and `thermo.com.dat`, tabulated log K against log K predicted from the HKF
+  parameters. Three known disagreements are declared with their magnitudes so
+  they cannot widen unnoticed.
+- Syntrophy: propionate and butyrate oxidation endergonic at standard state, and
+  a hydrogen window where both partners are exergonic.
+
+224 tests at the time of writing.
 
 Textbook $E^{\circ\prime}$ values are used as *sanity ranges*, not exact assertions —
 published tables differ in standard state and database vintage, and asserting equality
@@ -343,7 +398,53 @@ against them would encode someone else's conventions as truth.
 
 ## 14. Open questions
 
-1. Does "edt" in the original prompt mean EDTA? Metal–EDTA complexes come from a
-   different database lineage and would be a meaningful lift.
-2. Which glucose $\Delta G_f^\circ$ source do you want to standardize on, given pyGCC
-   has none?
+1. ~~Does "edt" in the original prompt mean EDTA?~~ **Resolved: it meant "etc."**
+   EDTA is out of scope.
+2. Which sources should the three supplemental values be traced to? Hydroxylamine,
+   glucose and pyruvate are hand-entered and flagged `verified: false`. Each needs
+   its primary source found, its standard state confirmed, and the flag set. Until
+   then every use warns and every figure depending on one is footnoted.
+
+---
+
+## 15. Where the implementation departed from the design
+
+Recorded because the reasons matter more than the decisions.
+
+**pH speciation (§6) is narrower than first designed.** The original called for
+`speciation="weighted"/"dominant"/"explicit"` modes computing an
+abundance-weighted *group free energy*. That is most of the way to eQuilibrator's
+Legendre transform, which is a different standard state and a large change:
+reactions balanced without explicit H⁺, group identities throughout the reaction
+layer, and figures that lose their proton stoichiometry — a regression for a
+biogeochemistry course, where proton stoichiometry is what teaches pH dependence.
+
+What actually bites is narrower and is what got built: measurements are totals,
+reactions name one form. See the README's Future work item 1 for the full
+argument against the transform, including that the two agree *exactly* for
+single-species reactants and differ by at most ≈1.7 kJ/mol otherwise.
+
+**Water needed a datum correction (§2).** Not anticipated. IAPWS-95 puts liquid
+water 9 cal/mol from the SUPCRT convention the rest of the data uses. It is a
+reference-state difference rather than an error, but it left a systematic
+0.041 kJ/mol error per mole of water. Water is now shifted onto the SUPCRT datum,
+preserving the IAPWS temperature dependence exactly.
+
+**Minerals came from a second database.** The design assumed one direct-access
+database. No pyGCC database contains the manganese oxides at all, so they are
+derived from GWB log K values combined with HKF basis species — a mixing of
+sources that had to be justified rather than assumed. See
+`tests/test_database_consistency.py`.
+
+**Couples can name several species.** Not in the original design, which assumed
+one reduced and one oxidized species per side. That made incomplete oxidations
+inexpressible, and syntrophic propionate oxidation — the textbook syntrophy
+example — is exactly that. Proportions within a side come from the caller, since
+conservation cannot supply them.
+
+**Reactions can be built from a written equation.** `Reaction.from_equation`
+was added after a user tried to write one and found no entry point. It infers
+the couples from which elements change oxidation state.
+
+**`energetics.py` was never created.** Its contents live in `reaction.py`
+(per-electron normalisation) and `figures/style.py` (ATP, energy quantum).

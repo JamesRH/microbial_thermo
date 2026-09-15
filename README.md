@@ -232,8 +232,8 @@ come from a small hand-entered table instead.
 **These values are of a different kind from everything else here.** They are
 literature figures typed in by hand, not computed from an equation of state and
 not cross-checked against a second source the way the mineral data was. Each
-carries a `verified` flag, and an unverified one **warns every time it is
-used**. All three currently ship unverified — trace them to a primary source and
+carries a `verified` flag, an unverified one **warns every time it is used**, and
+any figure resting on one is footnoted in red. All three currently ship unverified — trace them to a primary source and
 set the flag before relying on them.
 
 They are single-temperature values, honoured at 25 °C and refused elsewhere
@@ -263,7 +263,7 @@ where only one route exists.
 
 ### The curated metabolism library
 
-Twenty-eight named metabolisms, so you need not remember which couples to pair.
+Thirty-one named metabolisms, so you need not remember which couples to pair.
 Nothing thermodynamic is stored — energies are computed at whatever conditions
 you ask for.
 
@@ -502,7 +502,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 220 tests
+python -m unittest discover -s tests     # 224 tests
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```

@@ -27,7 +27,7 @@ from ..units import (
     KJ_PER_MOL_STR,
     as_magnitude,
 )
-from .style import PALETTE, SIZES, atp_equivalents
+from .style import PALETTE, SIZES, add_unverified_footnote, atp_equivalents
 
 _GROUP_COLOURS = {
     "hydrogen": "#6A7BA2",
@@ -182,6 +182,7 @@ def plot_redox_tower(
     )
     ax.set_title(title, fontsize=SIZES["title"], pad=14)
 
+    add_unverified_footnote(fig, reaction)
     fig.tight_layout(rect=(0, 0.16, 1, 1))
     if save is not None:
         _save(fig, save, formats, dpi)

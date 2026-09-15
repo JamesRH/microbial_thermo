@@ -14,14 +14,7 @@
 # ---
 
 # %% [markdown]
-# # Scratchbook: from a written reaction to the full analysis
-#
-# Start with nothing but an unbalanced reaction typed as a string, and let the
-# library do the rest: work out the couples, balance both half reactions, and
-# draw everything.
-#
-# The worked example is nitrate reduction to hydroxylamine with hydrogen, at
-# **pH 7.7**.
+# # Scratchbook
 
 # %%
 import warnings

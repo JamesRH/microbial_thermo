@@ -198,3 +198,56 @@ class TestSupplementalTable(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestUnverifiedValuesAreVisibleOnFigures(unittest.TestCase):
+    """A rendered figure has to say when it rests on a hand-entered value.
+
+    The console warning is long gone by the time someone looks at a saved
+    figure, so SPEC section 2.1 requires the figure itself to carry the notice.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import matplotlib
+
+        matplotlib.use("Agg")
+        cls.conditions = mt.Conditions(temperature_c=25.0, pH=7.7)
+
+    def _reaction(self, equation):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return mt.Reaction.from_equation(equation, conditions=self.conditions)
+
+    def test_footnote_names_the_unverified_species(self):
+        from microbial_thermo.figures.style import unverified_footnote
+
+        text = unverified_footnote(self._reaction("NO3- + H2 -> NH2OH"))
+        self.assertIsNotNone(text)
+        self.assertIn("NH2OH(aq)", text)
+
+    def test_no_footnote_when_everything_is_from_the_database(self):
+        from microbial_thermo.figures.style import unverified_footnote
+
+        self.assertIsNone(unverified_footnote(self._reaction("NH4+ + O2 -> N2")))
+
+    def test_the_figure_actually_carries_it(self):
+        from microbial_thermo.figures import plot_half_reactions
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            figure = plot_half_reactions(self._reaction("NO3- + H2 -> NH2OH"))
+        texts = [t.get_text() for t in figure.texts]
+        self.assertTrue(
+            any("unverified" in t for t in texts),
+            f"no notice found among figure-level texts: {texts}",
+        )
+
+    def test_a_clean_figure_is_not_cluttered(self):
+        from microbial_thermo.figures import plot_half_reactions
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            figure = plot_half_reactions(self._reaction("NH4+ + O2 -> N2"))
+        texts = [t.get_text() for t in figure.texts]
+        self.assertFalse(any("unverified" in t for t in texts))

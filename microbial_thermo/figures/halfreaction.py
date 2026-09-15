@@ -17,7 +17,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..typeset import ARROW, SPECIES, align_at_arrows, build_equation_tokens
-from .style import PALETTE, SIZES
+from .style import PALETTE, SIZES, add_unverified_footnote
 
 #: Vertical positions in axes coordinates.
 _Y_TOP = 0.66
@@ -121,6 +121,7 @@ def plot_half_reactions(
         title = _default_title(reaction)
     ax.set_title(title, fontsize=SIZES["title"], pad=14)
 
+    add_unverified_footnote(fig, reaction)
     fig.tight_layout()
     if save is not None:
         _save(fig, save, formats, dpi)
