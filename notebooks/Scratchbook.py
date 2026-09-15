@@ -87,10 +87,12 @@ for label, result in (("donor", reaction.donor_half), ("acceptor", reaction.acce
     )
 
 # %%
-mt.half_reaction("NO3-", "NH2OH(aq)").E_standard
-mt.half_reaction("H2(aq)","H+").E_standard
+mt.half_reaction("H2(aq)","H+").E_standard - mt.half_reaction("NO3-", "NH2OH(aq)").E_standard  
 
-# %% [markdown]
+# %%
+-0.760 -0.0394
+
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ## 3. Normalised to one mole of the first reactant
 #
 # The first reactant in the written equation is nitrate, so this is the
