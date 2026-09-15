@@ -105,7 +105,9 @@ class PygccBackend(ThermoBackend):
         mineral_database: str | None = None,
         use_minerals: bool = True,
         water_convention: str = "supcrt",
+        allow_extrapolation: bool = False,
     ):
+        self._allow_extrapolation = allow_extrapolation
         if water_convention not in ("supcrt", "iapws"):
             raise ValueError(
                 "water_convention must be 'supcrt' (consistent with the rest of "
@@ -183,11 +185,15 @@ class PygccBackend(ThermoBackend):
 
     def suggest(self, name: str, n: int = 5) -> list[str]:
         """Closest species names, for error messages."""
-        candidates = list(self.species_dict) + list(self.minerals)
+        from ..supplemental import supplemental_species
+
+        candidates = list(self.species_dict) + list(self.minerals) + list(supplemental_species())
         return difflib.get_close_matches(name, candidates, n=n, cutoff=0.6)
 
     def available_species(self) -> list[str]:
-        return sorted(set(self.species_dict) | set(self.minerals))
+        from ..supplemental import supplemental_species
+
+        return sorted(set(self.species_dict) | set(self.minerals) | set(supplemental_species()))
 
     def search(self, pattern: str) -> list[str]:
         """Case-insensitive substring search over species names."""
@@ -237,6 +243,9 @@ class PygccBackend(ThermoBackend):
         if name not in species:
             if name in self.minerals:
                 return self._mineral_gibbs_cal(name, temperature_c, pressure)
+            supplemented = self._supplemental_gibbs_cal(name, temperature_c)
+            if supplemented is not None:
+                return supplemented
             raise SpeciesNotFoundError(name, suggestions=self.suggest(name))
 
         entry = species[name]
@@ -280,6 +289,20 @@ class PygccBackend(ThermoBackend):
             return self._compute_gibbs_cal(species_name, temperature_c, pressure)
 
         return mineral_gibbs_cal(self.minerals[name], temperature_c, basis)
+
+    def _supplemental_gibbs_cal(self, name: str, temperature_c: float):
+        """Hand-entered value for a species no database carries, or None.
+
+        Unverified entries warn on every use; see :mod:`..supplemental`.
+        """
+        from ..supplemental import supplemental_species
+
+        entry = supplemental_species().get(name)
+        if entry is None:
+            return None
+        entry.warn_if_unverified()
+        value_kj = entry.gibbs_kJ_mol(temperature_c, allow_extrapolation=self._allow_extrapolation)
+        return value_kj * 1000.0 / 4.184  # kJ/mol -> cal/mol
 
     def _water_gibbs_cal(self, temperature_c: float, pressure) -> float:
         value, density = self._raw_water(temperature_c, pressure)

@@ -1,0 +1,61 @@
+# Formation energies for species pyGCC does not carry.
+#
+# ================== READ THIS BEFORE TRUSTING A NUMBER ==================
+# Every value here is a literature figure typed in by hand, NOT computed from
+# an equation of state and NOT cross-checked against a second source the way
+# the mineral data was. Entries marked `verified: false` emit a UserWarning
+# whenever they are used, and any figure built on one is flagged.
+#
+# Verifying an entry means: find the primary source, confirm the value and its
+# standard state (aqueous, 1 molal, 25 C, and on the convention that
+# dGf(H+) = 0), record the citation in `provenance`, and set `verified: true`.
+# Until then treat these as placeholders good to a few kJ/mol at best.
+# ========================================================================
+#
+# These are single-temperature values with no heat-capacity data, so they are
+# honoured at 25 C and refused elsewhere unless `delta_Hf_kJ_mol` is given, in
+# which case a van 't Hoff correction is applied and a warning issued. That is
+# the same stance taken for the isothermal manganese oxides: better to fail
+# than to invent a temperature dependence the data does not contain.
+
+species:
+  - backend: "NH2OH(aq)"
+    formula: "NH3O"
+    display: "NH_2OH"
+    phase: aq
+    aliases: [hydroxylamine, "NH2OH", "NH2OH(aq)"]
+    delta_Gf_kJ_mol: -23.5
+    delta_Hf_kJ_mol: -98.9
+    temperature_c: 25.0
+    verified: false
+    provenance: >-
+      Commonly cited value for aqueous hydroxylamine; NOT yet traced to a
+      primary source. Central nitrification intermediate, absent from every
+      pyGCC database. CHECK BEFORE USE.
+
+  - backend: "Glucose(aq)"
+    formula: "C6H12O6"
+    display: "glucose"
+    phase: aq
+    smiles: "OCC1OC(O)C(O)C(O)C1O"
+    aliases: [glucose, dextrose, "C6H12O6"]
+    delta_Gf_kJ_mol: -917.2
+    temperature_c: 25.0
+    verified: false
+    provenance: >-
+      Commonly cited value for aqueous D-glucose; sources differ by a few
+      kJ/mol (roughly -915 to -919). NOT yet traced to a primary source.
+      CHECK BEFORE USE.
+
+  - backend: "Pyruvate(aq)"
+    formula: "C3H3O3-"
+    display: "pyruvate^-"
+    phase: aq
+    smiles: "CC(=O)C(=O)[O-]"
+    aliases: [pyruvate]
+    delta_Gf_kJ_mol: -474.5
+    temperature_c: 25.0
+    verified: false
+    provenance: >-
+      Commonly cited value for aqueous pyruvate. NOT yet traced to a primary
+      source. CHECK BEFORE USE.

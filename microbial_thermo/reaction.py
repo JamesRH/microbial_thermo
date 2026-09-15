@@ -379,6 +379,41 @@ class Reaction:
             normalize_to=normalize_to,
         )
 
+    @classmethod
+    def from_equation(
+        cls,
+        equation: str,
+        conditions: Conditions | None = None,
+        backend=None,
+        n_electrons: int = 2,
+        normalize_to=None,
+        registry=None,
+    ) -> Reaction:
+        """Build a reaction from a written, possibly unbalanced, equation.
+
+        ``Reaction.from_equation("NO3- + H2 -> NH2OH")`` works out which
+        elements change oxidation state, forms the donor and acceptor couples
+        from that, and balances the rest -- water, protons and electrons -- as
+        usual. Species the writer left implicit are supplied: here the partner
+        of H2 is the proton.
+
+        Raises :class:`AmbiguousReactionError` when the equation does not
+        resolve to exactly one donor and one acceptor, rather than guessing.
+        Name the couples with :meth:`from_couples` in that case.
+        """
+        from .balance import infer_couples
+
+        donor, acceptor = infer_couples(equation, registry)
+        return cls.from_couples(
+            donor=donor,
+            acceptor=acceptor,
+            conditions=conditions,
+            backend=backend,
+            n_electrons=n_electrons,
+            normalize_to=normalize_to,
+            registry=registry,
+        )
+
     # --- energetics ------------------------------------------------------------
 
     @property

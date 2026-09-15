@@ -76,6 +76,7 @@ edit the `.py` and run `jupytext --sync <notebook>.ipynb`.
 | `01_half_reactions` | couples, balancing, oxidation states, show-your-work, the half-reaction figure |
 | `02_redox_tower_and_energy` | the tower and its scale bar, hydrogen and temperature sweeps, the interactive explorer |
 | `03_environmental_affinity` | pH speciation, the curated library, and the affinity ladder for a real porewater |
+| `Scratchbook` | a worked problem end to end, starting from nothing but an equation string |
 
 All three are committed with their outputs and execute clean end to end.
 
@@ -107,6 +108,31 @@ Reaction:  H+ + 4 H2(g) + SO4-- -> HS- + 4 H2O
   dG (conditions)    -152.2 kJ/mol
   dG per electron    -19.0 kJ/mol e-
 ```
+
+### From a written equation
+
+Type the reaction and let the library work out the rest:
+
+```python
+mt.Reaction.from_equation("NO3- + H2 -> NH2OH", conditions=conditions)
+# H+ + 3 H2(aq) + NO3- -> NH2OH(aq) + 2 H2O
+```
+
+It finds which elements change oxidation state, forms the donor and acceptor
+couples from that, and balances water, protons and electrons as usual. Species
+the writer left implicit are supplied — nobody writes the proton that H₂
+oxidises to.
+
+Hydrogen and oxygen are considered last, since they double as the auxiliary
+balancing species. In the example above the hydrogens of hydroxylamine are not
+an oxidation product of H₂; they are just hydrogens, and preferring nitrogen
+keeps that straight.
+
+Disproportionation works too — `"S2O3-2 + H2O -> SO4-2 + HS-"` resolves to
+thiosulfate as both donor and acceptor, which is a reaction conservation alone
+leaves underdetermined. Where the equation does *not* resolve to exactly one
+donor and one acceptor it raises rather than guessing; name the couples with
+`from_couples` in that case.
 
 ### Realistic conditions
 
@@ -197,6 +223,23 @@ a proton-only treatment gets wrong by tens of p*K* units.
 
 Twelve families ship: sulfide, carbonate, ammonia, phosphate, acetate, lactate,
 formate, propanoate, butanoate, sulfite, nitrite, sulfate.
+
+### Species pyGCC does not have
+
+Hydroxylamine, glucose and pyruvate are in none of pyGCC's databases, so they
+come from a small hand-entered table instead.
+
+**These values are of a different kind from everything else here.** They are
+literature figures typed in by hand, not computed from an equation of state and
+not cross-checked against a second source the way the mineral data was. Each
+carries a `verified` flag, and an unverified one **warns every time it is
+used**. All three currently ship unverified — trace them to a primary source and
+set the flag before relying on them.
+
+They are single-temperature values, honoured at 25 °C and refused elsewhere
+unless an enthalpy is available, in which case a van 't Hoff correction is
+applied and a warning issued — the same stance taken for the isothermal
+manganese oxides.
 
 ### Iron and manganese
 
@@ -459,7 +502,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 199 tests
+python -m unittest discover -s tests     # 220 tests
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```
@@ -532,9 +575,9 @@ items unblock later ones.
    Revisit only to interoperate with eQuilibrator values or to do
    metabolic-pathway thermodynamics, where everything upstream is in Alberty's
    convention and mixing conventions silently corrupts a pathway sum.
-2. **Supplemental formation-energy table** for species pyGCC lacks, chiefly
-   glucose and pyruvate. Every entry carries a provenance string and a
-   `verified` flag, and unverified values warn on use. Designed in `SPEC.md` §2.1.
+2. **Verify the supplemental values.** Hydroxylamine, glucose and pyruvate are
+   hand-entered and flagged unverified. Each needs tracing to a primary source,
+   confirming against its standard state, and the flag setting.
 3. **Syntrophy window figure**: both partners' ΔG against $p_{H_2}$ on one
    axis, shading the overlap where each is exergonic. The energetics are in
    place and asserted in the tests; only the plotting remains.

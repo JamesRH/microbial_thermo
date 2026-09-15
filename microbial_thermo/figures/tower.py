@@ -245,11 +245,18 @@ def _add_energy_scalebar(ax, reaction, delta_g_atp, energy_quantum):
         zorder=7,
     )
 
-    for offset, label in (
-        (0.0, "0"),
-        (quantum_v, f"{quantum_v:.3f} V  =  {quantum:g} kJ/mol\nenergy quantum"),
-        (atp_v, f"{atp_v:.3f} V  =  {atp:g} kJ/mol\n1 ATP"),
-    ):
+    # At a high electron count the marks bunch together -- six electrons put one
+    # ATP at 0.086 V rather than 0.259 -- so nudge the labels apart and join
+    # each to its own tick with a leader line.
+    offsets = [0.0, quantum_v, atp_v]
+    labels = [
+        "0",
+        f"{quantum_v:.3f} V  =  {quantum:g} kJ/mol\nenergy quantum",
+        f"{atp_v:.3f} V  =  {atp:g} kJ/mol\n1 ATP",
+    ]
+    label_offsets = _stagger(offsets, abs(span) * 0.055)
+
+    for offset, label_offset, label in zip(offsets, label_offsets, labels, strict=True):
         ax.plot(
             [x - 0.012, x + 0.012],
             [top + offset, top + offset],
@@ -259,9 +266,20 @@ def _add_energy_scalebar(ax, reaction, delta_g_atp, energy_quantum):
             clip_on=False,
             zorder=8,
         )
+        if abs(label_offset - offset) > abs(span) * 0.002:
+            ax.plot(
+                [x + 0.012, x + 0.020],
+                [top + offset, top + label_offset],
+                transform=transform,
+                color=PALETTE["annotation"],
+                linewidth=0.7,
+                alpha=0.6,
+                clip_on=False,
+                zorder=8,
+            )
         ax.text(
-            x + 0.022,
-            top + offset,
+            x + 0.024,
+            top + label_offset,
             label,
             transform=transform,
             fontsize=SIZES["annotation"] - 1,

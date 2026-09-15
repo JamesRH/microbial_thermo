@@ -38,6 +38,9 @@ _ARROW = re.compile(r"\s*(?:->|=>|-->|=|→|⟶)\s*")
 #: A separating "+" must have whitespace on both sides; a bare "+" is a charge.
 _PLUS_SEPARATOR = re.compile(r"\s+\+\s+")
 
+#: "+" immediately followed by a letter, i.e. a separator missing its spaces.
+_UNSPACED_SEPARATOR = re.compile(r"\+[A-Za-z]")
+
 
 def _water(registry=None) -> Species:
     return (registry or default_registry()).resolve("H2O")
@@ -450,7 +453,9 @@ def _split_side(side: str, equation: str) -> list[str]:
     species called ``H``.
     """
     tokens = [t.strip() for t in _PLUS_SEPARATOR.split(side) if t.strip()]
-    if len(tokens) == 1 and "+" in tokens[0][:-1]:
+    # A "+" followed by a letter is a separator someone forgot to space out.
+    # A "+" followed by a digit, or ending the token, is a charge: "Fe+3", "NH4+".
+    if len(tokens) == 1 and _UNSPACED_SEPARATOR.search(tokens[0]):
         raise BalancingError(
             f"could not separate the species in {side.strip()!r} (from "
             f"{equation!r}); put spaces around the separating '+', as in "
@@ -533,3 +538,112 @@ def balance_equation(equation: str, registry=None) -> dict:
 
     verify_conservation(coefficients, label=f"balanced {equation!r}")
     return coefficients
+
+
+#: Species that never form a couple of their own -- they are the auxiliaries
+#: used to balance oxygen, hydrogen and charge.
+_NEVER_A_COUPLE = frozenset({"H+", "H2O", "OH-"})
+
+#: An element in its elemental form couples to a conventional partner that the
+#: written equation usually leaves implicit: H2 oxidises to H+, O2 reduces to
+#: water.
+_IMPLICIT_PARTNERS = {"H2": "H+", "O2": "H2O"}
+
+
+def infer_couples(equation: str, registry=None) -> tuple:
+    """Work out the donor and acceptor couples from a written equation.
+
+    Returns ``(donor_couple, acceptor_couple)`` as ``(reduced, oxidized)``
+    name pairs, ready for :meth:`Reaction.from_couples`.
+
+    The method: find every element whose oxidation state differs between a
+    reactant and a product, which gives the couples directly. Any redox-active
+    species left over -- typically H2 or O2, whose partner the writer left
+    implicit -- is paired with that conventional partner. Hydrogen and oxygen
+    are considered last, since they are also the auxiliary balancing species
+    and would otherwise produce spurious couples: in
+    ``NO3- + H2 -> NH2OH`` the hydrogens of hydroxylamine are not an oxidation
+    product of H2, they are just hydrogens.
+
+    Raises when the result is not a single donor and a single acceptor, since
+    guessing there would be worse than asking.
+    """
+    registry = registry or default_registry()
+    reactant_names, product_names = parse_equation(equation)
+    reactants = [registry.resolve(n) for n in reactant_names]
+    products = [registry.resolve(n) for n in product_names]
+
+    candidates = [s for s in reactants + products if s.backend not in _NEVER_A_COUPLE]
+    elements = sorted({e for s in candidates for e in s.parsed.elements} - _AUXILIARY_ELEMENTS)
+
+    found: list[tuple] = []  # (reactant, product, element)
+    assigned: set = set()
+    for element in elements:
+        left = [
+            s
+            for s in reactants
+            if s.parsed.element_count(element) and s.backend not in _NEVER_A_COUPLE
+        ]
+        right = [
+            s
+            for s in products
+            if s.parsed.element_count(element) and s.backend not in _NEVER_A_COUPLE
+        ]
+        for r in left:
+            for p in right:
+                try:
+                    if mean_oxidation_state(element, r.formula) == mean_oxidation_state(
+                        element, p.formula
+                    ):
+                        continue
+                except Exception:
+                    continue
+                found.append((r, p, element))
+                assigned.add(r.backend)
+                assigned.add(p.backend)
+
+    # Anything still unassigned should be an elemental species whose partner the
+    # writer left out.
+    for species in candidates:
+        if species.backend in assigned:
+            continue
+        partner_name = _IMPLICIT_PARTNERS.get(species.formula)
+        if partner_name is None:
+            continue
+        partner = registry.resolve(partner_name)
+        element = next(iter(species.parsed.elements))
+        on_left = any(s.backend == species.backend for s in reactants)
+        if on_left:
+            found.append((species, partner, element))
+        else:
+            found.append((partner, species, element))
+        assigned.add(species.backend)
+
+    donors, acceptors = [], []
+    for reactant, product, element in found:
+        reactant_state = mean_oxidation_state(element, reactant.formula)
+        product_state = mean_oxidation_state(element, product.formula)
+        if reactant_state < product_state:
+            # The reactant loses electrons: it is the donor, written oxidatively.
+            donors.append((reactant, product, element))
+        else:
+            acceptors.append((product, reactant, element))
+
+    if len(donors) != 1 or len(acceptors) != 1:
+        raise AmbiguousReactionError(
+            f"could not read a single donor and a single acceptor from "
+            f"{equation!r}: found {len(donors)} donor(s) "
+            f"[{', '.join(f'{r.backend}->{p.backend}' for r, p, _ in donors)}] and "
+            f"{len(acceptors)} acceptor(s) "
+            f"[{', '.join(f'{o.backend}->{r.backend}' for r, o, _ in acceptors)}]. "
+            "Build it with Reaction.from_couples(donor=..., acceptor=...) instead, "
+            "naming the couples yourself.",
+            basis=(donors, acceptors),
+        )
+
+    donor_reduced, donor_oxidized, _ = donors[0]
+    acceptor_reduced, acceptor_oxidized, _ = acceptors[0]
+    return (
+        (donor_reduced.backend, donor_oxidized.backend),
+        (acceptor_reduced.backend, acceptor_oxidized.backend),
+    )

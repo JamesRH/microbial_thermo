@@ -147,6 +147,21 @@ def default_registry() -> SpeciesRegistry:
         )
         for item in document["species"]
     ]
+
+    # Species no pyGCC database carries, supplied by the hand-entered table.
+    from .supplemental import supplemental_species
+
+    entries.extend(
+        Species(
+            backend=entry.backend,
+            formula=entry.formula,
+            display=entry.display,
+            phase=entry.phase,
+            smiles=entry.smiles,
+            aliases=entry.aliases,
+        )
+        for entry in supplemental_species().values()
+    )
     return SpeciesRegistry(entries)
 
 
