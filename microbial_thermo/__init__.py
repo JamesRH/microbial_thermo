@@ -35,6 +35,14 @@ from .exceptions import (
 )
 from .oxidation import atom_oxidation_states, mean_oxidation_state, nosc
 from .reaction import Couple, HalfReactionResult, Reaction
+from .speciation import (
+    default_families,
+    dominant,
+    fractions,
+    pKa,
+    pKa_ladder,
+    speciation_table,
+)
 from .species import Species, default_registry, resolve
 from .units import Quantity, ureg
 
@@ -100,6 +108,12 @@ def versions() -> dict[str, str]:
 
 __all__ = [
     "Conditions",
+    "default_families",
+    "dominant",
+    "fractions",
+    "pKa",
+    "pKa_ladder",
+    "speciation_table",
     "Couple",
     "HalfReaction",
     "HalfReactionResult",

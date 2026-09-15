@@ -18,6 +18,13 @@ class Conditions:
     resolves; ``partial_pressures`` are in bar for gaseous species. Anything not
     listed is held at unit activity, which reproduces the standard state.
 
+    ``total_concentrations`` are keyed by an acid-base family instead -- pass
+    ``{"sulfide": 1e-6}`` or ``{"DIC": 2.2e-3}`` -- and the pH-dependent
+    fraction belonging to each member is worked out for you. This is usually
+    what you want, because measurements are reported as totals while reactions
+    are written with one specific form. A per-species entry in
+    ``concentrations`` takes precedence over a family total.
+
     ``activity_model``:
 
     ``"bdot"``
@@ -35,6 +42,7 @@ class Conditions:
     pressure_bar: float | None = None
     ionic_strength: float = 0.0
     concentrations: dict[str, float] = field(default_factory=dict)
+    total_concentrations: dict[str, float] = field(default_factory=dict)
     partial_pressures: dict[str, float] = field(default_factory=dict)
     activity_model: str = "ideal"
     water_activity: float = 1.0
@@ -53,6 +61,10 @@ class Conditions:
     @property
     def proton_activity(self) -> float:
         return 10.0**-self.pH
+
+    @property
+    def uses_speciation(self) -> bool:
+        return bool(self.total_concentrations)
 
     def replace(self, **changes) -> Conditions:
         """Return a copy with ``changes`` applied."""

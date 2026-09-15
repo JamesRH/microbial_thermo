@@ -110,7 +110,21 @@ def _activity(species: Species, conditions: Conditions, backend) -> float:
 
     molality = lookup(conditions.concentrations)
     if molality is None:
-        return 1.0
+        molality = _molality_from_family_total(species, conditions, backend)
+        if molality is None:
+            return 1.0
+    else:
+        # An explicit per-species concentration near a pKa is exactly where
+        # naming one form of a family goes wrong, so say so.
+        from .speciation import warn_if_ambiguous
+
+        warn_if_ambiguous(
+            species,
+            conditions.pH,
+            conditions.temperature_c,
+            conditions.pressure_bar,
+            backend,
+        )
     molality = float(molality)
 
     if conditions.activity_model == "ideal":
@@ -124,6 +138,34 @@ def _activity(species: Species, conditions: Conditions, backend) -> float:
         species_name=species.backend,
     )
     return gamma * molality
+
+
+def _molality_from_family_total(species: Species, conditions: Conditions, backend):
+    """Molality of ``species`` implied by a family total, or None.
+
+    Turns a measured total -- total sulfide, DIC, total ammonia -- into the
+    molality of the one form the reaction is written with, using the
+    pH-dependent distribution across the family.
+    """
+    if not conditions.total_concentrations:
+        return None
+
+    from .speciation import family_by_name, family_for, fraction_of
+
+    family = family_for(species)
+    if family is None:
+        return None
+    for key, total in conditions.total_concentrations.items():
+        if family_by_name(key) is family:
+            fraction = fraction_of(
+                species,
+                conditions.pH,
+                conditions.temperature_c,
+                conditions.pressure_bar,
+                backend,
+            )
+            return float(total) * fraction
+    return None
 
 
 def standard_gibbs(coefficients: dict, conditions: Conditions, backend) -> Quantity:

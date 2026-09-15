@@ -93,3 +93,16 @@ species:
   - {backend: "Bixbyite",      formula: "Mn2O3",    display: "Mn_2O_3", phase: s, aliases: [bixbyite]}
   - {backend: "Birnessite",    formula: "Mn8H10O19", display: "Mn_8O_{14}\\cdot 5H_2O", phase: s, aliases: [birnessite]}
   - {backend: "Rhodochrosite", formula: "MnCO3",    display: "MnCO_3",  phase: s, aliases: [rhodochrosite]}
+
+  # --- conjugate acids and bases needed by the speciation layer ---
+  # These complete the acid-base families in acid_base.yaml. Without both
+  # members present, a family cannot be used.
+  - {backend: "H3PO4(aq)", formula: "H3PO4",  display: "H_3PO_4",     phase: aq, aliases: ["phosphoric acid"]}
+  - {backend: "H2PO4-",    formula: "H2PO4-", display: "H_2PO_4^-",   phase: aq, aliases: ["H2PO4-", "dihydrogen phosphate"]}
+  - {backend: "HPO4--",    formula: "HPO4-2", display: "HPO_4^{2-}",  phase: aq, aliases: ["HPO4-2", "hydrogen phosphate"]}
+  - {backend: "PO4---",    formula: "PO4-3",  display: "PO_4^{3-}",   phase: aq, aliases: ["PO4-3", orthophosphate]}
+  - {backend: "HSO3-",     formula: "HSO3-",  display: "HSO_3^-",     phase: aq, aliases: [bisulfite]}
+  - {backend: "HSO4-",     formula: "HSO4-",  display: "HSO_4^-",     phase: aq, aliases: [bisulfate]}
+  - {backend: "HNO2(aq)",  formula: "HNO2",   display: "HNO_2",       phase: aq, aliases: ["nitrous acid"]}
+  - {backend: "Propanoic_acid(aq)", formula: "C3H6O2", display: "propionic\\ acid", phase: aq, smiles: "CCC(=O)O",  aliases: ["propionic acid", "propanoic acid"]}
+  - {backend: "Butanoic_acid(aq)",  formula: "C4H8O2", display: "butyric\\ acid",   phase: aq, smiles: "CCCC(=O)O", aliases: ["butyric acid", "butanoic acid"]}

@@ -129,6 +129,42 @@ mt.atom_oxidation_states("CC(=O)[O-]")    # per-atom, acetate: C at -3 and +3
 
 Exact `Fraction`s, so magnetite iron reports `+8/3` rather than `2.6666667`.
 
+### pH speciation
+
+Measurements are reported as totals — total sulfide, DIC, total ammonia — while
+a reaction is written with one specific form. Give the total and the split is
+handled for you:
+
+```python
+conditions = mt.Conditions(
+    temperature_c=25.0, pH=7.0, activity_model="ideal",
+    total_concentrations={"sulfide": 1e-6, "DIC": 2.2e-3},
+)
+```
+
+At pH 6 only 9% of total sulfide is HS⁻; at pH 8 it is 91%. Naming one form and
+treating a measured total as all of it is wrong by roughly a factor of two near
+a p*K*a, so the library warns when you do that.
+
+```python
+mt.speciation_table("sulfide", 7.0)
+#  species  fraction   percent  pKa to next
+#  H2S(aq)  0.492942   49.294   6.99
+#  HS-      0.507058   50.706
+```
+
+p*K*a values are **computed from the backend at the working temperature**, not
+tabulated, so sulfide's p*K*a falls from 6.99 at 25 °C to 6.65 at 60 °C and the
+distribution shifts with it. At 25 °C the computed values reproduce the
+literature: carbonate 6.34 / 10.33, ammonium 9.24, phosphate 2.17 / 7.21 /
+12.32, acetate 4.76.
+
+The carbonate step is balanced with water — CO₂(aq) + H₂O ⇌ HCO₃⁻ + H⁺ — which
+a proton-only treatment gets wrong by tens of p*K* units.
+
+Twelve families ship: sulfide, carbonate, ammonia, phosphate, acetate, lactate,
+formate, propanoate, butanoate, sulfite, nitrite, sulfate.
+
 ### Iron and manganese
 
 Aqueous ions come from the HKF database; solid phases are derived from log K
@@ -202,11 +238,12 @@ Options:
   --help           Show this message and exit.
 
 Commands:
-  couple    Balance one redox couple and report its potentials.
-  figure    Render a figure to SVG and PNG, or to standalone HTML for the...
-  reaction  Compute a whole reaction from a donor and an acceptor couple.
-  species   List known species, optionally filtered by a substring.
-  tower     Print the reference redox couples, ordered by potential.
+  couple      Balance one redox couple and report its potentials.
+  figure      Render a figure to SVG and PNG, or to standalone HTML for...
+  reaction    Compute a whole reaction from a donor and an acceptor couple.
+  speciation  Show acid-base speciation at a given pH and temperature.
+  species     List known species, optionally filtered by a substring.
+  tower       Print the reference redox couples, ordered by potential.
 ```
 
 Examples:
@@ -218,6 +255,8 @@ mthermo reaction -d "H2(g)" "H+" -a methane CO2 -p "H2(g)=1e-5" --ph 6.8
 mthermo figure -d acetate CO2 -a H2O O2 --kind tower -o figures/acetate
 mthermo figure -d "H2(g)" "H+" -a HS- SO4-2 --kind explorer -o figures/explorer
 mthermo tower --ph 7 -T 25
+mthermo speciation                      # every family and its pKa ladder
+mthermo speciation sulfide --ph 7 -T 60
 mthermo species sulf
 ```
 
@@ -301,7 +340,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 116 tests
+python -m unittest discover -s tests     # 138 tests
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```
@@ -323,10 +362,12 @@ ruff check microbial_thermo tests
 - **Neutral species are treated as ideal** ($\gamma = 1$) under the B-dot model,
   the usual Helgeson convention. Dissolved-gas activities are therefore not
   salted out.
-- **pH speciation is not yet implemented.** You currently name the species you
-  want (`H2S` or `HS-`) and get exactly that species. The automatic,
-  abundance-weighted acid–base treatment is designed in `SPEC.md` §6 but not
-  built — see Future work item 1, which is the most important gap.
+- **Speciation acts on activities, not on a transformed standard state.**
+  Giving a family total yields the correct activity of each form, which is what
+  in-situ ΔG needs. It is not the same as eQuilibrator's Legendre-transformed
+  ΔG′ over pseudoisomer groups, where protons are implicit and reactions are
+  balanced without H⁺. Here H⁺ is always explicit and balanced. See Future work
+  item 1.
 
 ---
 
@@ -337,12 +378,11 @@ items unblock later ones.
 
 ### Tier 1 — small, and builds directly on what exists
 
-1. **pH speciation layer** *(the most important gap)*. Resolve a typed species
-   onto its acid–base family, compute each member's fractional abundance from
-   p$K_a$ values derived from the backend at the working temperature, and use
-   the abundance-weighted group free energy. Matters most for sulfide, whose
-   p$K_a$ of ~7.0 sits exactly at physiological pH, where picking a dominant
-   species is a coin flip. Designed in `SPEC.md` §6.
+1. **Transformed (Legendre) standard state**, in the manner of eQuilibrator:
+   reactions balanced without explicit H⁺, and a ΔG′ defined over each
+   pseudoisomer group. The activity-level speciation now implemented handles
+   in-situ ΔG correctly; this would additionally make tabulated ΔG°′ values
+   directly comparable with the biochemical literature.
 2. **Supplemental formation-energy table** for species pyGCC lacks, chiefly
    glucose and pyruvate. Every entry carries a provenance string and a
    `verified` flag, and unverified values warn on use. Designed in `SPEC.md` §2.1.

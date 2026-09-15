@@ -1,0 +1,63 @@
+# Acid-base families.
+#
+# Members are listed most-protonated first. Consecutive members differ by one
+# proton, and the deprotonation step is balanced with water where the two forms
+# also differ in oxygen -- the CO2 / HCO3- step being the case that matters,
+# since it is CO2(aq) + H2O = HCO3- + H+ rather than a bare proton loss.
+#
+# No pKa values are stored here. They are computed from the backend at the
+# working temperature, so a calculation at 60 C uses 60 C pKa values instead of
+# a table pinned to 25 C.
+#
+# Species absent from pyGCC's default database are simply omitted: S2- and
+# H2SO3 have no entry, and both matter only far outside the physiological
+# range anyway.
+
+families:
+  - name: sulfide
+    members: ["H2S(aq)", "HS-"]
+    aliases: [sulfide, "total sulfide", "H2S", "sum H2S", TS]
+
+  - name: carbonate
+    members: ["CO2(aq)", "HCO3-", "CO3--"]
+    aliases: [carbonate, "dissolved inorganic carbon", DIC, TIC, "total CO2"]
+
+  - name: ammonia
+    members: ["NH4+", "NH3(aq)"]
+    aliases: [ammonia, ammonium, "total ammonia", TAN]
+
+  - name: phosphate
+    members: ["H3PO4(aq)", "H2PO4-", "HPO4--", "PO4---"]
+    aliases: [phosphate, "total phosphate", orthophosphate, Pi]
+
+  - name: acetate
+    members: ["Acetic_acid(aq)", "Acetate"]
+    aliases: [acetate, "acetic acid", "total acetate"]
+
+  - name: lactate
+    members: ["Lactic_acid(aq)", "Lactate(aq)"]
+    aliases: [lactate, "lactic acid", "total lactate"]
+
+  - name: formate
+    members: ["Formic_acid(aq)", "Formate(aq)"]
+    aliases: [formate, "formic acid", "total formate"]
+
+  - name: propanoate
+    members: ["Propanoic_acid(aq)", "Propanoate(aq)"]
+    aliases: [propanoate, propionate, "propionic acid", "total propionate"]
+
+  - name: butanoate
+    members: ["Butanoic_acid(aq)", "Butanoate(aq)"]
+    aliases: [butanoate, butyrate, "butyric acid", "total butyrate"]
+
+  - name: sulfite
+    members: ["HSO3-", "SO3--"]
+    aliases: [sulfite, "total sulfite"]
+
+  - name: nitrite
+    members: ["HNO2(aq)", "NO2-"]
+    aliases: [nitrite, "total nitrite"]
+
+  - name: sulfate
+    members: ["HSO4-", "SO4--"]
+    aliases: [sulfate, "total sulfate"]

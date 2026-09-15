@@ -294,6 +294,31 @@ def tower(temperature, ph, ionic_strength, concentration, partial_pressure):
 
 
 @main.command()
+@click.argument("family", required=False, default="")
+@_with_common
+@_version_option
+def speciation(family, temperature, ph, ionic_strength, concentration, partial_pressure):
+    """Show acid-base speciation at a given pH and temperature.
+
+    With no FAMILY, lists every family and its pKa ladder. With one, prints the
+    distribution across its members, e.g. `mthermo speciation sulfide --ph 7`.
+    """
+    from .speciation import default_families, pKa_ladder, speciation_table
+
+    if not family:
+        click.echo(f"pKa values at {temperature:g} C:")
+        for entry in default_families():
+            ladder = ", ".join(f"{v:.2f}" for v in pKa_ladder(entry, temperature_c=temperature))
+            members = " / ".join(m.backend for m in entry.members)
+            click.echo(f"  {entry.name:<11} {ladder:<22} {members}")
+        return
+
+    table = speciation_table(family, ph, temperature_c=temperature)
+    click.echo(f"{family} at pH {ph:g}, {temperature:g} C:")
+    click.echo(table.to_string(index=False))
+
+
+@main.command()
 @click.argument("pattern", required=False, default="")
 @_version_option
 def species(pattern):
