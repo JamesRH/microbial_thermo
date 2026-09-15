@@ -90,8 +90,11 @@ class HalfReaction:
     what makes a redox tower meaningful.
     """
 
-    oxidized: Species
-    reduced: Species
+    #: ``((Species, coefficient), ...)`` for each side. Usually one entry, but
+    #: an incomplete oxidation has several -- syntrophic propionate oxidation
+    #: yields acetate *and* bicarbonate, in a ratio conservation cannot fix.
+    oxidized_side: tuple
+    reduced_side: tuple
     key_element: str
     coefficients: dict
     n_electrons: Fraction
@@ -100,18 +103,38 @@ class HalfReaction:
     def species(self) -> list[Species]:
         return [s for s in self.coefficients if s != ELECTRON]
 
+    @property
+    def is_simple(self) -> bool:
+        """True when each side names a single species, the usual case."""
+        return len(self.oxidized_side) == 1 and len(self.reduced_side) == 1
+
+    @property
+    def oxidized(self) -> Species:
+        """The single oxidized species; raises for a multi-product side."""
+        return _sole(self.oxidized_side, "oxidized")
+
+    @property
+    def reduced(self) -> Species:
+        """The single reduced species; raises for a multi-product side."""
+        return _sole(self.reduced_side, "reduced")
+
     def oxidation_states(self) -> tuple[Fraction, Fraction]:
-        """Mean oxidation state of the key element: (oxidized form, reduced form)."""
+        """Mean oxidation state of the key element: (oxidized side, reduced side).
+
+        Averaged across the whole side, weighted by how many atoms of the key
+        element each species carries. For propionate oxidising to acetate plus
+        bicarbonate, the oxidized state is the mean over both products.
+        """
         return (
-            mean_oxidation_state(self.key_element, self.oxidized.formula),
-            mean_oxidation_state(self.key_element, self.reduced.formula),
+            side_oxidation_state(self.oxidized_side, self.key_element),
+            side_oxidation_state(self.reduced_side, self.key_element),
         )
 
     def scaled(self, factor) -> HalfReaction:
         factor = Fraction(factor)
         return HalfReaction(
-            oxidized=self.oxidized,
-            reduced=self.reduced,
+            oxidized_side=self.oxidized_side,
+            reduced_side=self.reduced_side,
             key_element=self.key_element,
             coefficients={k: v * factor for k, v in self.coefficients.items()},
             n_electrons=self.n_electrons * factor,
@@ -133,8 +156,8 @@ class HalfReaction:
 
     def reversed(self) -> HalfReaction:
         return HalfReaction(
-            oxidized=self.oxidized,
-            reduced=self.reduced,
+            oxidized_side=self.oxidized_side,
+            reduced_side=self.reduced_side,
             key_element=self.key_element,
             coefficients={k: -v for k, v in self.coefficients.items()},
             n_electrons=-self.n_electrons,
@@ -154,26 +177,123 @@ class HalfReaction:
         return self.format()
 
 
-def find_redox_element(reduced: Species, oxidized: Species) -> str:
-    """Identify the element that changes oxidation state between two forms.
+def normalize_side(spec, registry=None) -> tuple:
+    """Normalise one side of a couple into ``((Species, coefficient), ...)``.
+
+    Accepts a species name, a :class:`Species`, a sequence of names (taken in
+    equal proportion), a mapping of name to coefficient, or a sequence of
+    ``(name, coefficient)`` pairs.
+
+    Proportions *within* a side are the caller's to state, because conservation
+    cannot supply them: propionate could in principle oxidise to acetate plus
+    bicarbonate, to one and a half acetate, or to three bicarbonate, and which
+    one happens is biochemistry, not stoichiometry. Conservation then fixes the
+    scale *between* the two sides.
+    """
+    registry = registry or default_registry()
+
+    if isinstance(spec, (Species, str)):
+        return ((registry.resolve(spec), Fraction(1)),)
+
+    if isinstance(spec, dict):
+        items = spec.items()
+    else:
+        try:
+            items = list(spec)
+        except TypeError as exc:
+            raise BalancingError(f"could not read {spec!r} as one side of a redox couple") from exc
+        # A bare sequence of names means equal proportions.
+        if items and all(isinstance(i, (str, Species)) for i in items):
+            items = [(entry, 1) for entry in items]
+
+    side = []
+    for entry in items:
+        try:
+            name, coefficient = entry
+        except (TypeError, ValueError) as exc:
+            raise BalancingError(
+                f"could not read {entry!r} as a (species, coefficient) pair"
+            ) from exc
+        value = Fraction(coefficient)
+        if value <= 0:
+            raise BalancingError(f"coefficient for {name!r} must be positive, got {coefficient}")
+        side.append((registry.resolve(name), value))
+
+    if not side:
+        raise BalancingError("a redox couple side cannot be empty")
+    return tuple(side)
+
+
+def _sole(side: tuple, which: str) -> Species:
+    if len(side) != 1:
+        raise BalancingError(
+            f"this couple's {which} side names "
+            f"{', '.join(s.backend for s, _ in side)}; use .{which}_side for a "
+            "multi-product couple"
+        )
+    return side[0][0]
+
+
+def side_element_count(side: tuple, element: str) -> Fraction:
+    """Total atoms of ``element`` across a side."""
+    return sum(
+        (coefficient * species.parsed.element_count(element) for species, coefficient in side),
+        Fraction(0),
+    )
+
+
+def side_charge(side: tuple) -> Fraction:
+    return sum((coefficient * species.charge for species, coefficient in side), Fraction(0))
+
+
+def side_oxidation_state(side: tuple, element: str) -> Fraction:
+    """Mean oxidation state of ``element`` across a side, atom-weighted."""
+    total_atoms = side_element_count(side, element)
+    if total_atoms == 0:
+        raise BalancingError(f"no {element} on the side {', '.join(s.backend for s, _ in side)}")
+    weighted = sum(
+        (
+            coefficient
+            * species.parsed.element_count(element)
+            * mean_oxidation_state(element, species.formula)
+            for species, coefficient in side
+            if species.parsed.element_count(element)
+        ),
+        Fraction(0),
+    )
+    return weighted / total_atoms
+
+
+def _side_elements(side: tuple) -> set:
+    elements: set = set()
+    for species, _ in side:
+        elements |= set(species.parsed.elements)
+    return elements
+
+
+def _describe(side: tuple) -> str:
+    return " + ".join(f"{_format_coefficient(c)}{s.backend}" for s, c in side).strip()
+
+
+def find_redox_element(reduced_side: tuple, oxidized_side: tuple) -> str:
+    """Identify the element that changes oxidation state between two sides.
 
     Prefers an element other than hydrogen or oxygen, since those are the
     auxiliary balancing species.
     """
-    red, ox = reduced.parsed, oxidized.parsed
-    shared = set(red.elements) & set(ox.elements)
+    shared = _side_elements(reduced_side) & _side_elements(oxidized_side)
     if not shared:
         raise BalancingError(
-            f"{reduced.backend!r} and {oxidized.backend!r} share no element, "
-            "so they are not a redox couple"
+            f"{_describe(reduced_side)!r} and {_describe(oxidized_side)!r} share "
+            "no element, so they are not a redox couple"
         )
 
     candidates = sorted(shared - _AUXILIARY_ELEMENTS) or sorted(shared)
     changed = []
     for element in candidates:
         try:
-            if mean_oxidation_state(element, reduced.formula) != mean_oxidation_state(
-                element, oxidized.formula
+            if side_oxidation_state(reduced_side, element) != side_oxidation_state(
+                oxidized_side, element
             ):
                 changed.append(element)
         except Exception:
@@ -184,15 +304,16 @@ def find_redox_element(reduced: Species, oxidized: Species) -> str:
     if len(changed) > 1:
         raise AmbiguousReactionError(
             f"more than one element changes oxidation state between "
-            f"{reduced.backend!r} and {oxidized.backend!r}: {', '.join(changed)}. "
-            "Pass key_element explicitly.",
+            f"{_describe(reduced_side)!r} and {_describe(oxidized_side)!r}: "
+            f"{', '.join(changed)}. Pass key_element explicitly.",
             basis=changed,
         )
     if len(candidates) == 1:
         return candidates[0]
     raise BalancingError(
         f"could not identify the redox-active element between "
-        f"{reduced.backend!r} and {oxidized.backend!r}; pass key_element explicitly"
+        f"{_describe(reduced_side)!r} and {_describe(oxidized_side)!r}; "
+        "pass key_element explicitly"
     )
 
 
@@ -203,43 +324,53 @@ def balance_half_reaction(
 
     Balances the key element, then oxygen with water, hydrogen with protons,
     and charge with electrons.
+
+    Either side may name several species -- see :func:`normalize_side` -- which
+    is what allows incomplete oxidations such as propionate to acetate plus
+    bicarbonate. Proportions within a side come from the caller; the scale
+    between the sides is set by conserving the key element.
     """
     registry = registry or default_registry()
-    reduced = registry.resolve(reduced)
-    oxidized = registry.resolve(oxidized)
-    element = key_element or find_redox_element(reduced, oxidized)
+    reduced_side = normalize_side(reduced, registry)
+    oxidized_side = normalize_side(oxidized, registry)
+    element = key_element or find_redox_element(reduced_side, oxidized_side)
 
-    red, ox = reduced.parsed, oxidized.parsed
-    n_red = red.element_count(element)
-    n_ox = ox.element_count(element)
-    if n_red == 0 or n_ox == 0:
+    key_in_reduced = side_element_count(reduced_side, element)
+    key_in_oxidized = side_element_count(oxidized_side, element)
+    if key_in_reduced == 0 or key_in_oxidized == 0:
         raise BalancingError(
-            f"key element {element} missing from {reduced.backend!r} or {oxidized.backend!r}"
+            f"key element {element} missing from {_describe(reduced_side)!r} or "
+            f"{_describe(oxidized_side)!r}"
         )
 
-    # One mole of the reduced form fixes the scale.
-    a_red = Fraction(1)
-    a_ox = Fraction(n_red, n_ox)
+    # The reduced side as given fixes the scale; the oxidized side is scaled to
+    # conserve the key element across the arrow.
+    scale = key_in_reduced / key_in_oxidized
+    oxidized_side = tuple((s, c * scale) for s, c in oxidized_side)
 
     # Written as a reduction:
-    #     a_ox Oxidized + h H+ + n e-  ->  a_red Reduced + w H2O
+    #     oxidized side + h H+ + n e-  ->  reduced side + w H2O
     # Negative w or h simply moves that species to the other side. When the
     # couple *is* water or the proton, these terms come out at zero, which is
     # why the O2/H2O and H+/H2 couples need no special case.
-    water = a_ox * ox.element_count("O") - a_red * red.element_count("O")
-    proton = a_red * red.element_count("H") + 2 * water - a_ox * ox.element_count("H")
-    electrons = a_ox * ox.charge + proton - a_red * red.charge
+    water = side_element_count(oxidized_side, "O") - side_element_count(reduced_side, "O")
+    proton = (
+        side_element_count(reduced_side, "H") + 2 * water - side_element_count(oxidized_side, "H")
+    )
+    electrons = side_charge(oxidized_side) + proton - side_charge(reduced_side)
 
     coefficients: dict = {}
-    _add(coefficients, oxidized, -a_ox)
-    _add(coefficients, reduced, a_red)
+    for species, coefficient in oxidized_side:
+        _add(coefficients, species, -coefficient)
+    for species, coefficient in reduced_side:
+        _add(coefficients, species, coefficient)
     _add(coefficients, _water(registry), water)
     _add(coefficients, _proton(registry), -proton)
     _add(coefficients, ELECTRON, -electrons)
 
     half = HalfReaction(
-        oxidized=oxidized,
-        reduced=reduced,
+        oxidized_side=oxidized_side,
+        reduced_side=reduced_side,
         key_element=element,
         coefficients={k: v for k, v in coefficients.items() if v != 0},
         n_electrons=electrons,

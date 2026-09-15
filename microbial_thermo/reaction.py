@@ -50,32 +50,65 @@ CONSISTENCY_TOLERANCE_KJ = 1e-6
 
 @dataclass(frozen=True)
 class Couple:
-    """A redox couple, always written reduced/oxidized."""
+    """A redox couple, always written reduced/oxidized.
 
-    reduced: Species
-    oxidized: Species
+    Either side may name several species. That is what allows *incomplete*
+    oxidations -- syntrophic propionate oxidation yields acetate and
+    bicarbonate together -- which a single-species couple cannot express.
+    """
+
+    #: ``((Species, coefficient), ...)``; usually a single entry per side.
+    reduced_side: tuple
+    oxidized_side: tuple
     key_element: str | None = None
 
     @classmethod
     def make(cls, reduced, oxidized, key_element=None, registry=None) -> Couple:
+        from .balance import normalize_side
+
         registry = registry or default_registry()
         return cls(
-            reduced=registry.resolve(reduced),
-            oxidized=registry.resolve(oxidized),
+            reduced_side=normalize_side(reduced, registry),
+            oxidized_side=normalize_side(oxidized, registry),
             key_element=key_element,
         )
 
+    @property
+    def reduced(self) -> Species:
+        """The single reduced species; raises for a multi-product side."""
+        from .balance import _sole
+
+        return _sole(self.reduced_side, "reduced")
+
+    @property
+    def oxidized(self) -> Species:
+        """The single oxidized species; raises for a multi-product side."""
+        from .balance import _sole
+
+        return _sole(self.oxidized_side, "oxidized")
+
+    @property
+    def is_simple(self) -> bool:
+        return len(self.reduced_side) == 1 and len(self.oxidized_side) == 1
+
     def half_reaction(self, registry=None) -> HalfReaction:
         return balance_half_reaction(
-            self.reduced, self.oxidized, self.key_element, registry=registry
+            self.reduced_side, self.oxidized_side, self.key_element, registry=registry
         )
+
+    @staticmethod
+    def _join(side, attribute: str) -> str:
+        return " + ".join(getattr(species, attribute) for species, _ in side)
 
     @property
     def label(self) -> str:
-        return f"{self.oxidized.label}/{self.reduced.label}"
+        return f"{self._join(self.oxidized_side, 'label')}/{self._join(self.reduced_side, 'label')}"
 
     def __str__(self) -> str:
-        return f"{self.oxidized.backend}/{self.reduced.backend}"
+        return (
+            f"{self._join(self.oxidized_side, 'backend')}/"
+            f"{self._join(self.reduced_side, 'backend')}"
+        )
 
 
 def _activity(species: Species, conditions: Conditions, backend) -> float:

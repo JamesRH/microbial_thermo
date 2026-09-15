@@ -8,11 +8,13 @@
 # Doubles as the regression corpus: every entry is balanced and put through the
 # two-path cross-check by the test suite.
 #
-# LIMITATION: a couple names one reduced and one oxidized species, so
-# metabolisms whose oxidation yields *two* carbon products cannot be expressed
-# here. Syntrophic propionate oxidation (propionate -> acetate + CO2 + H2) is
-# the important case. Complete oxidations to CO2 are fine; incomplete ones are
-# not. See the Future work note in the README.
+# A side may name several species, which is what lets *incomplete* oxidations
+# be catalogued: syntrophic propionate oxidation yields acetate and bicarbonate
+# together, in a ratio conservation cannot supply. Write such a side as a list,
+# optionally with explicit proportions:
+#
+#     donor: ["Propanoate(aq)", ["Acetate", "HCO3-"]]
+#     donor: ["Butanoate(aq)", [["Acetate", 2]]]
 
 metabolisms:
   # --- aerobic ---
@@ -216,3 +218,37 @@ metabolisms:
     acceptor: [acetate, "CO2(aq)"]
     key_element: C
     organisms: Acetobacterium, Clostridium ljungdahlii
+
+  # --- syntrophy ---
+  #
+  # These are endergonic under standard conditions and only proceed when a
+  # partner keeps the hydrogen low -- which is the whole point of syntrophy,
+  # and why they are worth having in a course.
+  - name: syntrophic_propionate_oxidation
+    label: Syntrophic propionate oxidation
+    group: syntrophy
+    donor: ["Propanoate(aq)", ["Acetate", "HCO3-"]]
+    acceptor: ["H2(g)", "H+"]
+    key_element: C
+    organisms: Syntrophobacter
+    note: >-
+      Propionate + 3 H2O -> acetate + bicarbonate + H+ + 3 H2. Endergonic at
+      standard state; requires a hydrogen scavenger.
+
+  - name: syntrophic_butyrate_oxidation
+    label: Syntrophic butyrate oxidation
+    group: syntrophy
+    donor: ["Butanoate(aq)", [["Acetate", 2]]]
+    acceptor: ["H2(g)", "H+"]
+    key_element: C
+    organisms: Syntrophomonas
+    note: >-
+      Butyrate + 2 H2O -> 2 acetate + H+ + 2 H2. Endergonic at standard state.
+
+  - name: syntrophic_ethanol_oxidation
+    label: Syntrophic ethanol oxidation
+    group: syntrophy
+    donor: ["Ethanol(aq)", ["Acetate"]]
+    acceptor: ["H2(g)", "H+"]
+    key_element: C
+    organisms: "Syntrophus, the classic S organism"

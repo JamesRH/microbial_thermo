@@ -16,12 +16,37 @@ Built for teaching first. Every result can be asked to show its work.
 ## Installation
 
 ```bash
+source setup.sh
+```
+
+That one command builds the `microbial-thermo` environment if it is missing,
+activates it, installs this package in editable mode, and registers the Jupyter
+kernel. Pass `--force` to rebuild from scratch.
+
+It must be **sourced**, not executed — activating an environment changes the
+current shell, and a subshell would discard that. Running it directly prints a
+reminder and exits rather than half-working.
+
+Then launch the notebooks:
+
+```bash
+./run_notebooks.sh              # JupyterLab, notebooks/ directory, right kernel
+./run_notebooks.sh --classic    # the classic Notebook interface
+```
+
+`run_notebooks.sh` is executed rather than sourced: it activates the environment
+for its own process and leaves your shell alone.
+
+<details>
+<summary>Doing it by hand instead</summary>
+
+```bash
 mamba env create -f environment.yaml
 mamba activate microbial-thermo
 pip install -e .
 ```
 
-To build the environment by hand instead:
+Or piece by piece:
 
 ```bash
 mamba create -n microbial-thermo python=3.11
@@ -30,19 +55,19 @@ mamba install -c conda-forge numpy pandas scipy chempy sympy pint matplotlib sea
 pip install pygcc==1.5.3
 ```
 
-`pygcc` is installed with `pip` because it is not published on conda-forge;
-PyPI is its only distribution channel. Everything else comes from conda-forge.
-
-### Jupyter
-
-Register the environment as a kernel:
-
 ```bash
 mamba activate microbial-thermo
 python -m ipykernel install --user --name microbial-thermo --display-name "microbial-thermo"
 ```
 
-Then pick **microbial-thermo** as the notebook kernel. Notebooks in
+</details>
+
+`pygcc` is installed with `pip` because it is not published on conda-forge;
+PyPI is its only distribution channel. Everything else comes from conda-forge.
+
+### Jupyter
+
+Pick **microbial-thermo** as the notebook kernel. Notebooks in
 `notebooks/` are paired to `.py` scripts with jupytext in `percent` format;
 edit the `.py` and run `jupytext --sync <notebook>.ipynb`.
 
@@ -213,10 +238,33 @@ oxygen (−109 kJ/mol e⁻) > denitrification (−96) > Mn(IV) (−65) > Fe(III)
 at the famously marginal −1.4 and −3.7 kJ/mol e⁻. The zonation order is asserted
 in the test suite: if it broke, the thermodynamics would be wrong.
 
-*Limitation:* a couple names one reduced and one oxidized species, so
-metabolisms whose oxidation yields two carbon products cannot be catalogued.
-Syntrophic propionate oxidation (propionate → acetate + CO₂ + H₂) is the case
-that matters. Complete oxidations to CO₂ are fine.
+### Multi-product couples and syntrophy
+
+Either side of a couple may name several species, which is what lets
+*incomplete* oxidations be expressed:
+
+```python
+mt.Reaction.from_couples(
+    donor=("Propanoate(aq)", ["Acetate", "HCO3-"]),   # two products
+    acceptor=("H2(g)", "H+"),
+    conditions=conditions,
+    normalize_to="integer",
+)
+# Propanoate(aq) + 3 H2O -> Acetate + HCO3- + H+ + 3 H2(g)
+```
+
+Give explicit proportions where they are not one-to-one: `[("Acetate", 2)]` for
+butyrate. Proportions *within* a side are yours to state, because conservation
+cannot supply them — propionate could in principle go to 1.5 acetate, or to
+3 bicarbonate, and which happens is biochemistry. Conservation then fixes the
+scale *between* the sides, and any element that fails to balance is caught.
+
+This is what makes syntrophy expressible. Both reactions come out **endergonic
+at standard state** — +78 kJ/mol for propionate against a published +76, +50 for
+butyrate against +48 — which is exactly why they need a partner to draw the
+hydrogen down. The test suite asserts that a syntrophic window exists: a range
+of $p_{H_2}$ where propionate oxidation and hydrogenotrophic methanogenesis are
+*both* exergonic, with neither working outside it.
 
 ### Figures
 
@@ -411,7 +459,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 175 tests
+python -m unittest discover -s tests     # 199 tests
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```
@@ -487,10 +535,9 @@ items unblock later ones.
 2. **Supplemental formation-energy table** for species pyGCC lacks, chiefly
    glucose and pyruvate. Every entry carries a provenance string and a
    `verified` flag, and unverified values warn on use. Designed in `SPEC.md` §2.1.
-3. **Multi-product couples**, so incomplete oxidations can be catalogued —
-   syntrophic propionate and butyrate oxidation, which yield acetate *and* CO₂.
-   The `Couple` abstraction currently names one species each side, which is what
-   blocks them. This is the main thing missing from the metabolism library.
+3. **Syntrophy window figure**: both partners' ΔG against $p_{H_2}$ on one
+   axis, shading the overlap where each is exergonic. The energetics are in
+   place and asserted in the tests; only the plotting remains.
 4. **Provenance export**: per-result record of pyGCC version, database file
    hash, and per-species source, dumpable as BibTeX.
 5. **Sulfur disproportionation** and other reactions whose balancing is

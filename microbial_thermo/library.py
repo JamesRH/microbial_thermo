@@ -69,11 +69,13 @@ class Metabolism:
         """
         if self.key_element is None:
             return None
-        from .species import default_registry
+        from .balance import normalize_side
 
-        registry = default_registry()
+        # A side may name several species, so normalise before asking whether
+        # the element is present throughout.
         in_both = all(
-            self.key_element in registry.resolve(member).parsed.elements for member in couple
+            any(self.key_element in species.parsed.elements for species, _ in normalize_side(side))
+            for side in couple
         )
         return self.key_element if in_both else None
 

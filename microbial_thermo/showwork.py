@@ -137,13 +137,11 @@ def derivation(reaction: Reaction) -> Derivation:
     ):
         ox_state, red_state = result.oxidation_states()
         element = result.half.key_element
+        # Use the couple's own rendering: a side may name several species.
         step.line(
-            f"- {label}: {result.couple.oxidized.backend}/"
-            f"{result.couple.reduced.backend} — {element} goes from "
-            f"{format_oxidation_state(ox_state)} in "
-            f"{result.couple.oxidized.backend} to "
-            f"{format_oxidation_state(red_state)} in "
-            f"{result.couple.reduced.backend}"
+            f"- {label}: {result.couple} — {element} goes from "
+            f"{format_oxidation_state(ox_state)} on the oxidized side to "
+            f"{format_oxidation_state(red_state)} on the reduced side"
         )
     step.line(
         f"- The donor is written in the oxidative direction and the acceptor "

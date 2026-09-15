@@ -90,18 +90,23 @@ def plot_half_reactions(
     for layout in (top, bottom):
         _measure(fig, ax, layout.tokens, SIZES["equation"])
 
-    # Align on a common arrow position, then shift everything right to leave
-    # room for the role labels.
+    # Align on a common arrow position, then fit both equations into the space
+    # between the role labels and the potentials column.
+    #
+    # Measure the *actual* extent after alignment rather than summing token
+    # widths: the sum omits the inter-token gaps, which underestimates the true
+    # width and lets a long equation overrun the potentials.
     align_at_arrows([top, bottom], gap=_TOKEN_GAP)
-    shift = _LEFT_MARGIN - min(layout.tokens[0].x for layout in (top, bottom))
-    available = 1.0 - _LEFT_MARGIN - _RIGHT_MARGIN
-    widest = max(layout.total_width for layout in (top, bottom))
-    scale = min(1.0, available / widest) if widest > 0 else 1.0
+    tokens = [t for layout in (top, bottom) for t in layout.tokens]
+    leftmost = min(t.x for t in tokens)
+    extent = max(t.x + t.width for t in tokens) - leftmost
 
-    for layout in (top, bottom):
-        for token in layout.tokens:
-            token.x = _LEFT_MARGIN + (token.x + shift - _LEFT_MARGIN) * scale
-            token.width *= scale
+    available = 1.0 - _LEFT_MARGIN - _RIGHT_MARGIN
+    scale = min(1.0, available / extent) if extent > 0 else 1.0
+
+    for token in tokens:
+        token.x = _LEFT_MARGIN + (token.x - leftmost) * scale
+        token.width *= scale
 
     fontsize = SIZES["equation"] * scale
 
