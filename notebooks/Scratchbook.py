@@ -214,11 +214,118 @@ with warnings.catch_warnings():
 work
 
 # %% [markdown]
-# ### Still to do
+# ## 8. The other two problems
 #
-# - NH₃ + MnO₂ → N₂ + Mn²⁺ at pH 10
-# - NH₄⁺ → N₂ under aerobic conditions
+# Both go through the same route. Only the string and the pH change.
+
+# %% [markdown]
+# ### Ammonia oxidation by manganese oxide, pH 10
 #
-# Both should work through `Reaction.from_equation` the same way. The first
-# needs pyrolusite, which is tabulated across temperature; several other
-# manganese oxides are 25 °C only.
+# pH 10 is chosen deliberately: ammonia's p*K*a is near 9.2, so above it the
+# neutral NH₃ is the dominant form rather than ammonium. Worth checking before
+# writing the reaction with one form or the other.
+
+# %%
+mt.speciation_table("ammonia", 10.0)
+
+# %%
+alkaline = mt.Conditions(temperature_c=25.0, pH=10.0)
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    manganese = mt.Reaction.from_equation(
+        "NH3 + MnO2 -> N2 + Mn+2", conditions=alkaline, normalize_to="integer"
+    )
+
+print(manganese.summary())
+
+# %%
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    plot_half_reactions(manganese)
+plt.show()
+
+# %% [markdown]
+# Manganese(IV) is a strong enough oxidant to take ammonia all the way to N₂,
+# and strongly exergonic at that. Note this is written with pyrolusite, which
+# has a full temperature grid; several other manganese oxides in the database
+# are tabulated at 25 °C only and will refuse other temperatures.
+
+# %% [markdown]
+# ### Ammonium oxidation to N₂ under oxygen, pH 7
+
+# %%
+neutral = mt.Conditions(temperature_c=25.0, pH=7.0)
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    aerobic = mt.Reaction.from_equation(
+        "NH4+ + O2 -> N2", conditions=neutral, normalize_to="integer"
+    )
+
+print(aerobic.summary())
+
+# %%
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    plot_half_reactions(aerobic)
+plt.show()
+
+# %% [markdown]
+# ### The three side by side
+#
+# Per electron, so they are comparable despite very different electron counts.
+
+# %%
+rows = [
+    ("NO3- + H2 -> NH2OH", per_pair, conditions),
+    ("NH3 + MnO2 -> N2 + Mn+2", manganese, alkaline),
+    ("NH4+ + O2 -> N2", aerobic, neutral),
+]
+print(f"{'equation':28s} {'pH':>5s} {'n':>3s} {'dG0prime':>11s} {'per e-':>9s} {'dE0prime':>9s}")
+for label, built, where in rows:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        print(
+            f"{label:28s} {where.pH:5.1f} {built.n_electrons!s:>3s} "
+            f"{built.delta_G_standard_prime.magnitude:11.1f} "
+            f"{built.delta_G_per_electron.magnitude:9.2f} "
+            f"{built.delta_E_standard_prime.to('V').magnitude:+9.3f}"
+        )
+
+# %% [markdown]
+# A caution about reading that table. The three rows are **not** a fair
+# comparison of acceptor strength: each uses a different electron donor, and
+# each sits at a different pH. Oxygen looks best partly because it is, and
+# partly because its donor is ammonium rather than ammonia.
+#
+# To compare acceptors properly, hold the donor and the pH fixed and look at the
+# acceptor half reactions alone — which is exactly what the redox tower does:
+
+# %%
+from microbial_thermo.reaction import Couple, HalfReactionResult
+
+same_conditions = mt.Conditions(temperature_c=25.0, pH=7.0)
+for reduced, oxidized in [
+    ("H2O", "O2(aq)"),
+    ("Mn+2", "pyrolusite"),
+    ("NH2OH(aq)", "NO3-"),
+]:
+    pair = Couple.make(reduced, oxidized)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        result = HalfReactionResult(
+            couple=pair, half=pair.half_reaction(),
+            conditions=same_conditions, backend=mt.get_backend(),
+        )
+        value = result.E_standard_prime.to("V").magnitude
+    print(f"{str(pair):26s} E0' = {value:+.3f} V  (pH 7)")
+
+# %% [markdown]
+# On a common footing the order is oxygen, then manganese(IV), then nitrate to
+# hydroxylamine. Pyrolusite looked weak in the table above only because pH 10
+# penalises a couple that consumes four protons — the same reaction is far more
+# favourable at pH 7.
+#
+# Only the nitrate row depends on the unverified hydroxylamine value; the other
+# two rest entirely on pyGCC data.
