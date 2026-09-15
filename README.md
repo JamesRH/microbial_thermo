@@ -129,6 +129,26 @@ mt.atom_oxidation_states("CC(=O)[O-]")    # per-atom, acetate: C at -3 and +3
 
 Exact `Fraction`s, so magnetite iron reports `+8/3` rather than `2.6666667`.
 
+### Iron and manganese
+
+Aqueous ions come from the HKF database; solid phases are derived from log K
+values in pyGCC's GWB database, because no direct-access database it ships
+contains the manganese oxides.
+
+```python
+mt.Reaction.from_couples(donor=("Fe+2", "goethite"), acceptor=("H2O", "O2(aq)"))
+mt.Reaction.from_couples(donor=("acetate", "CO2(aq)"), acceptor=("Mn+2", "pyrolusite"))
+```
+
+Available: `Fe+2`, `Fe+3`, `Mn+2`, `Mn+3`, `MnO4-`, permanganate/manganate;
+goethite, hematite, magnetite, siderite, pyrite, ferrihydrite; pyrolusite,
+manganite, hausmannite, bixbyite, birnessite, rhodochrosite.
+
+Goethite, hematite and magnetite exist in two independent databases, giving two
+routes to the same number. They agree with each other and with published values
+to within 1–3 kJ/mol, which is what licenses trusting the manganese oxides,
+where only one route exists.
+
 ### Figures
 
 ```python
@@ -140,6 +160,18 @@ plot_half_reactions(reaction, save="figures/sulfate")     # SVG + PNG
 plot_redox_tower(reaction, save="figures/tower")          # SVG + PNG
 fig = plot_energy_explorer(reaction, save_html="figures/explorer")
 ```
+
+Both static figures normalise to **an electron pair** by default, whatever
+electron count the reaction was built with; pass `n_electrons=None` to draw it
+as given, or another integer to rescale.
+
+Pinning n is also what makes the tower's energy scale bar exact. Since
+$\Delta G = -nF\Delta E$, a *difference* in potential converts to free energy
+by the constant $2F = 192.97$ kJ·mol⁻¹·V⁻¹, so the bar marks 0.104 V as the
+−20 kJ/mol energy quantum and 0.259 V as one ATP. You can read a reaction's
+yield straight off the tower by comparing its donor–acceptor gap to the bar. An
+absolute kJ/mol *axis* would be wrong — it would imply each couple has an
+absolute free energy, when only differences carry energy.
 
 The explorer writes a self-contained HTML file: dropdown, hover, and the SVG
 download button all work with no Python process behind it, so you can hand the
@@ -269,7 +301,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 95 tests
+python -m unittest discover -s tests     # 116 tests
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```
@@ -282,9 +314,10 @@ ruff check microbial_thermo tests
   formate, lactate, propanoate, butanoate, methanol and ethanol are present.
   The supplemental-data mechanism for filling such gaps is specified in
   `SPEC.md` §2.1 but is **not yet implemented**.
-- **Mineral coverage is thin** in the default `speq21.dat`. Elemental sulfur is
-  present; goethite, hematite, magnetite and pyrolusite are not, and would need
-  a different pyGCC database (`supcrtbl.dat`).
+- **Isothermal minerals.** A few phases — manganite and birnessite among them —
+  are tabulated at 25 °C only in the source database. They evaluate at 25 °C and
+  raise `OutOfRangeError` elsewhere rather than inventing a temperature
+  dependence the data does not contain.
 - **N₂O is absent**, so the full denitrification pathway cannot be stepped
   through species by species.
 - **Neutral species are treated as ideal** ($\gamma = 1$) under the B-dot model,
@@ -344,8 +377,9 @@ items unblock later ones.
 
 13. **Eh–pH (Pourbaix) diagrams** with water stability lines and the couples
     overlaid.
-14. **Mineral-phase support**, which needs `supcrtbl.dat` or Berman data loaded
-    alongside the default database, plus a phase-aware activity convention.
+14. **Wider mineral support**: sulfides beyond pyrite, carbonates, and clays,
+    all of which the GWB route already reaches — they need only registry
+    entries and validation.
 15. **Uncertainty propagation** through formation-energy uncertainties, with a
     tornado plot showing which variable dominates. Note that SUPCRT-lineage
     databases mostly do not carry uncertainties, so this likely needs

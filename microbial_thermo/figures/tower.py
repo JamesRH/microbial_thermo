@@ -23,6 +23,7 @@ from ..tower import reference_couples
 from ..units import (
     DEFAULT_BIOLOGICAL_ENERGY_QUANTUM,
     DEFAULT_DELTA_G_ATP,
+    FARADAY,
     KJ_PER_MOL_STR,
     as_magnitude,
 )
@@ -41,7 +42,8 @@ _GROUP_COLOURS = {
 
 def plot_redox_tower(
     reaction,
-    figsize=(8.5, 8.0),
+    n_electrons: int | None = 2,
+    figsize=(9.5, 8.0),
     primed: bool = True,
     show_reference: bool = True,
     save: str | Path | None = None,
@@ -52,9 +54,17 @@ def plot_redox_tower(
 ):
     """Draw a redox tower with ``reaction``'s two couples marked.
 
+    Normalised to an electron pair by default, matching the half-reaction
+    figure. Fixing n also makes the energy scale bar meaningful: with n held
+    at 2, free energy and potential differ only by the constant 2F, so a
+    span in volts converts directly to kJ/mol.
+
     Returns the matplotlib figure.
     """
     import matplotlib.pyplot as plt
+
+    if n_electrons is not None and reaction.n_electrons != n_electrons:
+        reaction = reaction.renormalized(n_electrons)
 
     conditions = reaction.conditions
     backend = reaction.backend
@@ -155,6 +165,7 @@ def plot_redox_tower(
     )
 
     _add_energy_panel(ax, reaction, delta_g_atp, energy_quantum)
+    _add_energy_scalebar(ax, reaction, delta_g_atp, energy_quantum)
 
     delta_g = as_magnitude(
         reaction.delta_G_standard_prime if primed else reaction.delta_G_standard,
@@ -175,6 +186,103 @@ def plot_redox_tower(
     if save is not None:
         _save(fig, save, formats, dpi)
     return fig
+
+
+def volts_per_kilojoule(n_electrons) -> float:
+    """Volts corresponding to 1 kJ/mol at a fixed electron count.
+
+    From :math:`\\Delta G = -nF\\Delta E`. Only meaningful once n is pinned,
+    which is why the tower normalises to an electron pair by default.
+    """
+    faraday_kj = as_magnitude(FARADAY.to("C/mol"), "C/mol") / 1000.0
+    return 1.0 / (float(n_electrons) * faraday_kj)
+
+
+def _add_energy_scalebar(ax, reaction, delta_g_atp, energy_quantum):
+    """A map-style scale bar converting potential difference to free energy.
+
+    With n fixed, a *difference* in potential maps to free energy by the
+    constant nF, so a scale bar is exact. An absolute kJ/mol axis would not
+    be: it would imply each couple has an absolute free energy, which it does
+    not -- only differences between couples carry energy.
+    """
+    from matplotlib.transforms import blended_transform_factory
+
+    n = reaction.n_electrons
+    per_volt = 1.0 / volts_per_kilojoule(n)  # kJ/mol per volt
+    quantum = abs(as_magnitude(energy_quantum or DEFAULT_BIOLOGICAL_ENERGY_QUANTUM, KJ_PER_MOL_STR))
+    atp = abs(as_magnitude(delta_g_atp or DEFAULT_DELTA_G_ATP, KJ_PER_MOL_STR))
+
+    quantum_v = quantum / per_volt
+    atp_v = atp / per_volt
+
+    transform = blended_transform_factory(ax.transAxes, ax.transData)
+    low, high = ax.get_ylim()  # inverted: low is the larger value
+    span = low - high
+    top = high + 0.42 * span  # anchor in the empty middle of the tower
+    x = 0.90
+
+    # The bar itself: zero to one ATP, with the energy quantum marked inside.
+    ax.plot(
+        [x, x],
+        [top, top + atp_v],
+        transform=transform,
+        color=PALETTE["annotation"],
+        linewidth=1.6,
+        solid_capstyle="butt",
+        clip_on=False,
+        zorder=8,
+    )
+    ax.plot(
+        [x, x],
+        [top, top + quantum_v],
+        transform=transform,
+        color=PALETTE["quantum_band"],
+        linewidth=5.0,
+        alpha=0.75,
+        solid_capstyle="butt",
+        clip_on=False,
+        zorder=7,
+    )
+
+    for offset, label in (
+        (0.0, "0"),
+        (quantum_v, f"{quantum_v:.3f} V  =  {quantum:g} kJ/mol\nenergy quantum"),
+        (atp_v, f"{atp_v:.3f} V  =  {atp:g} kJ/mol\n1 ATP"),
+    ):
+        ax.plot(
+            [x - 0.012, x + 0.012],
+            [top + offset, top + offset],
+            transform=transform,
+            color=PALETTE["annotation"],
+            linewidth=1.4,
+            clip_on=False,
+            zorder=8,
+        )
+        ax.text(
+            x + 0.022,
+            top + offset,
+            label,
+            transform=transform,
+            fontsize=SIZES["annotation"] - 1,
+            color=PALETTE["annotation"],
+            ha="left",
+            va="center",
+            linespacing=1.3,
+            clip_on=False,
+        )
+
+    ax.text(
+        x,
+        top - 0.035 * span,
+        f"scale at {n} e$^-$",
+        transform=transform,
+        fontsize=SIZES["annotation"] - 1,
+        color=PALETTE["muted"],
+        ha="center",
+        va="bottom",
+        clip_on=False,
+    )
 
 
 def _stagger(values, minimum_separation):

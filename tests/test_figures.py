@@ -151,3 +151,101 @@ class TestAtpScale(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestElectronPairNormalization(unittest.TestCase):
+    """Figures normalise to an electron pair by default.
+
+    The brief specifies the half-reaction diagram around a transferred
+    electron pair, with everything else balanced to match, and the tower
+    follows the same convention so its energy scale bar is meaningful.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.conditions = mt.Conditions(temperature_c=25.0, pH=7.0)
+
+    def _built_with_eight(self):
+        return mt.Reaction.from_couples(
+            donor=("H2(g)", "H+"),
+            acceptor=("HS-", "SO4-2"),
+            conditions=self.conditions,
+            n_electrons=8,
+        )
+
+    def test_renormalized_changes_stoichiometry_not_potentials(self):
+        octet = self._built_with_eight()
+        pair = octet.renormalized(2)
+        self.assertEqual(pair.n_electrons, 2)
+        self.assertAlmostEqual(
+            pair.delta_E_standard_prime.to("V").magnitude,
+            octet.delta_E_standard_prime.to("V").magnitude,
+            places=9,
+        )
+        self.assertAlmostEqual(
+            pair.delta_G_standard_prime.magnitude * 4.0,
+            octet.delta_G_standard_prime.magnitude,
+            places=6,
+        )
+
+    def test_half_reaction_figure_defaults_to_a_pair(self):
+        from microbial_thermo.figures import plot_half_reactions
+
+        figure = plot_half_reactions(self._built_with_eight())
+        title = figure.axes[0].get_title()
+        self.assertIn("2 e", title)
+
+    def test_tower_defaults_to_a_pair(self):
+        from microbial_thermo.figures import plot_redox_tower
+
+        figure = plot_redox_tower(self._built_with_eight())
+        self.assertIn("2 e", figure.axes[0].get_title())
+
+    def test_passing_none_leaves_the_reaction_alone(self):
+        from microbial_thermo.figures import plot_half_reactions
+
+        figure = plot_half_reactions(self._built_with_eight(), n_electrons=None)
+        self.assertIn("8 e", figure.axes[0].get_title())
+
+
+class TestEnergyScaleBar(unittest.TestCase):
+    """The tower's map-style scale bar.
+
+    Valid only because n is pinned: with n fixed, a difference in potential
+    maps to free energy by the constant nF.
+    """
+
+    def test_volts_per_kilojoule_at_two_electrons(self):
+        from microbial_thermo.figures.tower import volts_per_kilojoule
+
+        # 1 kJ/mol / (2 * 96.485 kJ/mol/V) = 5.182 mV
+        self.assertAlmostEqual(volts_per_kilojoule(2), 0.005182, places=6)
+
+    def test_energy_quantum_and_atp_marks(self):
+        from microbial_thermo.figures.tower import volts_per_kilojoule
+
+        per_kj = volts_per_kilojoule(2)
+        self.assertAlmostEqual(20 * per_kj, 0.1036, places=4)
+        self.assertAlmostEqual(50 * per_kj, 0.2591, places=4)
+
+    def test_scale_halves_when_electrons_double(self):
+        """Twice the electrons, half the potential span per kJ/mol."""
+        from microbial_thermo.figures.tower import volts_per_kilojoule
+
+        self.assertAlmostEqual(volts_per_kilojoule(4), volts_per_kilojoule(2) / 2.0, places=9)
+
+    def test_scale_bar_is_consistent_with_the_reported_atp_yield(self):
+        """Reading the donor-acceptor gap against the bar must agree with the
+        ATP figure quoted in the energy panel."""
+        from microbial_thermo.figures.style import atp_equivalents
+        from microbial_thermo.figures.tower import volts_per_kilojoule
+
+        reaction = mt.Reaction.from_couples(
+            donor=("H2(g)", "H+"),
+            acceptor=("HS-", "SO4-2"),
+            conditions=mt.Conditions(temperature_c=25.0, pH=7.0),
+        )
+        gap_v = reaction.delta_E_standard_prime.to("V").magnitude
+        from_bar = gap_v / volts_per_kilojoule(reaction.n_electrons) / 50.0
+        from_panel = atp_equivalents(reaction.delta_G_standard_prime, mt.Quantity(-50.0, "kJ/mol"))
+        self.assertAlmostEqual(from_bar, from_panel, places=6)

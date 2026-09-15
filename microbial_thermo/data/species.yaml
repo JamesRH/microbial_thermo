@@ -64,10 +64,32 @@ species:
   - {backend: "Ethanol(aq)",     formula: "C2H6O",   display: "C_2H_5OH",   phase: aq, smiles: "CCO",        aliases: [ethanol, "C2H5OH"]}
 
   # --- iron and manganese ---
-  - {backend: "Fe++",      formula: "Fe+2", display: "Fe^{2+}",  phase: aq, aliases: ["Fe+2", "Fe(II)", ferrous]}
-  - {backend: "Fe+++",     formula: "Fe+3", display: "Fe^{3+}",  phase: aq, aliases: ["Fe+3", "Fe(III)", ferric]}
-  - {backend: "Goethite",  formula: "FeOOH", display: "FeOOH",   phase: s,  aliases: [goethite]}
-  - {backend: "Hematite",  formula: "Fe2O3", display: "Fe_2O_3", phase: s,  aliases: [hematite]}
-  - {backend: "Magnetite", formula: "Fe3O4", display: "Fe_3O_4", phase: s,  aliases: [magnetite]}
-  - {backend: "Mn++",      formula: "Mn+2", display: "Mn^{2+}",  phase: aq, aliases: ["Mn+2", "Mn(II)"]}
-  - {backend: "Pyrolusite", formula: "MnO2", display: "MnO_2",   phase: s,  aliases: [pyrolusite, MnO2]}
+  #
+  # Aqueous Fe and Mn come from the HKF database. The solid phases come from
+  # the GWB database by way of their log K values; see backends/gwb.py.
+  # Minerals marked "25 C only" below are tabulated at a single temperature
+  # and will refuse to evaluate elsewhere rather than extrapolate.
+  - {backend: "Fe++",   formula: "Fe+2", display: "Fe^{2+}", phase: aq, aliases: ["Fe+2", "Fe(II)", ferrous]}
+  - {backend: "Fe+++",  formula: "Fe+3", display: "Fe^{3+}", phase: aq, aliases: ["Fe+3", "Fe(III)", ferric]}
+  - {backend: "FeOH+",  formula: "FeOH+",  display: "FeOH^+",   phase: aq, aliases: ["FeOH+"]}
+  - {backend: "FeOH++", formula: "FeOH+2", display: "FeOH^{2+}", phase: aq, aliases: ["FeOH+2"]}
+  - {backend: "Mn++",   formula: "Mn+2", display: "Mn^{2+}", phase: aq, aliases: ["Mn+2", "Mn(II)"]}
+  - {backend: "Mn+++",  formula: "Mn+3", display: "Mn^{3+}", phase: aq, aliases: ["Mn+3", "Mn(III)"]}
+  - {backend: "MnO4-",  formula: "MnO4-",  display: "MnO_4^-",    phase: aq, aliases: [permanganate]}
+  - {backend: "MnO4--", formula: "MnO4-2", display: "MnO_4^{2-}", phase: aq, aliases: [manganate, "MnO4-2"]}
+
+  # Iron minerals
+  - {backend: "Goethite",      formula: "FeOOH",   display: "FeOOH", phase: s, aliases: [goethite]}
+  - {backend: "Hematite",      formula: "Fe2O3",   display: "Fe_2O_3", phase: s, aliases: [hematite]}
+  - {backend: "Magnetite",     formula: "Fe3O4",   display: "Fe_3O_4", phase: s, aliases: [magnetite]}
+  - {backend: "Siderite",      formula: "FeCO3",   display: "FeCO_3",  phase: s, aliases: [siderite]}
+  - {backend: "Pyrite",        formula: "FeS2",    display: "FeS_2",   phase: s, aliases: [pyrite]}
+  - {backend: "Fe(OH)3",       formula: "FeH3O3",  display: "Fe(OH)_3", phase: s, aliases: ["Fe(OH)3", ferrihydrite, "HFO"]}
+
+  # Manganese minerals
+  - {backend: "Pyrolusite",    formula: "MnO2",     display: "MnO_2",   phase: s, aliases: [pyrolusite, MnO2, "Mn(IV)"]}
+  - {backend: "Manganite",     formula: "MnOOH",    display: "MnOOH",   phase: s, aliases: [manganite]}
+  - {backend: "Hausmannite",   formula: "Mn3O4",    display: "Mn_3O_4", phase: s, aliases: [hausmannite]}
+  - {backend: "Bixbyite",      formula: "Mn2O3",    display: "Mn_2O_3", phase: s, aliases: [bixbyite]}
+  - {backend: "Birnessite",    formula: "Mn8H10O19", display: "Mn_8O_{14}\\cdot 5H_2O", phase: s, aliases: [birnessite]}
+  - {backend: "Rhodochrosite", formula: "MnCO3",    display: "MnCO_3",  phase: s, aliases: [rhodochrosite]}

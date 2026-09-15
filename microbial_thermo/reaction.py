@@ -289,6 +289,21 @@ class Reaction:
         reaction.verify_consistency()
         return reaction
 
+    def renormalized(self, n_electrons: int = 2, normalize_to=None) -> Reaction:
+        """Return the same chemistry scaled to a different electron count.
+
+        Potentials and free energy per electron are intensive and do not
+        change; only the stoichiometry and the total free energy scale.
+        """
+        return Reaction.from_couples(
+            donor=self.donor,
+            acceptor=self.acceptor,
+            conditions=self.conditions,
+            backend=self.backend,
+            n_electrons=n_electrons,
+            normalize_to=normalize_to,
+        )
+
     # --- energetics ------------------------------------------------------------
 
     @property

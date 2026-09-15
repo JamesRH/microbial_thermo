@@ -49,6 +49,7 @@ def _measure(fig, ax, tokens, fontsize):
 
 def plot_half_reactions(
     reaction,
+    n_electrons: int | None = 2,
     figsize=(11.0, 4.0),
     title: str | None = None,
     save: str | Path | None = None,
@@ -57,10 +58,18 @@ def plot_half_reactions(
 ):
     """Draw the two half reactions of ``reaction``, aligned at their arrows.
 
+    Normalised to an electron pair by default, which is the convention the
+    figure is specified around: both halves are balanced so exactly two
+    electrons transfer. Pass ``n_electrons=None`` to draw the reaction exactly
+    as it was built, or another integer to normalise to that instead.
+
     ``save`` gives a path without an extension; one file is written per entry
     in ``formats``. Returns the matplotlib figure.
     """
     import matplotlib.pyplot as plt
+
+    if n_electrons is not None and reaction.n_electrons != n_electrons:
+        reaction = reaction.renormalized(n_electrons)
 
     donor = reaction.donor_half
     acceptor = reaction.acceptor_half

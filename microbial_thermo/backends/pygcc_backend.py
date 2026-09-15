@@ -80,11 +80,20 @@ class PygccBackend(ThermoBackend):
 
     name = "pygcc"
 
-    def __init__(self, database: str | None = None, dielectric_method: str = "JN91"):
+    def __init__(
+        self,
+        database: str | None = None,
+        dielectric_method: str = "JN91",
+        mineral_database: str | None = None,
+        use_minerals: bool = True,
+    ):
         self._database = database
         self._dielectric_method = dielectric_method
+        self._mineral_database = mineral_database
+        self._use_minerals = use_minerals
         self._db: Any = None
         self._species: dict[str, Any] | None = None
+        self._minerals: dict[str, Any] | None = None
         self._gibbs_cache: dict[tuple[str, float, Any], float] = {}
         self._solvent_cache: dict[tuple[float, Any], dict] = {}
 
@@ -102,6 +111,26 @@ class PygccBackend(ThermoBackend):
                 )
             self._species = self._db.dbaccessdic
         return self._species
+
+    @property
+    def minerals(self) -> dict:
+        """Mineral entries from the GWB database, loaded on first use.
+
+        Supplies phases the direct-access database lacks -- notably every
+        manganese oxide -- by deriving their formation energies from tabulated
+        log K values and the basis species. See :mod:`.gwb`.
+        """
+        if not self._use_minerals:
+            return {}
+        if self._minerals is None:
+            from .gwb import default_gwb_path, load_gwb_minerals
+
+            path = self._mineral_database or default_gwb_path()
+            try:
+                self._minerals = load_gwb_minerals(path)
+            except OSError:
+                self._minerals = {}
+        return self._minerals
 
     @property
     def version(self) -> str:
@@ -128,10 +157,11 @@ class PygccBackend(ThermoBackend):
 
     def suggest(self, name: str, n: int = 5) -> list[str]:
         """Closest species names, for error messages."""
-        return difflib.get_close_matches(name, list(self.species_dict), n=n, cutoff=0.6)
+        candidates = list(self.species_dict) + list(self.minerals)
+        return difflib.get_close_matches(name, candidates, n=n, cutoff=0.6)
 
     def available_species(self) -> list[str]:
-        return sorted(self.species_dict)
+        return sorted(set(self.species_dict) | set(self.minerals))
 
     def search(self, pattern: str) -> list[str]:
         """Case-insensitive substring search over species names."""
@@ -179,6 +209,8 @@ class PygccBackend(ThermoBackend):
 
         species = self.species_dict
         if name not in species:
+            if name in self.minerals:
+                return self._mineral_gibbs_cal(name, temperature_c, pressure)
             raise SpeciesNotFoundError(name, suggestions=self.suggest(name))
 
         entry = species[name]
@@ -209,6 +241,19 @@ class PygccBackend(ThermoBackend):
                 "state point falls outside the equation of state's valid region."
             )
         return value
+
+    def _mineral_gibbs_cal(self, name: str, temperature_c: float, pressure) -> float:
+        """Formation energy of a mineral, derived from its log K.
+
+        The basis species are looked up through the normal path, so the result
+        sits on the same standard-state convention as everything else.
+        """
+        from .gwb import mineral_gibbs_cal
+
+        def basis(species_name: str) -> float:
+            return self._compute_gibbs_cal(species_name, temperature_c, pressure)
+
+        return mineral_gibbs_cal(self.minerals[name], temperature_c, basis)
 
     def _water_gibbs_cal(self, temperature_c: float, pressure) -> float:
         from pygcc import iapws95
