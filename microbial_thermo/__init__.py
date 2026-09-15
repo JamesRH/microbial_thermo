@@ -35,7 +35,7 @@ from .exceptions import (
 )
 from .library import default_library, energy_table, metabolism
 from .oxidation import atom_oxidation_states, mean_oxidation_state, nosc
-from .reaction import Couple, HalfReactionResult, Reaction
+from .reaction import Couple, HalfReactionResult, Reaction, half_reaction
 from .speciation import (
     default_families,
     dominant,
@@ -109,6 +109,7 @@ def versions() -> dict[str, str]:
 
 __all__ = [
     "Conditions",
+    "half_reaction",
     "default_library",
     "energy_table",
     "metabolism",

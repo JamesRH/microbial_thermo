@@ -86,6 +86,10 @@ for label, result in (("donor", reaction.donor_half), ("acceptor", reaction.acce
         f"E0' = {result.E_standard_prime.to('V').magnitude:+.3f} V"
     )
 
+# %%
+mt.half_reaction("NO3-", "NH2OH(aq)").E_standard
+mt.half_reaction("H2(aq)","H+").E_standard
+
 # %% [markdown]
 # ## 3. Normalised to one mole of the first reactant
 #

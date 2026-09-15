@@ -396,7 +396,7 @@ Standard library `unittest`. Ground-truth fixtures:
 - Syntrophy: propionate and butyrate oxidation endergonic at standard state, and
   a hydrogen window where both partners are exergonic.
 
-235 tests at the time of writing.
+243 tests at the time of writing.
 
 Textbook $E^{\circ\prime}$ values are used as *sanity ranges*, not exact assertions —
 published tables differ in standard state and database vintage, and asserting equality

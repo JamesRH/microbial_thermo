@@ -316,5 +316,88 @@ class TestVersions(unittest.TestCase):
         self.assertEqual(versions["microbial_thermo"], mt.__version__)
 
 
+class TestHalfReactionConvenience(unittest.TestCase):
+    """``half_reaction()`` exists because reaching one potential otherwise
+    takes six lines of construction."""
+
+    def test_matches_the_long_form_exactly(self):
+        from microbial_thermo.reaction import Couple, HalfReactionResult
+
+        short = mt.half_reaction("HS-", "SO4-2")
+        couple = Couple.make("HS-", "SO4-2")
+        long = HalfReactionResult(
+            couple=couple,
+            half=couple.half_reaction(),
+            conditions=mt.Conditions(),
+            backend=mt.get_backend(),
+        )
+        self.assertEqual(short.E_standard, long.E_standard)
+        self.assertEqual(short.E_standard_prime, long.E_standard_prime)
+        self.assertEqual(short.half.coefficients, long.half.coefficients)
+
+    def test_standard_potential_ignores_the_ph_field(self):
+        """E_standard holds every activity at 1, the proton included."""
+        for ph in (0.0, 7.0, 11.0):
+            with self.subTest(pH=ph):
+                value = (
+                    mt.half_reaction("HS-", "SO4-2", mt.Conditions(temperature_c=25.0, pH=ph))
+                    .E_standard.to("V")
+                    .magnitude
+                )
+                self.assertAlmostEqual(value, 0.2491, places=3)
+
+    def test_primed_potential_follows_the_ph_field(self):
+        low = mt.half_reaction("HS-", "SO4-2", mt.Conditions(pH=5.0))
+        high = mt.half_reaction("HS-", "SO4-2", mt.Conditions(pH=9.0))
+        self.assertGreater(
+            low.E_standard_prime.to("V").magnitude,
+            high.E_standard_prime.to("V").magnitude,
+        )
+
+    def test_temperature_is_honoured(self):
+        cold = mt.half_reaction("HS-", "SO4-2", mt.Conditions(temperature_c=5.0))
+        hot = mt.half_reaction("HS-", "SO4-2", mt.Conditions(temperature_c=95.0))
+        self.assertNotAlmostEqual(
+            cold.E_standard.to("V").magnitude,
+            hot.E_standard.to("V").magnitude,
+            places=3,
+        )
+
+    def test_rescaling_changes_the_equation_but_not_the_potential(self):
+        """E is intensive, so n only affects how the half reaction reads."""
+        default = mt.half_reaction("HS-", "SO4-2")
+        pair = mt.half_reaction("HS-", "SO4-2", n_electrons=2)
+        self.assertEqual(pair.half.n_electrons, 2)
+        self.assertEqual(default.half.n_electrons, 8)
+        self.assertAlmostEqual(
+            default.E_standard.to("V").magnitude,
+            pair.E_standard.to("V").magnitude,
+            places=9,
+        )
+
+    def test_accepts_a_multi_species_side(self):
+        result = mt.half_reaction("Propanoate(aq)", ["Acetate", "HCO3-"])
+        self.assertEqual(result.half.n_electrons, 6)
+        self.assertFalse(result.half.is_simple)
+
+    def test_key_element_hint_is_passed_through(self):
+        result = mt.half_reaction("acetate", "CO2(aq)", key_element="C")
+        self.assertEqual(result.half.key_element, "C")
+
+    def test_reproduces_published_potentials(self):
+        for reduced, oxidized, expected in [
+            ("H2(g)", "H+", -0.414),
+            ("H2O", "O2(g)", 0.816),
+            ("Fe+2", "Fe+3", 0.770),
+        ]:
+            with self.subTest(couple=f"{oxidized}/{reduced}"):
+                value = (
+                    mt.half_reaction(reduced, oxidized, mt.Conditions(temperature_c=25.0, pH=7.0))
+                    .E_standard_prime.to("V")
+                    .magnitude
+                )
+                self.assertAlmostEqual(value, expected, delta=0.035)
+
+
 if __name__ == "__main__":
     unittest.main()

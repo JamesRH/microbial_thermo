@@ -286,6 +286,44 @@ class HalfReactionResult:
         return self.format()
 
 
+def half_reaction(
+    reduced,
+    oxidized,
+    conditions: Conditions | None = None,
+    backend=None,
+    key_element: str | None = None,
+    n_electrons: int | None = None,
+    registry=None,
+) -> HalfReactionResult:
+    """Balance one couple and return it with its potentials, in a single call.
+
+    ``half_reaction("HS-", "SO4-2").E_standard`` replaces constructing a
+    :class:`Couple` and a :class:`HalfReactionResult` by hand, which is six
+    lines to reach one number.
+
+    The couple is written ``(reduced, oxidized)`` as everywhere else, and either
+    side may name several species. ``conditions`` defaults to 25 °C and pH 7;
+    only the temperature affects :attr:`~HalfReactionResult.E_standard`, since
+    that holds every activity at 1 including the proton.
+
+    ``n_electrons`` rescales the half reaction for display. It does not change
+    any potential -- E is intensive -- but it does change how the equation
+    reads.
+    """
+    from . import get_backend
+
+    couple = Couple.make(reduced, oxidized, key_element, registry=registry)
+    half = couple.half_reaction(registry)
+    if n_electrons is not None:
+        half = half.normalized_to_electrons(n_electrons)
+    return HalfReactionResult(
+        couple=couple,
+        half=half,
+        conditions=conditions if conditions is not None else Conditions(),
+        backend=backend or get_backend(),
+    )
+
+
 @dataclass
 class Reaction:
     """A donor couple driving an acceptor couple.

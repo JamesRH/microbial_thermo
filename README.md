@@ -134,6 +134,27 @@ leaves underdetermined. Where the equation does *not* resolve to exactly one
 donor and one acceptor it raises rather than guessing; name the couples with
 `from_couples` in that case.
 
+### One couple, one line
+
+```python
+mt.half_reaction("HS-", "SO4-2").E_standard          # +0.2491 V
+mt.half_reaction("HS-", "SO4-2").E_standard_prime    # -0.2168 V at pH 7
+```
+
+| property | meaning |
+|---|---|
+| `.E_standard` | E° — every activity 1, **H⁺ included** (pH 0) |
+| `.E_standard_prime` | E°′ — every activity 1, H⁺ at the conditions' pH |
+| `.E` | the actual potential at your concentrations |
+
+`E_standard` ignores the `pH` field, since it holds the proton at 1 M too; only
+temperature reaches it. Pass conditions, a `key_element` hint, or `n_electrons`
+to rescale the displayed equation — the last changes how the half reaction
+reads, not the potential, since E is intensive.
+
+Either side may name several species, as couples do generally:
+`mt.half_reaction("Propanoate(aq)", ["Acetate", "HCO3-"])`.
+
 ### Realistic conditions
 
 Anything not named is held at unit activity, so the standard state is the
@@ -526,7 +547,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 235 tests
+python -m unittest discover -s tests     # 243 tests
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```
