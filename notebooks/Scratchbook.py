@@ -86,12 +86,6 @@ for label, result in (("donor", reaction.donor_half), ("acceptor", reaction.acce
         f"E0' = {result.E_standard_prime.to('V').magnitude:+.3f} V"
     )
 
-# %%
-mt.half_reaction("H2(aq)","H+").E_standard - mt.half_reaction("NO3-", "NH2OH(aq)").E_standard  
-
-# %%
--0.760 -0.0394
-
 # %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ## 3. Normalised to one mole of the first reactant
 #
@@ -193,7 +187,7 @@ for label, built in (("per nitrate", per_nitrate), ("per electron pair", per_pai
 from microbial_thermo.sweep import concentration_axis, partial_pressure_axis, ph_axis
 
 axes = [
-    ph_axis(low=4.0, high=10.0, n=31),
+    ph_axis(low=2.0, high=10.0, n=33),
     concentration_axis("NO3-"),
     concentration_axis("NH2OH(aq)"),
     partial_pressure_axis("H2(aq)"),
