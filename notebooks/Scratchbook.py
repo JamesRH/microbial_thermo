@@ -247,6 +247,33 @@ plt.show()
 # are tabulated at 25 °C only and will refuse other temperatures.
 
 # %% [markdown]
+# The tower, at an electron pair so it can be set against the other two
+# questions directly. Note the acceptor rung sits where pH 10 puts it, not
+# where a pH 7 table would.
+
+# %%
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    plot_redox_tower(manganese)
+plt.show()
+
+# %% [markdown]
+# Free energy against pH. Written for an electron pair this reaction **consumes**
+# two protons, one per electron, so raising the pH makes it *less* favourable:
+# −156 kJ/mol at pH 5, −88 at pH 11. The slope is
+# $\nu_{H^+} RT\ln 10$ = 11.4 kJ/mol per pH unit.
+#
+# Temperature is in the dropdown here, unlike the first question: pyrolusite has
+# a full log K grid, where hydroxylamine did not.
+
+# %%
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    manganese_explorer = plot_energy_explorer(manganese.renormalized(2))
+
+manganese_explorer.show()
+
+# %% [markdown]
 # # Ammonium oxidation to N₂ under oxygen, pH 7
 
 # %%
@@ -265,6 +292,34 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     plot_half_reactions(aerobic)
 plt.show()
+
+# %% [markdown]
+# The tower again at an electron pair. The gap here is the widest of the three,
+# which is what the free energy per electron already said.
+
+# %%
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    plot_redox_tower(aerobic)
+plt.show()
+
+# %% [markdown]
+# Free energy against pH — and compare it with the manganese case, because the
+# two go in *opposite directions*. This reaction **releases** two thirds of a
+# proton per electron pair, so raising the pH makes it *more* favourable:
+# −205 kJ/mol at pH 5, −228 at pH 11.
+#
+# The slope is 3.8 kJ/mol per pH unit against manganese's 11.4 — a factor of
+# three, which is exactly the ratio of their proton coefficients (1 per electron
+# against 1/3). Nothing about pH sensitivity is arbitrary: it is the proton
+# stoichiometry, read straight off the balanced half reactions.
+
+# %%
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    aerobic_explorer = plot_energy_explorer(aerobic.renormalized(2))
+
+aerobic_explorer.show()
 
 # %% [markdown]
 # ### The three side by side
