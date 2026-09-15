@@ -10,6 +10,10 @@ figures_out/
 
 # Jupyter
 .ipynb_checkpoints/
+# Duplicates Jupyter creates when a notebook is copied in the file browser.
+*-Copy[0-9]*.ipynb
+*-Copy[0-9]*.py
+Untitled*.ipynb
 
 # Environment
 .env
