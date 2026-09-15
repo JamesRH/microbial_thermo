@@ -116,14 +116,18 @@ def unverified_footnote(reaction) -> str | None:
     )
 
 
-def add_unverified_footnote(figure, reaction) -> None:
-    """Draw :func:`unverified_footnote` along the bottom of a figure."""
+def add_unverified_footnote(figure, reaction, y: float = 0.005) -> None:
+    """Draw :func:`unverified_footnote` along the bottom of a figure.
+
+    ``y`` lets a figure with its own bottom furniture -- the tower's energy
+    panel -- put the notice below it rather than on top of it.
+    """
     text = unverified_footnote(reaction)
     if text is None:
         return
     figure.text(
         0.5,
-        0.005,
+        y,
         text,
         fontsize=SIZES["annotation"] - 1,
         color=PALETTE["endergonic"],

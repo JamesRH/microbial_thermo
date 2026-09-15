@@ -182,8 +182,8 @@ def plot_redox_tower(
     )
     ax.set_title(title, fontsize=SIZES["title"], pad=14)
 
-    add_unverified_footnote(fig, reaction)
-    fig.tight_layout(rect=(0, 0.16, 1, 1))
+    add_unverified_footnote(fig, reaction, y=0.005)
+    fig.tight_layout(rect=(0, 0.21, 1, 1))
     if save is not None:
         _save(fig, save, formats, dpi)
     return fig
@@ -220,7 +220,7 @@ def _add_energy_scalebar(ax, reaction, delta_g_atp, energy_quantum):
     transform = blended_transform_factory(ax.transAxes, ax.transData)
     low, high = ax.get_ylim()  # inverted: low is the larger value
     span = low - high
-    top = high + 0.42 * span  # anchor in the empty middle of the tower
+    top = high + 0.55 * span  # anchor low enough to clear the couple labels
     x = 0.90
 
     # The bar itself: zero to one ATP, with the energy quantum marked inside.
@@ -294,12 +294,34 @@ def _add_energy_scalebar(ax, reaction, delta_g_atp, energy_quantum):
     ax.text(
         x,
         top - 0.035 * span,
-        f"scale at {n} e$^-$",
+        f"per reaction, at {n} e$^-$",
         transform=transform,
         fontsize=SIZES["annotation"] - 1,
         color=PALETTE["muted"],
         ha="center",
         va="bottom",
+        clip_on=False,
+    )
+
+    # The same bar read per electron. This conversion does not depend on n --
+    # dG/n = F dE -- so these numbers never move, while the marks above do.
+    # Showing both makes the intensive/extensive distinction visible instead of
+    # something the caption asks the reader to remember: the potential axis is
+    # per-electron, the reference quantities are per-reaction.
+    per_electron_volt = volts_per_kilojoule(1)
+    below = max(label_offsets) + 0.075 * abs(span)
+    ax.text(
+        x - 0.012,
+        top + below,
+        "per electron (any n):\n"
+        f"{quantum * per_electron_volt:.3f} V  =  {quantum:g} kJ/mol e$^-$\n"
+        f"{atp * per_electron_volt:.3f} V  =  {atp:g} kJ/mol e$^-$",
+        transform=transform,
+        fontsize=SIZES["annotation"] - 2,
+        color=PALETTE["muted"],
+        ha="left",
+        va="top",
+        linespacing=1.4,
         clip_on=False,
     )
 
@@ -355,7 +377,7 @@ def _add_energy_panel(ax, reaction, delta_g_atp, energy_quantum):
     ]
     ax.get_figure().text(
         0.08,
-        0.005,
+        0.055,
         "\n".join(lines),
         fontsize=SIZES["annotation"],
         va="bottom",

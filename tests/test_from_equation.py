@@ -196,10 +196,6 @@ class TestSupplementalTable(unittest.TestCase):
             self.assertIn(name, available)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class TestUnverifiedValuesAreVisibleOnFigures(unittest.TestCase):
     """A rendered figure has to say when it rests on a hand-entered value.
 
@@ -251,3 +247,7 @@ class TestUnverifiedValuesAreVisibleOnFigures(unittest.TestCase):
             figure = plot_half_reactions(self._reaction("NH4+ + O2 -> N2"))
         texts = [t.get_text() for t in figure.texts]
         self.assertFalse(any("unverified" in t for t in texts))
+
+
+if __name__ == "__main__":
+    unittest.main()

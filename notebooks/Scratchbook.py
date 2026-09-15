@@ -25,6 +25,10 @@ import microbial_thermo as mt
 from microbial_thermo.balance import infer_couples
 from microbial_thermo.figures import plot_energy_explorer, plot_half_reactions, plot_redox_tower
 
+# %% [markdown]
+# # Nitrate to Hydroxylamine by H2 oxidation
+
+# %%
 EQUATION = "NO3- + H2 -> NH2OH"
 conditions = mt.Conditions(temperature_c=25.0, pH=7.7)
 
@@ -195,7 +199,7 @@ with warnings.catch_warnings():
 
 figure.show()
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ## 7. Show the work
 #
 # Every number above, traced back to where it came from.
@@ -207,12 +211,10 @@ with warnings.catch_warnings():
 work
 
 # %% [markdown]
-# ## 8. The other two problems
 #
-# Both go through the same route. Only the string and the pH change.
 
 # %% [markdown]
-# ### Ammonia oxidation by manganese oxide, pH 10
+# # Ammonia oxidation by manganese oxide, pH 10
 #
 # pH 10 is chosen deliberately: ammonia's p*K*a is near 9.2, so above it the
 # neutral NH₃ is the dominant form rather than ammonium. Worth checking before
@@ -245,7 +247,7 @@ plt.show()
 # are tabulated at 25 °C only and will refuse other temperatures.
 
 # %% [markdown]
-# ### Ammonium oxidation to N₂ under oxygen, pH 7
+# # Ammonium oxidation to N₂ under oxygen, pH 7
 
 # %%
 neutral = mt.Conditions(temperature_c=25.0, pH=7.0)

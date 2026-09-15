@@ -304,11 +304,19 @@ an $E^{\circ\prime}$ axis by default. Title reports overall $\Delta G^{\circ\pri
 
 Interactive sliders: pH, temperature, concentrations, gas partial pressures.
 
-**ATP / energy-quantum scale (answers user question 2):** on the tower the y-axis is $E$,
-where the ΔG mapping depends on $n$. So the ATP scale is rendered in the legend area as
-an annotated ruler labeled for this reaction's own $n$, not as a twin axis. On the
-explorer, where the y-axis *is* ΔG, it becomes a true twin right-hand axis, plus a shaded
-band for the ~−20 kJ/mol biological energy quantum.
+**ATP / energy-quantum scale:** on the tower the y-axis is $E$, where the ΔG
+mapping depends on $n$. So the ATP scale is a map-style bar in the side panel, not
+a twin axis — an absolute kJ/mol axis would imply each couple has an absolute free
+energy, when only differences between couples carry energy.
+
+The bar carries two sets of readings. Per reaction (one ATP = 0.259 V at n = 2,
+0.086 V at n = 6) and per electron (0.518 V at any n, since ΔG/n = FΔE). Both are
+shown because the potential axis is intensive — every rung is n-independent —
+while the reference quantities are per-reaction, so the marks move and the rungs
+do not. Showing one convention alone left that to a caption.
+
+On the explorer, where the y-axis *is* ΔG, ATP becomes a true twin right-hand
+axis, plus a shaded band for the ~−20 kJ/mol biological energy quantum.
 
 ### 8.3 Free-energy explorer (plotly)
 
@@ -388,7 +396,7 @@ Standard library `unittest`. Ground-truth fixtures:
 - Syntrophy: propionate and butyrate oxidation endergonic at standard state, and
   a hydrogen window where both partners are exergonic.
 
-224 tests at the time of writing.
+228 tests at the time of writing.
 
 Textbook $E^{\circ\prime}$ values are used as *sanity ranges*, not exact assertions —
 published tables differ in standard state and database vintage, and asserting equality

@@ -333,11 +333,25 @@ as given, or another integer to rescale.
 
 Pinning n is also what makes the tower's energy scale bar exact. Since
 $\Delta G = -nF\Delta E$, a *difference* in potential converts to free energy
-by the constant $2F = 192.97$ kJ·mol⁻¹·V⁻¹, so the bar marks 0.104 V as the
+by the constant $nF$, so at an electron pair the bar marks 0.104 V as the
 −20 kJ/mol energy quantum and 0.259 V as one ATP. You can read a reaction's
 yield straight off the tower by comparing its donor–acceptor gap to the bar. An
 absolute kJ/mol *axis* would be wrong — it would imply each couple has an
 absolute free energy, when only differences carry energy.
+
+The bar carries **both conventions**, because they answer different questions
+and only one of them depends on n:
+
+| | at n = 2 | at n = 6 |
+|---|---|---|
+| per reaction — 1 ATP | 0.259 V | 0.086 V |
+| per electron — 1 ATP per e⁻ | 0.518 V | 0.518 V |
+
+The potential axis is intensive: every rung stays exactly where it is under
+renormalisation. The reference quantities (one ATP, the energy quantum) are
+per-reaction, so *their* position does move with n. Giving both readings makes
+that visible instead of leaving it to a caption — and the gap between the two
+sets is n itself.
 
 The explorer writes a self-contained HTML file: dropdown, hover, and the SVG
 download button all work with no Python process behind it, so you can hand the
@@ -502,7 +516,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 224 tests
+python -m unittest discover -s tests     # 228 tests
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```

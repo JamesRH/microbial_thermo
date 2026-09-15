@@ -149,10 +149,6 @@ class TestAtpScale(unittest.TestCase):
         self.assertLess(atp_equivalents(Quantity(+30.0, "kJ/mol"), Quantity(-50.0, "kJ/mol")), 0)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class TestElectronPairNormalization(unittest.TestCase):
     """Figures normalise to an electron pair by default.
 
@@ -314,3 +310,67 @@ class TestAffinityLadder(unittest.TestCase):
         empty = energy_table(self.conditions).iloc[0:0]
         with self.assertRaises(ValueError):
             plot_affinity_ladder(self.conditions, table=empty)
+
+
+class TestScaleBarShowsBothConventions(unittest.TestCase):
+    """The tower's scale bar carries per-reaction and per-electron readings.
+
+    The potential axis is intensive -- every rung stays put under
+    renormalisation -- but the reference quantities (one ATP, the energy
+    quantum) are per-reaction, so their position on that axis depends on n.
+    Showing both makes that visible rather than leaving it to a caption.
+    """
+
+    @staticmethod
+    def _texts(reaction, **kwargs):
+        import warnings as _w
+
+        from microbial_thermo.figures import plot_redox_tower
+
+        with _w.catch_warnings():
+            _w.simplefilter("ignore")
+            figure = plot_redox_tower(reaction, **kwargs)
+        return [t.get_text() for ax in figure.axes for t in ax.texts]
+
+    @classmethod
+    def setUpClass(cls):
+        cls.reaction = mt.Reaction.from_couples(
+            donor=("H2(g)", "H+"),
+            acceptor=("HS-", "SO4-2"),
+            conditions=mt.Conditions(temperature_c=25.0, pH=7.0),
+        )
+
+    def test_per_electron_conversion_does_not_depend_on_n(self):
+        """dG/n = F dE, so the per-electron reading is the same at any n."""
+        from microbial_thermo.figures.tower import volts_per_kilojoule
+
+        per_electron = volts_per_kilojoule(1)
+        self.assertAlmostEqual(50 * per_electron, 0.5182, places=4)
+        self.assertAlmostEqual(20 * per_electron, 0.2073, places=4)
+
+    def test_both_labels_are_drawn(self):
+        joined = "\n".join(self._texts(self.reaction))
+        self.assertIn("per reaction", joined)
+        self.assertIn("per electron", joined)
+
+    def test_per_reaction_marks_move_with_n_but_per_electron_do_not(self):
+        two = "\n".join(self._texts(self.reaction, n_electrons=2))
+        six = "\n".join(self._texts(self.reaction, n_electrons=6))
+        # Per-reaction ATP mark: 0.259 V at n=2, 0.086 V at n=6.
+        self.assertIn("0.259", two)
+        self.assertIn("0.086", six)
+        # Per-electron reading is identical in both.
+        for text in (two, six):
+            self.assertIn("0.518", text)
+            self.assertIn("0.207", text)
+
+    def test_the_two_conventions_coincide_at_one_electron(self):
+        from microbial_thermo.figures.tower import volts_per_kilojoule
+
+        self.assertAlmostEqual(50 * volts_per_kilojoule(1), 50 * volts_per_kilojoule(1), places=9)
+        one = "\n".join(self._texts(self.reaction, n_electrons=1))
+        self.assertEqual(one.count("0.518"), 2)  # per reaction and per electron
+
+
+if __name__ == "__main__":
+    unittest.main()
