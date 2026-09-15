@@ -163,6 +163,16 @@ formation energy with its source, the reaction quotient term by term, the
 $RT\ln Q$ arithmetic, conversion to potentials, and the independent
 cross-check.
 
+Step 8 works the potentials out in full rather than asserting them. For each
+half reaction it tabulates the Nernst correction species by species —
+
+$$E = E^\circ - \frac{RT}{nF}\sum_i \nu_i \ln a_i$$
+
+— then shows $E^\circ$ becoming $E^{\circ\prime}$ by the proton term alone,
+and $E$ by every term, before taking $\Delta E$ and comparing $-nF\Delta E$
+against the formation-energy sum. The tests parse the rendered numbers back out
+and check they add up, so the narrative cannot drift from the arithmetic.
+
 ### Normalisation
 
 Default is an electron pair. Override with `normalize_to=`:
@@ -516,7 +526,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 228 tests
+python -m unittest discover -s tests     # 235 tests
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```

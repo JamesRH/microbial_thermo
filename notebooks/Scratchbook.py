@@ -30,7 +30,7 @@ from microbial_thermo.figures import plot_energy_explorer, plot_half_reactions, 
 
 # %%
 EQUATION = "NO3- + H2 -> NH2OH"
-conditions = mt.Conditions(temperature_c=25.0, pH=7.7)
+conditions = mt.Conditions(temperature_c=25.0, pH=4)
 
 # %% [markdown]
 # > **A caution before anything else.** Hydroxylamine is in none of pyGCC's
@@ -199,7 +199,7 @@ with warnings.catch_warnings():
 
 figure.show()
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ## 7. Show the work
 #
 # Every number above, traced back to where it came from.

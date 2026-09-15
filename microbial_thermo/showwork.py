@@ -270,25 +270,101 @@ def derivation(reaction: Reaction) -> Derivation:
     # --- 8. the cross-check --------------------------------------------------
     step = work.step("Cross-check by an independent path")
     n = float(reaction.n_electrons)
-    path_b = as_magnitude(
-        -(n * FARADAY.to("C/mol") * reaction.delta_E.to("V")).to(KJ_PER_MOL_STR),
-        KJ_PER_MOL_STR,
-    )
+    faraday_kj = as_magnitude(FARADAY.to("C/mol"), "C/mol") / 1000.0
+
     step.line(
-        "The free energy is computed twice: once by summing formation "
-        "energies over the whole reaction, and once from the two half-reaction "
-        "potentials. Agreement confirms the half reactions really do sum to "
-        "the combined reaction, with the right electron count and no sign slip."
+        "The free energy is computed twice: once by summing formation energies "
+        "over the whole reaction, and once from the two half-reaction "
+        "potentials. Agreement confirms the half reactions really do sum to the "
+        "combined reaction, with the right electron count and no sign slip."
     )
+    step.line("")
+    step.line(
+        "Building the potentials takes three steps each, so they are worked "
+        "out in full below. Both halves are treated as **reductions**, which is "
+        "the convention that makes potentials comparable — the donor is shown "
+        "oxidatively elsewhere, but not here."
+    )
+
+    # --- 8a. each half reaction, corrected term by term ---------------------
+    step.line("")
+    step.line("**a. Correct each potential from the standard state.**")
+    step.equation("E = E^\\circ - \\frac{RT}{nF}\\sum_i \\nu_i \\ln a_i")
+
+    for label, result in (
+        ("Donor", reaction.donor_half),
+        ("Acceptor", reaction.acceptor_half),
+    ):
+        half = result.half
+        half_n = float(half.n_electrons)
+        prefactor = rt / (half_n * faraday_kj)  # volts per unit of (nu ln a)
+
+        step.line("")
+        step.line(f"*{label}: {result.couple}*, as a reduction, n = {half.n_electrons}:")
+        step.line("")
+        step.line("| species | ν | activity | ν·ln a | ΔE term (V) |")
+        step.line("|---|---:|---:|---:|---:|")
+
+        total_term = 0.0
+        proton_term = 0.0
+        for species, nu in sorted(half.coefficients.items(), key=lambda kv: kv[0].backend):
+            if species == ELECTRON:
+                continue
+            activity = _activity(species, conditions, backend)
+            term = float(nu) * math.log(activity)
+            delta_e = -prefactor * term
+            total_term += delta_e
+            if species.backend == "H+":
+                proton_term = delta_e
+            step.line(
+                f"| {species.backend} | {_format_fraction(nu)} | "
+                f"{activity:.4g} | {_signed(term)} | {_signed(delta_e)} |"
+            )
+
+        standard = result.E_standard.to("V").magnitude
+        primed = result.E_standard_prime.to("V").magnitude
+        actual = result.E.to("V").magnitude
+        step.line("")
+        step.line(
+            f"- $E^\\circ$ = {_signed(standard)} V — every activity 1, so every term above is zero."
+        )
+        step.line(
+            f"- $E^{{\\circ\\prime}}$ = {_signed(standard)} {_signed(proton_term)} = "
+            f"{_signed(primed)} V — the proton term alone, at pH {conditions.pH:g}."
+        )
+        step.line(
+            f"- $E$ = {_signed(standard)} {_signed(total_term)} = {_signed(actual)} V — "
+            "every term, at the stated conditions."
+        )
+
+    # --- 8b. the difference --------------------------------------------------
+    donor_e = reaction.donor_half.E.to("V").magnitude
+    acceptor_e = reaction.acceptor_half.E.to("V").magnitude
+    delta_e_total = reaction.delta_E.to("V").magnitude
+    step.line("")
+    step.line("**b. Subtract.** Electrons fall from the donor to the acceptor:")
     step.equation(
-        f"-nF\\Delta E = -{n:g} \\times F \\times "
-        f"{reaction.delta_E.to('V').magnitude:+.4f}\\ \\mathrm{{V}} = "
-        f"{path_b:+.2f}\\ \\mathrm{{kJ\\,mol^{{-1}}}}"
+        "\\Delta E = E_\\mathrm{acceptor} - E_\\mathrm{donor} = "
+        f"{_signed(acceptor_e)} - ({_signed(donor_e)}) = {_signed(delta_e_total)}"
+        "\\ \\mathrm{V}"
     )
-    step.line(
-        f"Sum over formation energies gave ${delta_g:+.2f}$ kJ/mol; "
-        f"difference ${abs(delta_g - path_b):.2e}$ kJ/mol. ✓"
+
+    # --- 8c. compare ---------------------------------------------------------
+    path_b = -n * faraday_kj * delta_e_total
+    step.line("")
+    step.line("**c. Convert, and compare against the formation-energy sum.**")
+    step.equation(
+        f"-nF\\Delta E = -{n:g} \\times {faraday_kj:.3f} \\times "
+        f"{_signed(delta_e_total)} = {path_b:+.2f}\\ \\mathrm{{kJ\\,mol^{{-1}}}}"
     )
+    step.line("")
+    step.line("| route | ΔG (kJ/mol) |")
+    step.line("|---|---:|")
+    step.line(f"| sum of formation energies (step 6) | {delta_g:+.4f} |")
+    step.line(f"| −nFΔE, from the potentials above | {path_b:+.4f} |")
+    step.line(f"| difference | {delta_g - path_b:+.2e} |")
+    step.line("")
+    step.line("The two agree, so the half reactions really do sum to the combined reaction. ✓")
 
     return work
 
@@ -310,6 +386,8 @@ _TEXT_SUBSTITUTIONS = [
     ("\\ ", " "),
     ("^{-1}", "^-1"),
     ("$", ""),
+    ("**", ""),
+    ("*", ""),
 ]
 
 _TFRAC = re.compile(r"\\t?frac\{(-?\d+)\}\{(-?\d+)\}")
@@ -338,6 +416,13 @@ def _latex_to_text(text: str) -> str:
         text = replaced
     text = _BRACES.sub("", text)
     return " ".join(text.split())
+
+
+def _signed(value: float, places: int = 4) -> str:
+    """Signed fixed-point that never produces a negative zero."""
+    if abs(value) < 0.5 * 10**-places:
+        return f"{0.0:+.{places}f}"
+    return f"{value:+.{places}f}"
 
 
 def _format_fraction(value: Fraction) -> str:
