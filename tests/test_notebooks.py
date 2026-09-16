@@ -51,6 +51,10 @@ def execute(path: Path):
     client = NotebookClient(
         notebook,
         timeout=900,
+        # A kernel that fails to come up must fail, not hang. One run of this
+        # suite sat on a kernel that never started; without this it waits
+        # forever and looks like a slow test rather than a stuck one.
+        startup_timeout=120,
         kernel_name=_kernel_name(),
         # Relative paths inside a notebook are written against its own
         # directory, so run it there.

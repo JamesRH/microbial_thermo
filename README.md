@@ -76,11 +76,16 @@ edit the `.py` and run `jupytext --sync <notebook>.ipynb`.
 | notebook | covers |
 |---|---|
 | `01_half_reactions` | couples, balancing, oxidation states, show-your-work, the half-reaction figure |
-| `02_redox_tower_and_energy` | the tower and its scale bar, hydrogen and temperature sweeps, the interactive explorer |
+| `02_redox_tower_and_energy` | the tower and its scale bar, the interactive tower, hydrogen and temperature sweeps, the syntrophy window, the interactive explorer |
 | `03_environmental_affinity` | pH speciation, the curated library, and the affinity ladder for a real porewater |
+| `04_when_the_library_refuses_to_guess` | the three places the library asks instead of guessing: contested names, underdetermined equations, and averaged oxidation states |
 | `Scratchbook` | a worked problem end to end, starting from nothing but an equation string |
 
-All three are committed with their outputs and execute clean end to end.
+The numbered notebooks are committed with their outputs and are **executed by
+the test suite** (`tests/test_notebooks.py`), so a library change that breaks
+one is caught rather than discovered in class. They run from the `.py` pair,
+never from the committed `.ipynb`, so the check does not depend on stored
+outputs.
 
 ---
 
@@ -482,6 +487,70 @@ The explorer writes a self-contained HTML file: dropdown, hover, and the SVG
 download button all work with no Python process behind it, so you can hand the
 file to students directly.
 
+#### The syntrophy window
+
+Two partners on one axis, with the overlap shaded where each is exergonic.
+
+```python
+from microbial_thermo.figures import plot_syntrophy_window
+from microbial_thermo.library import reaction
+
+producer = reaction("syntrophic_propionate_oxidation", sediment)
+consumer = reaction("hydrogenotrophic_methanogenesis", sediment)
+
+figure, window = plot_syntrophy_window(producer, consumer)
+print(window.low, window.high, window.decades)   # 2.3e-06 2.1e-04 1.95
+print(window.best_shared)                        # (2.2e-05, -5.5) bar, kJ/mol
+```
+
+The window edges are interpolated in log pressure off whichever curve is the
+binding constraint at that edge, so the reported width is a property of the
+chemistry rather than of how finely the axis was sampled — a 13-point and a
+25-point grid agree to six decimal places.
+
+`best_shared` gives the pressure at which the *worse-off* partner does best,
+and what it gets there. For propionate against hydrogenotrophic methanogenesis
+at pH 7 that is −5.5 kJ/mol: at any hydrogen pressure, one partner or the other
+is doing at least that badly, which is well inside the energy-quantum band.
+That is the figure's point.
+
+Both partners must be normalised to the same electron count; sharing a y axis
+between a per-6-electron and a per-8-electron free energy would look fine and
+mean nothing, so the function refuses it.
+
+#### The interactive tower
+
+The static tower draws one set of conditions, which invites the reading that
+the tower is a fixed table. It is not — couples move at different rates and
+change places.
+
+```python
+from microbial_thermo.tower import tower_grid
+from microbial_thermo.figures import interactive_tower, plot_interactive_tower
+
+grid = tower_grid()                          # a few seconds per temperature
+interactive_tower(grid)                      # ipywidgets, live in a notebook
+plot_interactive_tower(grid, save_html="tower")   # standalone HTML, no kernel
+```
+
+Three sliders — pH, temperature, and the oxidised:reduced activity ratio — over
+a precomputed grid. Nothing calls the backend while a slider moves. The grid
+samples pH finely and temperature coarsely, because that asymmetry is real:
+formation energies are cached per temperature, so a new pH costs about 10 ms
+and a new temperature about 2.5 s. The activity ratio is not stored at all; it
+is a closed-form Nernst shift, $(RT/nF)\ln(\text{ratio})$, applied on lookup, so
+it stays continuous rather than quantised to grid steps.
+
+The crossing worth showing students: at pH 7 and 25 °C oxygen sits above iron,
+and raising the ferric:ferrous ratio past about $10^{1.5}$ puts iron on top,
+because a one-electron couple moves twice as fast per decade as a two-electron
+one.
+
+Plotly's native sliders cannot express three *independent* dimensions — a
+slider's steps have no access to the other sliders' positions — so the exported
+page builds its own sliders and redoes the Nernst shift in JavaScript. Both
+implementations agree to five decimal places, which is itself a cross-check.
+
 ### Sweeps without plotting
 
 ```python
@@ -641,7 +710,8 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 285 tests
+python -m unittest discover -s tests     # 351 tests, ~155 s
+MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # skip the slow notebook runs
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```
@@ -678,6 +748,21 @@ ruff check microbial_thermo tests
 
 Ordered by logical dependency first, then by effort within each tier. Earlier
 items unblock later ones.
+
+**Numbering is stable.** Completed items keep their original number and move to
+the list below rather than being renumbered, because `NOTES.md` and commit
+messages refer to them by number.
+
+### Completed
+
+| # | Item | Where it lives |
+|---|---|---|
+| 3 | Syntrophy window figure | `figures/syntrophy.py`, `tests/test_syntrophy_figure.py`, notebook 02 |
+| 5 | Underdetermined full-equation balancing | `balance_equation(..., fix=)`, `tests/test_ambiguity.py`, notebook 04 |
+| 6 | Execute the notebooks in the test suite | `tests/test_notebooks.py` |
+| 7 | Phase-ambiguous species names | `canonical:` in `species.yaml`, `registry.ambiguities()`, notebook 04 |
+| 10 | Interactive redox tower | `tower.tower_grid`, `figures/interactive_tower.py`, notebook 02 |
+| 11 | Per-atom oxidation states on the half-reaction figure | `oxidation.format_per_atom_states`, `per_atom=True`, notebook 04 |
 
 ### Tier 1 — small, and builds directly on what exists
 
@@ -719,24 +804,8 @@ items unblock later ones.
 2. **Verify the supplemental values.** Hydroxylamine, glucose and pyruvate are
    hand-entered and flagged unverified. Each needs tracing to a primary source,
    confirming against its standard state, and the flag setting.
-3. **Syntrophy window figure**: both partners' ΔG against $p_{H_2}$ on one
-   axis, shading the overlap where each is exergonic. The energetics are in
-   place and asserted in the tests; only the plotting remains.
 4. **Provenance export**: per-result record of pyGCC version, database file
    hash, and per-species source, dumpable as BibTeX.
-5. **Underdetermined full-equation balancing.** `Reaction.from_equation` now
-   handles disproportionation, because inferring the couples supplies the
-   information conservation cannot — thiosulfate resolves to donor and acceptor
-   both being S₂O₃²⁻. But `balance_equation` alone still refuses such cases. It
-   could offer the nullspace basis and ask which combination is meant rather
-   than only raising.
-6. **Execute the notebooks in the test suite.** They are currently executed by
-   hand, so a library change can silently rot them. `nbconvert --execute` over
-   `notebooks/` would catch it; the cost is roughly a minute.
-7. **Phase-ambiguous species names.** A bare `H2` resolves to `H2(aq)` purely
-   because that entry comes first in `species.yaml`, and the gas is 91 mV away
-   at pH 7. The resolution is deliberate but undeclared — either make it
-   explicit in the registry or warn when an ambiguous name is used.
 
 ### Tier 2 — moderate, mostly new figures over existing machinery
 
@@ -745,11 +814,6 @@ items unblock later ones.
    figure that makes redox zonation fall out of thermodynamics.
 9. **Two-dimensional contours** over pairs of variables ($p\mathrm{H_2}$ × pH,
    T × pH) with the $\Delta G = 0$ and energy-quantum contours drawn.
-10. **Interactive redox tower** with live pH, temperature and concentration
-    sliders, alongside the current static version.
-11. **Per-atom oxidation states on the half-reaction figure**, so a species like
-    acetate shows its two chemically distinct carbons rather than their mean.
-    The per-atom engine already exists; only the figure work remains.
 12. **Problem generator and grader**: randomised conditions with worked
     solutions, built on show-your-work.
 
@@ -781,4 +845,4 @@ items unblock later ones.
 | `AGENTS.md` | repository conventions for AI agents |
 | `microbial_thermo/` | the library |
 | `tests/` | unittest suite |
-| `notebooks/` | jupytext-paired teaching notebooks, committed with outputs |
+| `notebooks/` | jupytext-paired teaching notebooks, committed with outputs and executed by the suite |

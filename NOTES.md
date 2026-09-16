@@ -17,10 +17,14 @@ It must be **sourced**. `pygcc` comes from PyPI (not conda-forge) and is the one
 sanctioned `pip` in the project.
 
 ```bash
-python -m unittest discover -s tests     # full suite, ~140 s
+python -m unittest discover -s tests     # full suite, 351 tests, ~155 s
+MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # ~130 s
 python tests/test_balance.py             # one file, seconds — use this while iterating
 ruff format microbial_thermo tests && ruff check microbial_thermo tests
 ```
+
+The suite now executes the numbered teaching notebooks, which is the slowest
+part (~25 s) and the part most likely to catch a rename you did not expect.
 
 ---
 
@@ -111,13 +115,33 @@ survives it — E = −ΔG/(nF) flips numerator and denominator together — so 
 number looks right while the half reaction formats as an oxidation. That sign is
 the only tell.
 
-**A bare `H2` resolves to `H2(aq)`, not the gas**, by registry ordering. The gas
-is 91 mV away at pH 7. Future work item 7.
+**A bare `H2` resolves to `H2(aq)`, not the gas.** The gas is 91 mV away at
+pH 7. This is now *declared* rather than accidental: `canonical: true` in
+`species.yaml` picks the winner for each contested name, and
+`tests/test_ambiguity.py` fails if a new aqueous/gas pair is added without
+declaring one. It used to depend on file ordering.
 
 **Measure matplotlib text extents with the Agg renderer**, even when exporting
 SVG; the SVG backend's metrics differ. And size equations by the *laid-out
 extent*, not the sum of token widths — the latter omits inter-token gaps and lets
 long equations overrun.
+
+**`R` and `FARADAY` have magnitude 1.** They are defined as
+`1 * ureg.molar_gas_constant` and `1 * ureg.faraday_constant`, so `R.magnitude`
+is 1, not 8.314. Convert first: `R.to("J/(mol*K)")`. Likewise a bare float
+temperature will not cancel against R — it needs `kelvin * ureg.kelvin`.
+
+**An nbclient kernel can hang on startup and look like a slow test.** One full
+run sat for ten minutes on a kernel that never came up, with no output, because
+the pipeline was buffering. `startup_timeout` is now set on the client. When a
+run seems slow, check `ps` for a live `ipykernel_launcher` before assuming the
+suite got heavier.
+
+**Plotly's native sliders cannot express independent dimensions.** A slider's
+steps cannot read the other sliders' positions, so two sliders cannot select a
+cell of a 2-D grid. The interactive tower's exported HTML builds its own
+sliders in JavaScript instead. If you add another interactive figure with more
+than one control, do not spend time trying to make `updatemenus` do it.
 
 **The user runs JupyterLab against `notebooks/`.** Do not kill it. Their edits
 arrive as working-tree changes; read a diff before assuming it is yours, and
@@ -148,8 +172,12 @@ recomputing the formula inside the test would not.
 
 ## Where the planned work is recorded
 
-`README.md`, *Future work*, in three tiers by effort and dependency. Two entries
-deserve reading before touching anything nearby:
+`README.md`, *Future work*, in three tiers by effort and dependency, with a
+*Completed* table above them. **Item numbers are stable** — completed items keep
+their number rather than being renumbered, because this file and the commit
+messages refer to them by number. Items 3, 5, 6, 7, 10 and 11 are done.
+
+Two of the remaining entries deserve reading before touching anything nearby:
 
 - **Item 1** records the argument *against* the Legendre-transformed standard
   state, with the reasoning, so it does not get relitigated. The short version:
