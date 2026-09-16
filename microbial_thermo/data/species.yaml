@@ -106,3 +106,23 @@ species:
   - {backend: "HNO2(aq)",  formula: "HNO2",   display: "HNO_2",       phase: aq, aliases: ["nitrous acid"]}
   - {backend: "Propanoic_acid(aq)", formula: "C3H6O2", display: "propionic\\ acid", phase: aq, smiles: "CCC(=O)O",  aliases: ["propionic acid", "propanoic acid"]}
   - {backend: "Butanoic_acid(aq)",  formula: "C4H8O2", display: "butyric\\ acid",   phase: aq, smiles: "CCCC(=O)O", aliases: ["butyric acid", "butanoic acid"]}
+
+  # --- vanadium ---
+  #
+  # All of these come from pyGCC, not the supplemental table: the aqueous ions
+  # from speq21.dat and the oxides and the sulfate ion pair from thermo.com.dat
+  # by the log K route.
+  #
+  # Two naming traps worth knowing. Vanadium dioxide is "V2O4" in the database,
+  # the doubled formula of VO2 -- the same V(IV) compound. And "VO2+" is NOT
+  # that: it is the aqueous dioxovanadium(V) cation, a different oxidation
+  # state. A bare "VO2" resolves to the solid, since that is what the name
+  # conventionally means.
+  - {backend: "V++",       formula: "V+2",   display: "V^{2+}",     phase: aq, aliases: ["V+2", "V(II)"]}
+  - {backend: "V+++",      formula: "V+3",   display: "V^{3+}",     phase: aq, aliases: ["V+3", "V(III)"]}
+  - {backend: "VO++",      formula: "VO+2",  display: "VO^{2+}",    phase: aq, aliases: ["VO+2", vanadyl, "V(IV)"]}
+  - {backend: "VO2+",      formula: "VO2+",  display: "VO_2^+",     phase: aq, aliases: [dioxovanadium, "V(V)"]}
+  - {backend: "VO4---",    formula: "VO4-3", display: "VO_4^{3-}",  phase: aq, aliases: ["VO4-3", vanadate, orthovanadate]}
+  - {backend: "V2O4",      formula: "V2O4",  display: "VO_2",       phase: s,  aliases: ["VO2", "vanadium dioxide", "vanadium(IV) oxide"]}
+  - {backend: "V3O5",      formula: "V3O5",  display: "V_3O_5",     phase: s,  aliases: ["V3O5"]}
+  - {backend: "VOSO4(aq)", formula: "VOSO4", display: "VOSO_4(aq)", phase: aq, aliases: ["VOSO4", "vanadyl sulfate", "vanadyl sulphate"]}

@@ -161,5 +161,91 @@ class TestMetalMetabolisms(unittest.TestCase):
         self.assertEqual(mean_oxidation_state("Mn", "Mn3O4"), Fraction(8, 3))
 
 
+class TestVanadium(unittest.TestCase):
+    """Vanadium, all of it from pyGCC rather than the supplemental table."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.backend = mt.get_backend()
+        cls.conditions = mt.Conditions(temperature_c=25.0, pH=7.0)
+
+    def test_formation_energies_against_published(self):
+        for name, expected, tolerance in [
+            ("vanadyl", -446.4, 2.0),  # VO2+ aqueous
+            ("V(V)", -587.0, 3.0),  # VO2+ dioxovanadium
+            ("vanadium dioxide", -1318.6, 4.0),  # V2O4
+        ]:
+            with self.subTest(species=name):
+                species = resolve(name)
+                value = self.backend.delta_Gf(species.backend, 25.0).magnitude
+                self.assertAlmostEqual(value, expected, delta=tolerance)
+
+    def test_vo2_means_the_solid_not_the_cation(self):
+        """'VO2' is vanadium(IV) oxide; 'VO2+' is dioxovanadium(V). Two
+        different oxidation states one character apart."""
+        solid = resolve("VO2")
+        cation = resolve("VO2+")
+        self.assertEqual(solid.backend, "V2O4")
+        self.assertEqual(solid.phase, "s")
+        self.assertEqual(cation.backend, "VO2+")
+        self.assertEqual(cation.phase, "aq")
+        from microbial_thermo.oxidation import mean_oxidation_state
+
+        self.assertEqual(mean_oxidation_state("V", solid.formula), 4)
+        self.assertEqual(mean_oxidation_state("V", cation.formula), 5)
+
+    def test_vanadyl_sulfate_resolves_to_the_ion_pair(self):
+        species = resolve("vanadyl sulfate")
+        self.assertEqual(species.backend, "VOSO4(aq)")
+        self.assertEqual(species.parsed.elements, {"V": 1, "S": 1, "O": 5})
+
+    def test_vanadyl_sulfate_is_tabulated_at_one_temperature(self):
+        self.assertTrue(self.backend.minerals["VOSO4(aq)"].is_isothermal)
+        with self.assertRaises(OutOfRangeError):
+            self.backend.delta_Gf("VOSO4(aq)", 60.0)
+
+    def test_vanadium_dioxide_has_a_full_temperature_grid(self):
+        self.assertFalse(self.backend.minerals["V2O4"].is_isothermal)
+        cold = self.backend.delta_Gf("V2O4", 5.0).magnitude
+        warm = self.backend.delta_Gf("V2O4", 95.0).magnitude
+        self.assertNotAlmostEqual(cold, warm, places=1)
+
+    def test_the_two_reduction_couples(self):
+        for reduced, oxidized, expected in [
+            ("VO+2", "VO2+", 0.173),  # V(V)/V(IV)
+            ("V+3", "VO+2", -0.486),  # V(IV)/V(III)
+        ]:
+            with self.subTest(couple=f"{oxidized}/{reduced}"):
+                result = mt.half_reaction(reduced, oxidized, self.conditions)
+                self.assertEqual(result.half.n_electrons, 1)
+                self.assertAlmostEqual(
+                    result.E_standard_prime.to("V").magnitude, expected, delta=0.01
+                )
+
+    def test_vanadate_reduction_is_exergonic_and_consistent(self):
+        for equation in ("VO2+ + H2 -> VO++", "acetate + VO2+ -> CO2 + VO++"):
+            with self.subTest(equation=equation):
+                reaction = mt.Reaction.from_equation(
+                    equation, conditions=self.conditions, normalize_to="integer"
+                )
+                reaction.verify_consistency()
+                self.assertLess(reaction.delta_G_standard_prime.magnitude, 0.0)
+
+    def test_the_solid_and_the_vanadyl_ion_are_not_a_redox_couple(self):
+        """V2O4 and VO2+ are both V(IV); pairing them is a dissolution, and
+        the library should say so rather than inventing a potential."""
+        with self.assertRaises(ValueError) as caught:
+            _ = mt.half_reaction("VO+2", "V2O4", self.conditions).E_standard
+        self.assertIn("no electrons", str(caught.exception))
+
+    def test_vanadyl_sulfate_cannot_stand_in_for_the_vanadyl_ion(self):
+        """It carries sulfur, so a couple against VO2+ fails conservation --
+        the right answer, since VOSO4 is an ion pair, not a redox form."""
+        from microbial_thermo.exceptions import BalancingError
+
+        with self.assertRaises(BalancingError):
+            mt.half_reaction("VOSO4(aq)", "VO2+", self.conditions)
+
+
 if __name__ == "__main__":
     unittest.main()

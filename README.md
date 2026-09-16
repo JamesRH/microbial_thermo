@@ -292,6 +292,27 @@ routes to the same number. They agree with each other and with published values
 to within 1–3 kJ/mol, which is what licenses trusting the manganese oxides,
 where only one route exists.
 
+### Vanadium
+
+Aqueous ions from the HKF database, oxides and the sulfate ion pair through the
+log K route — no hand-entered values. `V+2`, `V+3`, `VO+2` (vanadyl),
+`VO2+` (dioxovanadium), `VO4-3` (vanadate), `V2O4`, `V3O5`, `VOSO4(aq)`.
+
+Two naming traps:
+
+- **`VO2` is the solid**, vanadium(IV) oxide, stored as `V2O4` — the doubled
+  formula of the same compound. **`VO2+` is not that**: it is the aqueous
+  dioxovanadium(V) cation, one oxidation state higher. One character apart,
+  V(IV) against V(V).
+- **`VOSO4(aq)` is an ion pair**, not a redox form, and it is tabulated at 25 °C
+  only. Pairing it against `VO2+` fails conservation because it carries sulfur;
+  use `VO+2` for redox work. Likewise `V2O4` against `VO+2` is a dissolution,
+  not a couple — both are V(IV) — and the library says so rather than inventing
+  a potential.
+
+The two reduction couples come out at +0.173 V (V(V)/V(IV)) and −0.486 V
+(V(IV)/V(III)) at pH 7.
+
 ### The curated metabolism library
 
 Thirty-one named metabolisms, so you need not remember which couples to pair.
@@ -547,7 +568,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 243 tests
+python -m unittest discover -s tests     # 252 tests
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```

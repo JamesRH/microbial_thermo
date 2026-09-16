@@ -2,6 +2,13 @@
 
 This document is the absolute source of truth and operational blueprint for all AI agents and autonomous coding harnesses operating within this repository. You MUST adhere strictly to these constraints, conventions, and software carpentry guidelines to ensure scientifically reproducible and maintainable code.
 
+> **Start with `NOTES.md`.** This file gives the rules; `NOTES.md` gives the
+> accumulated operational knowledge for this particular project — pyGCC's real
+> behaviour (several points contradict its documentation), the numerical
+> conventions that must not drift, and the traps that have already cost time.
+> `SPEC.md` §15 records where the implementation departed from its design and
+> why. Planned work is in the *Future work* section of `README.md`.
+
 ## 1. Core Directives & Agent Execution
 
 * **Read Before Writing:** Always read the current state of a file, module, or README before proposing or applying edits. Never assume the structure of the codebase.
