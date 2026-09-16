@@ -22,7 +22,11 @@ from dataclasses import dataclass
 from fractions import Fraction
 from math import gcd
 
-from .exceptions import AmbiguousReactionError, BalancingError
+from .exceptions import (
+    AmbiguousReactionError,
+    BalancingError,
+    MicrobialThermoError,
+)
 from .oxidation import mean_oxidation_state
 from .species import Species, default_registry
 
@@ -578,6 +582,10 @@ def infer_couples(equation: str, registry=None) -> tuple:
 
     found: list[tuple] = []  # (reactant, product, element)
     assigned: set = set()
+    # Species whose oxidation state cannot be read from the formula alone --
+    # vanadyl sulfate carries both V and S, neither of them a spectator. These
+    # are invisible to the search below, so remember them for the error message.
+    unassignable: dict = {}
     for element in elements:
         left = [
             s
@@ -596,6 +604,13 @@ def infer_couples(equation: str, registry=None) -> tuple:
                         element, p.formula
                     ):
                         continue
+                except MicrobialThermoError:
+                    for candidate in (r, p):
+                        try:
+                            mean_oxidation_state(element, candidate.formula)
+                        except MicrobialThermoError:
+                            unassignable[candidate.backend] = element
+                    continue
                 except Exception:
                     continue
                 found.append((r, p, element))
@@ -630,16 +645,27 @@ def infer_couples(equation: str, registry=None) -> tuple:
             acceptors.append((product, reactant, element))
 
     if len(donors) != 1 or len(acceptors) != 1:
-        raise AmbiguousReactionError(
+        message = (
             f"could not read a single donor and a single acceptor from "
             f"{equation!r}: found {len(donors)} donor(s) "
             f"[{', '.join(f'{r.backend}->{p.backend}' for r, p, _ in donors)}] and "
             f"{len(acceptors)} acceptor(s) "
-            f"[{', '.join(f'{o.backend}->{r.backend}' for r, o, _ in acceptors)}]. "
-            "Build it with Reaction.from_couples(donor=..., acceptor=...) instead, "
-            "naming the couples yourself.",
-            basis=(donors, acceptors),
+            f"[{', '.join(f'{o.backend}->{r.backend}' for r, o, _ in acceptors)}]."
         )
+        if unassignable:
+            listed = ", ".join(
+                f"{name} ({element})" for name, element in sorted(unassignable.items())
+            )
+            message += (
+                f" The oxidation state of {listed} cannot be read from the formula "
+                "alone, because more than one of its elements has no conventional "
+                "state, so it could not take part in a couple here."
+            )
+        message += (
+            " Build it with Reaction.from_couples(donor=..., acceptor=...) instead, "
+            "naming the couples yourself."
+        )
+        raise AmbiguousReactionError(message, basis=(donors, acceptors))
 
     donor_reduced, donor_oxidized, _ = donors[0]
     acceptor_reduced, acceptor_oxidized, _ = acceptors[0]

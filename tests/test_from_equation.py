@@ -249,5 +249,50 @@ class TestUnverifiedValuesAreVisibleOnFigures(unittest.TestCase):
         self.assertFalse(any("unverified" in t for t in texts))
 
 
+class TestInferenceFailuresExplainThemselves(unittest.TestCase):
+    """An error that says only "0 acceptors" sends you hunting.
+
+    When a species is invisible to couple inference because its oxidation state
+    cannot be read from the formula, the message should name it.
+    """
+
+    def _error(self, equation):
+        with self.assertRaises(AmbiguousReactionError) as caught:
+            mt.Reaction.from_equation(equation, conditions=mt.Conditions(pH=7.0))
+        return str(caught.exception)
+
+    def test_it_names_the_species_that_blocked_inference(self):
+        message = self._error("VO2+ + SO4-2 + H2 -> VOSO4(aq)")
+        self.assertIn("VOSO4(aq)", message)
+        self.assertIn("cannot be read from the formula", message)
+
+    def test_it_still_reports_what_it_did_find(self):
+        message = self._error("VO2+ + SO4-2 + H2 -> VOSO4(aq)")
+        self.assertIn("1 donor", message)
+        self.assertIn("0 acceptor", message)
+
+    def test_it_points_at_the_route_that_works(self):
+        message = self._error("VO2+ + SO4-2 + H2 -> VOSO4(aq)")
+        self.assertIn("from_couples", message)
+
+    def test_a_plain_non_redox_equation_says_nothing_about_oxidation_states(self):
+        """The extra sentence must only appear when it is the actual cause."""
+        message = self._error("CO2(aq) + H2O -> HCO3- + H+")
+        self.assertNotIn("cannot be read from the formula", message)
+
+    def test_the_named_route_actually_works(self):
+        """What the error recommends must produce the reaction."""
+        from microbial_thermo.reaction import Couple, Reaction
+
+        reaction = Reaction.from_couples(
+            donor=Couple.make("H2(aq)", "H+"),
+            acceptor=Couple.make(["VOSO4(aq)"], ["VO2+", "SO4-2"], key_element="V"),
+            conditions=mt.Conditions(temperature_c=25.0, pH=7.0),
+            normalize_to="integer",
+        )
+        reaction.verify_consistency()
+        self.assertLess(reaction.delta_G_standard_prime.magnitude, 0.0)
+
+
 if __name__ == "__main__":
     unittest.main()

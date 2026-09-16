@@ -597,7 +597,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 255 tests
+python -m unittest discover -s tests     # 260 tests
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```
