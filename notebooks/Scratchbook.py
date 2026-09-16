@@ -229,7 +229,7 @@ alkaline = mt.Conditions(temperature_c=25.0, pH=10.0)
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     manganese = mt.Reaction.from_equation(
-        "NH3 + MnO2 -> N2 + Mn+2", conditions=alkaline, normalize_to="integer"
+        "NH3 + MnO2 -> N2 + Mn+2", conditions=alkaline, n_electrons=2
     )
 
 print(manganese.summary())
@@ -272,6 +272,17 @@ with warnings.catch_warnings():
     manganese_explorer = plot_energy_explorer(manganese.renormalized(2))
 
 manganese_explorer.show()
+
+# %% [markdown]
+# ## Show the work
+#
+# Every number above, traced back to where it came from.
+
+# %%
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    work = manganese.show_work()
+work
 
 # %% [markdown]
 # # Ammonium oxidation to N₂ under oxygen, pH 7
@@ -322,7 +333,18 @@ with warnings.catch_warnings():
 aerobic_explorer.show()
 
 # %% [markdown]
-# ### The three side by side
+# ## Show the work
+#
+# Every number above, traced back to where it came from.
+
+# %%
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    work = aerobic.show_work()
+work
+
+# %% [markdown]
+# # The three side by side
 #
 # Per electron, so they are comparable despite very different electron counts.
 

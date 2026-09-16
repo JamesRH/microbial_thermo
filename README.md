@@ -556,10 +556,12 @@ ruff check microbial_thermo tests
 
 ## Known limitations
 
-- **Glucose and pyruvate are absent** from every database pyGCC ships. Acetate,
-  formate, lactate, propanoate, butanoate, methanol and ethanol are present.
-  The supplemental-data mechanism for filling such gaps is specified in
-  `SPEC.md` §2.1 but is **not yet implemented**.
+- **Glucose, pyruvate and hydroxylamine are absent** from every database pyGCC
+  ships. Acetate, formate, lactate, propanoate, butanoate, methanol and ethanol
+  are present. The three missing ones come from the hand-entered supplemental
+  table instead, and all three are flagged `verified: false` — they warn on every
+  use and footnote any figure that depends on them. Tracing them to primary
+  sources is the one real correctness debt outstanding.
 - **Isothermal minerals.** A few phases — manganite and birnessite among them —
   are tabulated at 25 °C only in the source database. They evaluate at 25 °C and
   raise `OutOfRangeError` elsewhere rather than inventing a temperature
@@ -628,14 +630,22 @@ items unblock later ones.
    place and asserted in the tests; only the plotting remains.
 4. **Provenance export**: per-result record of pyGCC version, database file
    hash, and per-species source, dumpable as BibTeX.
-5. **Sulfur disproportionation** and other reactions whose balancing is
-   genuinely underdetermined — currently detected and refused, rather than
-   solved by asking which products are intended.
+5. **Underdetermined full-equation balancing.** `Reaction.from_equation` now
+   handles disproportionation, because inferring the couples supplies the
+   information conservation cannot — thiosulfate resolves to donor and acceptor
+   both being S₂O₃²⁻. But `balance_equation` alone still refuses such cases. It
+   could offer the nullspace basis and ask which combination is meant rather
+   than only raising.
+6. **Execute the notebooks in the test suite.** They are currently executed by
+   hand, so a library change can silently rot them. `nbconvert --execute` over
+   `notebooks/` would catch it; the cost is roughly a minute.
+7. **Phase-ambiguous species names.** A bare `H2` resolves to `H2(aq)` purely
+   because that entry comes first in `species.yaml`, and the gas is 91 mV away
+   at pH 7. The resolution is deliberate but undeclared — either make it
+   explicit in the registry or warn when an ambiguous name is used.
 
 ### Tier 2 — moderate, mostly new figures over existing machinery
 
-7. **Syntrophy window plot**: both partners' $\Delta G$ against $p\mathrm{H_2}$
-   on one axis, showing the narrow overlap where both are exergonic.
 8. **Environmental gradient profiles**: read a CSV of depth, T, pH and
    concentrations and plot the affinity of many metabolisms against depth — the
    figure that makes redox zonation fall out of thermodynamics.
@@ -671,9 +681,10 @@ items unblock later ones.
 
 | path | purpose |
 |---|---|
+| `NOTES.md` | operational knowledge for anyone picking this up: pyGCC's quirks, the conventions that must not drift, and the traps |
 | `SPEC.md` | design specification, including verified backend findings |
 | `PROMPT.md` | the original project brief |
 | `AGENTS.md` | repository conventions for AI agents |
 | `microbial_thermo/` | the library |
 | `tests/` | unittest suite |
-| `notebooks/` | jupytext-paired notebooks (not yet populated) |
+| `notebooks/` | jupytext-paired teaching notebooks, committed with outputs |
