@@ -6,7 +6,9 @@ chemistry, computes $E^\circ$, $E^{\circ\prime}$ and $\Delta G$ from a real
 thermodynamic database, and draws the three figures a course needs: a stacked
 half-reaction diagram, a redox tower, and an interactive free-energy explorer.
 
-Built for teaching first. Every result can be asked to show its work.
+Built as a teaching aid. Every result can be asked to show its work.
+
+**Code not reviewed, not production ready scientific software**
 
 **Backend:** [pyGCC](https://bitbucket.org/Tutolo-RTG/pygcc/) only.
 **Range:** 0.01–100 °C, near-surface pressure.
