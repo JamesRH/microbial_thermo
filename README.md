@@ -118,6 +118,12 @@ mt.Reaction.from_equation("NO3- + H2 -> NH2OH", conditions=conditions)
 # H+ + 3 H2(aq) + NO3- -> NH2OH(aq) + 2 H2O
 ```
 
+**What the string may contain:** species names only, separated by a spaced `+`.
+No electrons — they are inferred. No stoichiometric coefficients — the point is
+that it is unbalanced. No H⁺ or H₂O unless you want them; they are supplied. A
+bare `+` with no space after it is a charge (`Fe+3`, `VO2+`), which is why the
+spacing matters.
+
 It finds which elements change oxidation state, forms the donor and acceptor
 couples from that, and balances water, protons and electrons as usual. Species
 the writer left implicit are supplied — nobody writes the proton that H₂
@@ -311,7 +317,30 @@ Two naming traps:
   a potential.
 
 The two reduction couples come out at +0.173 V (V(V)/V(IV)) and −0.486 V
-(V(IV)/V(III)) at pH 7.
+(V(IV)/V(III)) at pH 7, so the simplest vanadate reduction is just
+
+```python
+mt.Reaction.from_equation("H2 + VO2+ -> VO+2")
+# 2 H+ + H2(aq) + 2 VO2+ -> 2 VO++ + 2 H2O
+```
+
+To keep VOSO₄ explicitly, `from_equation` cannot infer it — vanadium's state is
+unreadable in that formula — so name the couple yourself, carrying sulfate along
+on the same side so sulfur conserves:
+
+```python
+from microbial_thermo.reaction import Couple, Reaction
+
+Reaction.from_couples(
+    donor=Couple.make("H2(g)", "H+"),
+    acceptor=Couple.make(["VOSO4(aq)"], ["VO2+", "SO4-2"], key_element="V"),
+    conditions=conditions, normalize_to="integer",
+)
+# 2 H+ + H2(g) + 2 VO2+ + 2 SO4-- -> 2 VOSO4(aq) + 2 H2O,  ΔG°′ = -141.6 kJ/mol
+```
+
+VOSO₄ then goes unannotated on the half-reaction diagram, since its oxidation
+state cannot be assigned, but everything else is labelled normally.
 
 ### The curated metabolism library
 
@@ -568,7 +597,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 252 tests
+python -m unittest discover -s tests     # 255 tests
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```

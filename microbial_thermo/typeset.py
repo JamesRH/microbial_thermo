@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 
 from .balance import ELECTRON, HalfReaction
+from .exceptions import MicrobialThermoError
 from .oxidation import format_oxidation_state, mean_oxidation_state
 
 #: Token kinds. The arrow is the alignment anchor for stacked equations.
@@ -137,9 +138,16 @@ def build_equation_tokens(
                 and species != ELECTRON
                 and annotate_element in species.parsed.elements
             ):
-                state = format_oxidation_state(
-                    mean_oxidation_state(annotate_element, species.formula)
-                )
+                try:
+                    state = format_oxidation_state(
+                        mean_oxidation_state(annotate_element, species.formula)
+                    )
+                except MicrobialThermoError:
+                    # Some species carry two elements with no conventional
+                    # state -- vanadyl sulfate has both V and S -- so the mean
+                    # cannot be assigned from the formula alone. Leave that one
+                    # species unannotated rather than losing the whole figure.
+                    state = None
             layout.tokens.append(
                 Token(
                     text=species_latex(species),

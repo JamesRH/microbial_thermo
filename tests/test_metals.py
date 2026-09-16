@@ -247,5 +247,65 @@ class TestVanadium(unittest.TestCase):
             mt.half_reaction("VOSO4(aq)", "VO2+", self.conditions)
 
 
+class TestVanadylSulfateAsACouple(unittest.TestCase):
+    """VOSO4 can be a redox form, but only as a multi-species side.
+
+    Sulfate has to travel with it or sulfur does not conserve, and its own
+    vanadium oxidation state cannot be read from the formula, since V and S are
+    both non-spectator elements.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from microbial_thermo.reaction import Couple
+
+        cls.conditions = mt.Conditions(temperature_c=25.0, pH=7.0)
+        cls.acceptor = Couple.make(["VOSO4(aq)"], ["VO2+", "SO4-2"], key_element="V")
+
+    def test_it_balances_with_sulfate_carried_along(self):
+        half = self.acceptor.half_reaction()
+        self.assertEqual(half.n_electrons, 1)
+        names = {s.backend for s in half.coefficients}
+        self.assertIn("SO4--", names)
+        self.assertIn("VOSO4(aq)", names)
+
+    def test_the_whole_reaction_balances_and_cross_checks(self):
+        from microbial_thermo.reaction import Couple, Reaction
+
+        reaction = Reaction.from_couples(
+            donor=Couple.make("H2(g)", "H+"),
+            acceptor=self.acceptor,
+            conditions=self.conditions,
+            normalize_to="integer",
+        )
+        reaction.verify_consistency()
+        self.assertLess(reaction.delta_G_standard_prime.magnitude, 0.0)
+
+    def test_an_unassignable_oxidation_state_does_not_lose_the_figure(self):
+        """VOSO4's vanadium cannot be assigned from the formula. That species
+        goes unannotated; it must not take the whole diagram down."""
+        import matplotlib
+
+        matplotlib.use("Agg")
+        from microbial_thermo.figures import plot_half_reactions
+        from microbial_thermo.reaction import Couple, Reaction
+        from microbial_thermo.typeset import build_equation_tokens
+
+        reaction = Reaction.from_couples(
+            donor=Couple.make("H2(g)", "H+"),
+            acceptor=self.acceptor,
+            conditions=self.conditions,
+            normalize_to="integer",
+        )
+        plot_half_reactions(reaction)  # must not raise
+
+        layout = build_equation_tokens(
+            reaction.acceptor_half.half, "reduction", annotate_element="V"
+        )
+        annotations = {t.species.backend: t.oxidation_state for t in layout.species_tokens()}
+        self.assertEqual(annotations["VO2+"], "+5")  # still labelled
+        self.assertIsNone(annotations["VOSO4(aq)"])  # quietly skipped
+
+
 if __name__ == "__main__":
     unittest.main()
