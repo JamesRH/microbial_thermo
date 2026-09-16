@@ -20,6 +20,8 @@ dependencies:
   - pyyaml>=6.0
   - ipykernel
   - ipywidgets
+  # nbclient executes the teaching notebooks in the test suite.
+  - nbclient>=0.9
   - ruff
   - pip
   - pip:

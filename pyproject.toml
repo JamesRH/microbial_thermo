@@ -25,7 +25,8 @@ dependencies = [
 
 [project.optional-dependencies]
 figures = ["seaborn>=0.13", "rdkit>=2024.03"]
-dev = ["ruff", "jupytext", "ipykernel", "ipywidgets"]
+# nbclient executes the teaching notebooks in the test suite.
+dev = ["ruff", "jupytext", "ipykernel", "ipywidgets", "nbclient>=0.9"]
 
 [project.scripts]
 mthermo = "microbial_thermo.cli:main"
