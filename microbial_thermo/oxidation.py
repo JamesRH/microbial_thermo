@@ -243,3 +243,31 @@ def format_oxidation_state(state: Fraction) -> str:
     if magnitude.denominator == 1:
         return f"{sign}{magnitude.numerator}"
     return f"{sign}{magnitude.numerator}/{magnitude.denominator}"
+
+
+def per_atom_states(smiles: str, element: str) -> list[int]:
+    """Oxidation states of every ``element`` atom in ``smiles``, sorted."""
+    return sorted(state for symbol, state in atom_oxidation_states(smiles) if symbol == element)
+
+
+def format_per_atom_states(smiles: str, element: str) -> str:
+    """Render the distinct per-atom states, with multiplicity where it repeats.
+
+    Acetate's two carbons are chemically distinct -- a methyl at -3 and a
+    carboxyl at +3 -- which their mean of 0 hides entirely. Glucose has six,
+    so repeats are collapsed rather than listed one by one::
+
+        acetate   -3, +3
+        butyrate  -3, -2(x2), +3
+        glucose   -1, 0(x4), +1
+    """
+    states = per_atom_states(smiles, element)
+    if not states:
+        raise MicrobialThermoError(f"{smiles!r} contains no {element}")
+
+    parts = []
+    for state in sorted(set(states)):
+        count = states.count(state)
+        label = format_oxidation_state(Fraction(state))
+        parts.append(f"{label}(x{count})" if count > 1 else label)
+    return ", ".join(parts)

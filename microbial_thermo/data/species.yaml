@@ -13,6 +13,11 @@
 #   aliases  - anything a user might reasonably type
 #   phase    - aq | g | s | l
 #   smiles   - optional, enables per-atom oxidation states
+#   canonical- declares this entry the intended answer for a name another
+#              phase also claims. A bare "H2", "O2", "N2", "CO2" or "CH4"
+#              resolves to the DISSOLVED form, since that is the one a cell
+#              actually sees. Write "H2(g)" for the gas, or
+#              resolve("H2", phase="g").
 
 species:
   # --- solvent and proton ---
@@ -21,9 +26,9 @@ species:
   - {backend: "OH-",  formula: "OH-", display: "OH^-", phase: aq, aliases: [hydroxide]}
 
   # --- oxygen and hydrogen ---
-  - {backend: "O2(aq)", formula: "O2", display: "O_2(aq)", phase: aq, aliases: [O2, oxygen, dioxygen]}
+  - {backend: "O2(aq)", formula: "O2", display: "O_2(aq)", phase: aq, canonical: true, aliases: [O2, oxygen, dioxygen]}
   - {backend: "O2(g)",  formula: "O2", display: "O_2(g)",  phase: g,  aliases: ["O2(g)"]}
-  - {backend: "H2(aq)", formula: "H2", display: "H_2(aq)", phase: aq, aliases: ["H2(aq)", dihydrogen]}
+  - {backend: "H2(aq)", formula: "H2", display: "H_2(aq)", phase: aq, canonical: true, aliases: ["H2(aq)", dihydrogen]}
   - {backend: "H2(g)",  formula: "H2", display: "H_2(g)",  phase: g,  aliases: [H2, hydrogen, "H2(g)"]}
 
   # --- sulfur ---
@@ -38,17 +43,17 @@ species:
   # --- nitrogen ---
   - {backend: "NO3-",    formula: "NO3-",  display: "NO_3^-",  phase: aq, aliases: [nitrate]}
   - {backend: "NO2-",    formula: "NO2-",  display: "NO_2^-",  phase: aq, aliases: [nitrite]}
-  - {backend: "N2(aq)",  formula: "N2",    display: "N_2(aq)", phase: aq, aliases: [N2, dinitrogen, "nitrogen gas"]}
+  - {backend: "N2(aq)",  formula: "N2",    display: "N_2(aq)", phase: aq, canonical: true, aliases: [N2, dinitrogen, "nitrogen gas"]}
   - {backend: "N2(g)",   formula: "N2",    display: "N_2(g)",  phase: g,  aliases: ["N2(g)"]}
   - {backend: "NH4+",    formula: "NH4+",  display: "NH_4^+",  phase: aq, aliases: [ammonium]}
   - {backend: "NH3(aq)", formula: "NH3",   display: "NH_3(aq)", phase: aq, aliases: [NH3, ammonia]}
 
   # --- carbon, inorganic ---
-  - {backend: "CO2(aq)",     formula: "CO2",  display: "CO_2(aq)", phase: aq, aliases: [CO2, "carbon dioxide"]}
+  - {backend: "CO2(aq)",     formula: "CO2",  display: "CO_2(aq)", phase: aq, canonical: true, aliases: [CO2, "carbon dioxide"]}
   - {backend: "CO2(g)",      formula: "CO2",  display: "CO_2(g)",  phase: g,  aliases: ["CO2(g)"]}
   - {backend: "HCO3-",       formula: "HCO3-", display: "HCO_3^-", phase: aq, aliases: [bicarbonate]}
   - {backend: "CO3--",       formula: "CO3-2", display: "CO_3^{2-}", phase: aq, aliases: [carbonate, "CO3-2"]}
-  - {backend: "Methane(aq)", formula: "CH4",  display: "CH_4(aq)", phase: aq, aliases: [CH4, methane, "CH4(aq)"]}
+  - {backend: "Methane(aq)", formula: "CH4",  display: "CH_4(aq)", phase: aq, canonical: true, aliases: [CH4, methane, "CH4(aq)"]}
   - {backend: "CH4(g)",      formula: "CH4",  display: "CH_4(g)",  phase: g,  aliases: ["CH4(g)"]}
 
   # --- carbon, organic ---

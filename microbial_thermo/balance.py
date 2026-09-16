@@ -468,7 +468,25 @@ def _split_side(side: str, equation: str) -> list[str]:
     return tokens
 
 
-def balance_equation(equation: str, registry=None) -> dict:
+def _readable_basis(species, nullspace) -> list:
+    """Turn sympy nullspace vectors into labelled coefficient sets."""
+    out = []
+    for vector in nullspace:
+        values = [Fraction(int(v.p), int(v.q)) for v in vector]
+        if any(v != 0 for v in values):
+            first = next(v for v in values if v != 0)
+            if first < 0:
+                values = [-v for v in values]
+        entry = {sp: v for sp, v in zip(species, values, strict=True) if v != 0}
+        out.append(clear_denominators(entry))
+    return out
+
+
+def _describe_solution(coefficients: dict) -> str:
+    return " , ".join(f"{v}·{s.backend}" for s, v in coefficients.items())
+
+
+def balance_equation(equation: str, registry=None, fix=None) -> dict:
     """Balance a full reaction string into signed, Species-keyed coefficients.
 
     Solves the homogeneous system ``A x = 0`` where the rows of ``A`` are the
@@ -476,18 +494,23 @@ def balance_equation(equation: str, registry=None) -> dict:
     species. The nullspace is computed in exact rational arithmetic by sympy,
     so coefficients are never floating point.
 
-    The nullspace dimension tells us how determined the problem is:
+    The nullspace dimension says how determined the problem is:
 
     * 0 -- no non-trivial solution; the reaction cannot be balanced.
-    * 1 -- a unique answer up to scale, which is the normal case.
-    * >1 -- genuinely ambiguous, disproportionation being the usual cause. We
-      raise :class:`AmbiguousReactionError` carrying the basis rather than
-      silently returning one of infinitely many answers.
+    * 1 -- a unique answer up to scale, the normal case.
+    * >1 -- genuinely underdetermined. Conservation alone does not pick an
+      answer, and nor should we.
 
-    We deliberately do not use ``chempy.balance_stoichiometry`` here: its
+    For that last case, pass ``fix`` to supply the missing information: a
+    mapping of species name to how many moles of it participate, as a positive
+    number, e.g. ``fix={"O2": 1}``. Each entry is one extra constraint. Without
+    it the raised :class:`AmbiguousReactionError` carries the solution basis in
+    readable form, so you can see what the choices actually are.
+
+    ``chempy.balance_stoichiometry`` is deliberately not used here: its
     ``underdetermined=None`` mode solves an integer program through ``pulp``,
-    which requires an external CBC solver binary that is not part of the conda
-    environment, and it offers no way to inspect the nullspace dimension.
+    needing an external CBC binary that is not in the environment, and it
+    offers no way to inspect the nullspace.
     """
     from sympy import Matrix, Rational
 
@@ -513,24 +536,34 @@ def balance_equation(equation: str, registry=None) -> dict:
             "conserves both atoms and charge. Check for a missing species such "
             "as H2O, H+, or an electron acceptor."
         )
-    if len(nullspace) > 1:
+
+    if len(nullspace) > 1 and fix is None:
+        options = _readable_basis(species, nullspace)
+        listed = "; ".join(f"({i}) {_describe_solution(o)}" for i, o in enumerate(options))
         raise AmbiguousReactionError(
             f"reaction {equation!r} has {len(nullspace)} independent balanced "
-            "solutions, so the stoichiometry is not determined by conservation "
-            "alone (disproportionation is the usual cause). Specify the donor "
-            "and acceptor couples explicitly instead.",
-            basis=nullspace,
+            "solutions, so conservation alone does not determine the "
+            f"stoichiometry. Any combination of these balances: {listed}. "
+            "Say which you mean by passing fix={'SPECIES': moles} -- one entry "
+            "per degree of freedom, which sets both the ratio and the scale, so "
+            f"{len(nullspace)} here -- or "
+            "specify the donor and acceptor couples with "
+            "Reaction.from_couples instead.",
+            basis=options,
         )
 
-    vector = list(nullspace[0])
-    # Orient the solution so the declared reactants come out negative.
-    if vector[0] > 0:
-        vector = [-v for v in vector]
-
-    coefficients: dict = {}
-    for entry, value in zip(species, vector, strict=True):
-        _add(coefficients, entry, Fraction(int(value.p), int(value.q)))
-    coefficients = clear_denominators({k: v for k, v in coefficients.items() if v != 0})
+    if len(nullspace) > 1:
+        coefficients = _solve_with_constraints(
+            species, reactants, rows, fix, registry, equation, len(nullspace)
+        )
+    else:
+        vector = list(nullspace[0])
+        if vector[0] > 0:
+            vector = [-v for v in vector]
+        coefficients = {}
+        for entry, value in zip(species, vector, strict=True):
+            _add(coefficients, entry, Fraction(int(value.p), int(value.q)))
+        coefficients = clear_denominators({k: v for k, v in coefficients.items() if v != 0})
 
     misplaced = [s.backend for s in reactants if coefficients.get(s, Fraction(0)) > 0]
     misplaced += [s.backend for s in products if coefficients.get(s, Fraction(0)) < 0]
@@ -541,6 +574,57 @@ def balance_equation(equation: str, registry=None) -> dict:
         )
 
     verify_conservation(coefficients, label=f"balanced {equation!r}")
+    return coefficients
+
+
+def _solve_with_constraints(species, reactants, rows, fix, registry, equation, dimension) -> dict:
+    """Re-solve an underdetermined system with the caller's extra constraints.
+
+    ``fix`` gives moles as a positive number; the sign comes from which side of
+    the arrow the species was written on, so the caller need not think about it.
+    """
+    from sympy import Rational, linsolve, symbols
+
+    unknowns = symbols(f"x0:{len(species)}")
+    equations = [sum(row[i] * unknowns[i] for i in range(len(species))) for row in rows]
+
+    reactant_backends = {s.backend for s in reactants}
+    for name, moles in fix.items():
+        target = registry.resolve(name)
+        try:
+            index = next(i for i, s in enumerate(species) if s.backend == target.backend)
+        except StopIteration:
+            raise BalancingError(
+                f"cannot fix {name!r}: it does not appear in {equation!r}"
+            ) from None
+        value = Rational(moles)
+        if target.backend in reactant_backends:
+            value = -value
+        equations.append(unknowns[index] - value)
+
+    solution = linsolve(equations, unknowns)
+    if not solution:
+        raise BalancingError(
+            f"no balanced solution for {equation!r} with fix={fix!r}; the "
+            "constraint is inconsistent with conservation"
+        )
+
+    values = list(next(iter(solution)))
+    free = sorted({str(sym) for value in values for sym in value.free_symbols})
+    if free:
+        raise AmbiguousReactionError(
+            f"{equation!r} is still underdetermined with fix={fix!r}: "
+            f"{len(free)} degree(s) of freedom remain. A nullspace of dimension "
+            f"{dimension} needs {dimension} constraints in all -- they set the "
+            "ratio between the independent solutions and the overall scale.",
+            basis=None,
+        )
+
+    coefficients = {}
+    for entry, value in zip(species, values, strict=True):
+        fraction = Fraction(int(value.p), int(value.q))
+        if fraction != 0:
+            _add(coefficients, entry, fraction)
     return coefficients
 
 

@@ -50,6 +50,7 @@ def _measure(fig, ax, tokens, fontsize):
 def plot_half_reactions(
     reaction,
     n_electrons: int | None = 2,
+    per_atom: bool = False,
     figsize=(11.0, 4.0),
     title: str | None = None,
     save: str | Path | None = None,
@@ -62,6 +63,11 @@ def plot_half_reactions(
     figure is specified around: both halves are balanced so exactly two
     electrons transfer. Pass ``n_electrons=None`` to draw the reaction exactly
     as it was built, or another integer to normalise to that instead.
+
+    ``per_atom`` annotates each atom's own oxidation state rather than the
+    species mean, where a SMILES is available. Acetate then reads "-3, +3"
+    instead of "0" -- its two carbons really are that far apart, and the mean
+    is an artefact of averaging them.
 
     ``save`` gives a path without an extension; one file is written per entry
     in ``formats``. Returns the matplotlib figure.
@@ -81,10 +87,16 @@ def plot_half_reactions(
     fig.canvas.draw()  # provision a renderer before measuring anything
 
     top = build_equation_tokens(
-        donor.half, direction="oxidation", annotate_element=donor.half.key_element
+        donor.half,
+        direction="oxidation",
+        annotate_element=donor.half.key_element,
+        per_atom=per_atom,
     )
     bottom = build_equation_tokens(
-        acceptor.half, direction="reduction", annotate_element=acceptor.half.key_element
+        acceptor.half,
+        direction="reduction",
+        annotate_element=acceptor.half.key_element,
+        per_atom=per_atom,
     )
 
     for layout in (top, bottom):

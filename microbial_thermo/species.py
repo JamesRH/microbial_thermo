@@ -41,6 +41,10 @@ class Species:
     phase: str = "aq"
     smiles: str | None = None
     aliases: tuple[str, ...] = field(default_factory=tuple)
+    #: Declares this entry the intended answer when a name it claims is also
+    #: claimed by another phase -- a bare "H2" being the case that matters.
+    #: Without it, which entry wins would depend on file ordering.
+    canonical: bool = False
 
     @property
     def parsed(self) -> ParsedFormula:
@@ -76,25 +80,81 @@ class SpeciesRegistry:
     def __init__(self, species: Iterable[Species]):
         self._species: list[Species] = list(species)
         self._index: dict[str, Species] = {}
+        #: Keys claimed by more than one species, and every claimant. A bare
+        #: "H2" is claimed by both the dissolved and the gaseous entry.
+        self._contested: dict[str, list[Species]] = {}
+
         for entry in self._species:
             for key in self._keys_for(entry):
-                # First registration wins, so the canonical backend name is not
-                # displaced by an alias belonging to another entry.
-                self._index.setdefault(key, entry)
+                claimants = self._contested.setdefault(key, [])
+                # One species can claim a key twice -- its formula and an
+                # identical alias -- which is not an ambiguity.
+                if entry.backend not in {e.backend for e in claimants}:
+                    claimants.append(entry)
+
+        for key, claimants in self._contested.items():
+            if len(claimants) == 1:
+                self._index[key] = claimants[0]
+                continue
+            declared = [e for e in claimants if e.canonical]
+            if len(declared) == 1:
+                self._index[key] = declared[0]
+            else:
+                # Nothing declared, so fall back on order -- but record it so
+                # ambiguities() can report the guess rather than hiding it.
+                self._index[key] = claimants[0]
+
+        self._contested = {k: v for k, v in self._contested.items() if len(v) > 1}
 
     @staticmethod
     def _keys_for(entry: Species) -> list[str]:
         keys = [entry.backend, entry.formula, *entry.aliases]
         return [_normalise(k) for k in keys if k]
 
-    def resolve(self, name: str) -> Species:
-        """Look up ``name``; raises with suggestions when it is unknown."""
+    @property
+    def undeclared_ambiguities(self) -> dict:
+        """Contested names where no entry claims to be canonical.
+
+        These resolve by file ordering, which is not a decision anyone made.
+        """
+        return {
+            key: list(claimants)
+            for key, claimants in self._contested.items()
+            if not any(e.canonical for e in claimants)
+        }
+
+    def ambiguities(self) -> dict:
+        """Every name claimed by more than one species, with what it resolves to.
+
+        ``{"h2": (resolved, [all claimants], declared)}`` -- ``declared`` says
+        whether the winner was chosen deliberately or fell out of file order.
+        """
+        out = {}
+        for key, claimants in self._contested.items():
+            resolved = self._index[key]
+            out[key] = (resolved, list(claimants), bool(resolved.canonical))
+        return out
+
+    def resolve(self, name, phase: str | None = None) -> Species:
+        """Look up ``name``; raises with suggestions when it is unknown.
+
+        ``phase`` picks between entries sharing a name -- ``resolve("H2",
+        phase="g")`` for the gas rather than the dissolved form.
+        """
         if isinstance(name, Species):
             return name
         key = _normalise(name)
-        if key in self._index:
+        if key not in self._index:
+            raise SpeciesNotFoundError(name, suggestions=self.suggest(name))
+
+        if phase is None:
             return self._index[key]
-        raise SpeciesNotFoundError(name, suggestions=self.suggest(name))
+
+        for entry in self._contested.get(key, [self._index[key]]):
+            if entry.phase == phase:
+                return entry
+        available = sorted({e.phase for e in self._contested.get(key, [self._index[key]])})
+        raise SpeciesNotFoundError(f"{name} (phase {phase!r}; available: {', '.join(available)})")
 
     def get(self, name: str, default=None):
         try:
@@ -144,6 +204,7 @@ def default_registry() -> SpeciesRegistry:
             phase=item.get("phase", "aq"),
             smiles=item.get("smiles"),
             aliases=tuple(str(a) for a in item.get("aliases", [])),
+            canonical=bool(item.get("canonical", False)),
         )
         for item in document["species"]
     ]
@@ -165,6 +226,9 @@ def default_registry() -> SpeciesRegistry:
     return SpeciesRegistry(entries)
 
 
-def resolve(name: str) -> Species:
-    """Resolve ``name`` against the default registry."""
-    return default_registry().resolve(name)
+def resolve(name, phase: str | None = None) -> Species:
+    """Resolve ``name`` against the default registry.
+
+    ``phase`` disambiguates a name two entries share: ``resolve("H2", "g")``.
+    """
+    return default_registry().resolve(name, phase=phase)

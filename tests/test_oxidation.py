@@ -117,5 +117,104 @@ class TestAtomOxidationStates(unittest.TestCase):
                 self.assertEqual(mean, nosc(formula))
 
 
+class TestPerAtomDisplay(unittest.TestCase):
+    """Per-atom states for the half-reaction figure.
+
+    A mean hides real chemistry: acetate's two carbons are four units apart
+    and average to zero, which describes neither of them.
+    """
+
+    def test_acetate_shows_both_carbons(self):
+        from microbial_thermo.oxidation import format_per_atom_states
+
+        self.assertEqual(format_per_atom_states("CC(=O)[O-]", "C"), "-3, +3")
+
+    def test_repeats_are_collapsed_with_a_count(self):
+        from microbial_thermo.oxidation import format_per_atom_states
+
+        # butyrate: methyl, two methylenes, carboxyl
+        self.assertEqual(format_per_atom_states("CCCC(=O)[O-]", "C"), "-3, -2(x2), +3")
+
+    def test_a_single_carbon_reads_like_the_mean(self):
+        from microbial_thermo.oxidation import format_per_atom_states
+
+        self.assertEqual(format_per_atom_states("CO", "C"), "-2")
+
+    def test_states_are_sorted(self):
+        from microbial_thermo.oxidation import per_atom_states
+
+        self.assertEqual(per_atom_states("CCC(=O)[O-]", "C"), [-3, -2, 3])
+
+    def test_the_mean_of_the_per_atom_states_is_the_nosc(self):
+        """The two views must agree: averaging the per-atom states has to give
+        back what the formula-only route reports."""
+        from fractions import Fraction
+
+        from microbial_thermo.oxidation import nosc, per_atom_states
+        from microbial_thermo.species import default_registry
+
+        for species in default_registry().all_species():
+            if not species.smiles or "C" not in species.parsed.elements:
+                continue
+            with self.subTest(species=species.backend):
+                states = per_atom_states(species.smiles, "C")
+                mean = Fraction(sum(states), len(states))
+                self.assertEqual(mean, nosc(species.formula))
+
+    def test_missing_element_raises(self):
+        from microbial_thermo.oxidation import format_per_atom_states
+
+        with self.assertRaises(MicrobialThermoError):
+            format_per_atom_states("CO", "N")
+
+
+class TestPerAtomOnTheFigure(unittest.TestCase):
+    def setUp(self):
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import microbial_thermo as mt
+
+        self.mt = mt
+        self.reaction = mt.Reaction.from_couples(
+            donor=("acetate", "CO2(aq)"),
+            acceptor=("H2O", "O2(aq)"),
+            conditions=mt.Conditions(temperature_c=25.0, pH=7.0),
+        )
+
+    def _annotations(self, per_atom):
+        from microbial_thermo.typeset import build_equation_tokens
+
+        layout = build_equation_tokens(
+            self.reaction.donor_half.half,
+            "oxidation",
+            annotate_element="C",
+            per_atom=per_atom,
+        )
+        return {
+            t.species.backend: t.oxidation_state
+            for t in layout.species_tokens()
+            if t.oxidation_state
+        }
+
+    def test_the_mean_is_still_the_default(self):
+        self.assertEqual(self._annotations(False)["Acetate"], "0")
+
+    def test_per_atom_replaces_it_when_asked(self):
+        self.assertEqual(self._annotations(True)["Acetate"], "-3, +3")
+
+    def test_species_without_a_smiles_keep_the_mean(self):
+        """CO2 has no SMILES in the registry, so it cannot do better than
+        the mean -- and must not break the figure."""
+        self.assertEqual(self._annotations(True)["CO2(aq)"], "+4")
+
+    def test_the_figure_renders_either_way(self):
+        from microbial_thermo.figures import plot_half_reactions
+
+        for per_atom in (False, True):
+            with self.subTest(per_atom=per_atom):
+                plot_half_reactions(self.reaction, per_atom=per_atom)
+
+
 if __name__ == "__main__":
     unittest.main()

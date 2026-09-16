@@ -138,7 +138,30 @@ keeps that straight.
 
 Disproportionation works too — `"S2O3-2 + H2O -> SO4-2 + HS-"` resolves to
 thiosulfate as both donor and acceptor, which is a reaction conservation alone
-leaves underdetermined. Where the equation does *not* resolve to exactly one
+leaves underdetermined.
+
+`balance_equation` on its own has no couples to lean on, so where the nullspace
+has more than one dimension it says so and hands back the basis in readable
+form rather than picking for you:
+
+```python
+balance_equation("HS- + O2 -> SO4-2 + Sulfur(s) + H2O + H+")
+# AmbiguousReactionError: 2 independent balanced solutions ... any combination
+# of these balances: (0) 4·HS- , 5·O2(aq) , -2·SO4-- , -2·Sulfur(s) , -2·H2O;
+# (1) 1·HS- , 2·O2(aq) , -1·SO4-- , -1·H+
+```
+
+Supply the missing information with `fix`, one entry per degree of freedom —
+they set both the ratio between solutions and the overall scale. Moles are
+positive; the sign comes from which side you wrote the species on:
+
+```python
+balance_equation(equation, fix={"HS-": 2, "Sulfur(s)": 1})
+# HS- -2, O2(aq) -5/2, SO4-- 1, Sulfur(s) 1, H2O 1
+```
+
+Different constraints give different chemistry, which is the point — you are
+choosing a reaction, not discovering one. Where the equation does *not* resolve to exactly one
 donor and one acceptor it raises rather than guessing; name the couples with
 `from_couples` in that case.
 
@@ -226,6 +249,25 @@ mt.atom_oxidation_states("CC(=O)[O-]")    # per-atom, acetate: C at -3 and +3
 ```
 
 Exact `Fraction`s, so magnetite iron reports `+8/3` rather than `2.6666667`.
+
+Pass `per_atom=True` to `plot_half_reactions` and a species with a SMILES shows
+each atom's own state instead of the mean — acetate as `-3, +3` rather than `0`,
+since its methyl and carboxyl carbons really are four units apart and the mean
+describes neither. Repeats collapse: butyrate reads `-3, -2(x2), +3`.
+
+### Which phase a bare name means
+
+`H2`, `O2`, `N2`, `CO2` and `CH4` are each claimed by a dissolved and a gaseous
+entry. The **dissolved** form wins, declared in `species.yaml` rather than
+falling out of file ordering, because that is the form a cell sees. It matters:
+H₂(aq) and H₂(g) are 91 mV apart at pH 7.
+
+```python
+mt.resolve("H2")               # H2(aq)
+mt.resolve("H2", phase="g")    # H2(g)
+mt.default_registry().ambiguities()          # every contested name
+mt.default_registry().undeclared_ambiguities # must stay empty; a test enforces it
+```
 
 ### pH speciation
 
@@ -599,7 +641,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 260 tests
+python -m unittest discover -s tests     # 285 tests
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
 ```

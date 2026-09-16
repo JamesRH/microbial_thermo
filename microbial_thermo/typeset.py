@@ -17,7 +17,11 @@ from fractions import Fraction
 
 from .balance import ELECTRON, HalfReaction
 from .exceptions import MicrobialThermoError
-from .oxidation import format_oxidation_state, mean_oxidation_state
+from .oxidation import (
+    format_oxidation_state,
+    format_per_atom_states,
+    mean_oxidation_state,
+)
 
 #: Token kinds. The arrow is the alignment anchor for stacked equations.
 COEFFICIENT = "coefficient"
@@ -95,6 +99,7 @@ def build_equation_tokens(
     half: HalfReaction,
     direction: str,
     annotate_element: str | None = None,
+    per_atom: bool = False,
 ) -> EquationLayout:
     """Turn a half reaction into an ordered token list.
 
@@ -139,9 +144,12 @@ def build_equation_tokens(
                 and annotate_element in species.parsed.elements
             ):
                 try:
-                    state = format_oxidation_state(
-                        mean_oxidation_state(annotate_element, species.formula)
-                    )
+                    if per_atom and species.smiles:
+                        state = format_per_atom_states(species.smiles, annotate_element)
+                    else:
+                        state = format_oxidation_state(
+                            mean_oxidation_state(annotate_element, species.formula)
+                        )
                 except MicrobialThermoError:
                     # Some species carry two elements with no conventional
                     # state -- vanadyl sulfate has both V and S -- so the mean
