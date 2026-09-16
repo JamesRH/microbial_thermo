@@ -42,7 +42,8 @@ print(reaction.summary())
 p = plot_redox_tower(reaction)
 
 # %%
-Reaction:  2 H+ + H2(aq) + 2 VO2+ + 2 SO4-- -> 2 VOSO4(aq) + 2 H2O
+# What the acceptor couple's oxidized side holds, which the next cell indexes.
+reaction.acceptor_half.couple.oxidized_side
 
 # %%
 Elist = [reaction.acceptor_half.couple.oxidized_side[0][0].backend, 
