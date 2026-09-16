@@ -98,6 +98,11 @@ grid = tower_grid(
 print(f"{len(grid.labels)} couples over {len(grid.ph_values)} pH x "
       f"{len(grid.temperature_values)} temperatures")
 
+# %% [markdown]
+# The sliders below need a live kernel. If you are reading this notebook on
+# GitHub the cell will look empty — open it in JupyterLab, or use the exported
+# HTML at the end of this section, which needs no kernel at all.
+
 # %%
 from microbial_thermo.figures import interactive_tower
 

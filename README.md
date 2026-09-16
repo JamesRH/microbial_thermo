@@ -87,6 +87,18 @@ one is caught rather than discovered in class. They run from the `.py` pair,
 never from the committed `.ipynb`, so the check does not depend on stored
 outputs.
 
+To regenerate the committed outputs after changing a notebook:
+
+```bash
+jupytext --sync --execute notebooks/02_redox_tower_and_energy.py
+```
+
+One caveat on notebook 02: the interactive tower is an ipywidgets view, which
+needs a live kernel. Its widget state is embedded, so JupyterLab and nbviewer
+render it, but **GitHub's notebook viewer shows that cell blank**. The
+`plot_interactive_tower(..., save_html=...)` export in the same section is the
+route that works with no kernel behind it.
+
 ---
 
 ## Library usage
