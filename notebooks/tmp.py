@@ -21,24 +21,39 @@ from microbial_thermo.figures import plot_energy_explorer, plot_half_reactions, 
 from microbial_thermo.supplemental import supplemental_species
 entry = supplemental_species()["NH2OH(aq)"]
 
+from microbial_thermo.reaction import Couple, Reaction
+
+
+
 # %%
-EQUATION = "NO3- + H2 -> NH2OH"
-conditions = mt.Conditions(temperature_c=25.0, pH=4)
-reaction = mt.Reaction.from_equation(EQUATION, conditions=conditions)
+from microbial_thermo.reaction import Couple, Reaction
+
+conditions = mt.Conditions(temperature_c=25.0, pH=7)
+
+reaction = Reaction.from_couples(
+    donor=Couple.make("H2(aq)", "H+"),
+    acceptor=Couple.make(["VOSO4(aq)"], ["VO2+", "SO4-2"], key_element="V"),
+    conditions=conditions,
+    normalize_to="integer",
+)
 print(reaction.summary())
 
 # %%
 p = plot_redox_tower(reaction)
 
 # %%
+Reaction:  2 H+ + H2(aq) + 2 VO2+ + 2 SO4-- -> 2 VOSO4(aq) + 2 H2O
+
+# %%
+Elist = [reaction.acceptor_half.couple.oxidized_side[0][0].backend, 
+reaction.acceptor_half.couple.oxidized_side[1][0].backend, 
+reaction.acceptor_half.couple.reduced.backend, 
+reaction.donor_half.couple.reduced.backend]
+
+# %%
 from microbial_thermo.sweep import concentration_axis, partial_pressure_axis, ph_axis
 
-axes = [
-    ph_axis(low=1.0, high=13.0, n=31),
-    concentration_axis("NO3-"),
-    concentration_axis("NH2OH(aq)"),
-    partial_pressure_axis("H2(aq)"),
-]
+axes = [ph_axis(low=1.0, high=13.0, n=31)] + [concentration_axis(E) for E in Elist]
 figure = plot_energy_explorer(reaction, axes=axes)
 
 figure.show()
