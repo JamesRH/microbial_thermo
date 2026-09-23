@@ -325,14 +325,26 @@ formate, propanoate, butanoate, sulfite, nitrite, sulfate.
 ### Species pyGCC does not have
 
 Hydroxylamine, glucose and pyruvate are in none of pyGCC's databases, so they
-come from a small hand-entered table instead.
+come from a small hand-entered table instead. The biomass placeholder
+`<CH2O>` lives there too, though it is a different kind of thing again — see
+below.
 
 **These values are of a different kind from everything else here.** They are
 literature figures typed in by hand, not computed from an equation of state and
 not cross-checked against a second source the way the mineral data was. Each
 carries a `verified` flag, an unverified one **warns every time it is used**, and
-any figure resting on one is footnoted in red. All three currently ship unverified — trace them to a primary source and
+any figure resting on one is footnoted in red. All four currently ship unverified — trace them to a primary source and
 set the flag before relying on them.
+
+**`Biomass(aq)` is not a compound at all.** `<CH2O>` is a stand-in for cell
+carbon at oxidation state zero, and its value is this library's own glucose
+divided by six, so the two are at least mutually consistent. It gets two
+things wrong on purpose: real biomass is nearer CH₁.₈O₀.₅N₀.₂ — slightly more
+reduced, so a little costlier to make — and it contains nitrogen this term
+ignores entirely, so the cost of assimilating N is missing. Treat any
+autotrophy yield built on it as a statement about sign and scale. The example
+script below takes a `--biomass-dgf` override precisely so you can check
+whether a conclusion survives the choice.
 
 They are single-temperature values, honoured at 25 °C and refused elsewhere
 unless an enthalpy is available, in which case a van 't Hoff correction is
@@ -456,7 +468,7 @@ Mono Lake organisms live.
 
 ### The curated metabolism library
 
-Thirty-six named metabolisms, so you need not remember which couples to pair.
+Thirty-seven named metabolisms, so you need not remember which couples to pair.
 Nothing thermodynamic is stored — energies are computed at whatever conditions
 you ask for.
 
@@ -773,7 +785,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 385 tests, ~165 s
+python -m unittest discover -s tests     # 404 tests, ~165 s
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # skip the slow notebook runs
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
@@ -898,6 +910,70 @@ messages refer to them by number.
 
 ---
 
+## Examples
+
+Runnable scripts that go beyond a single call. Each is library-first — import
+the functions from a notebook, or run the file for a CLI.
+
+### Arsenite-driven carbon fixation
+
+`examples/arsenite_carbon_fixation.py` builds the **anabolic** half of
+chemolithoautotrophy — As(III) → As(V) driving CO₂ into biomass — and plots it
+against pH beside the catabolism that pays for it.
+
+```bash
+python examples/arsenite_carbon_fixation.py --save figures/as_fixation
+python examples/arsenite_carbon_fixation.py --biomass-dgf -130 --no-catabolic
+```
+
+```python
+from arsenite_carbon_fixation import fixation_vs_ph, plot_fixation_vs_ph
+
+result = fixation_vs_ph(temperature_c=25.0)
+figure, _ = plot_fixation_vs_ph(result=result)
+```
+
+The reaction is **endergonic** — about **+80 kJ/mol** per electron pair at
+pH 7 — and that is the point: fixing carbon costs energy, and an autotroph has
+to earn it back from catabolism. Three things the figure makes visible:
+
+- The cost falls by **11.4 kJ/mol per pH unit**, which is exactly
+  2 × RT·ln10. Two protons leave per electron pair, so the slope is
+  predictable before you plot it — the script prints the observed slope beside
+  the prediction as a self-check.
+- The catabolism moves at the *same* rate and the same direction, so the net
+  improves twice as fast, about 23 kJ/mol per pH unit. Alkaline water is
+  thermodynamically kinder to these organisms, which is one reason the best
+  studied arsenite oxidisers come out of soda lakes.
+- At pH 4 a one-to-one budget nets only −14 kJ/mol — **inside** the biological
+  energy quantum. The margin is real, not a rounding detail.
+
+`--biomass-dgf` re-runs with a different placeholder energy. Across any
+plausible value the sign does not change, which is the honest way to use a
+placeholder: show that the conclusion does not rest on it.
+
+```
+$ python examples/arsenite_carbon_fixation.py --help
+Usage: arsenite_carbon_fixation.py [OPTIONS]
+
+  Plot arsenite-driven CO2 fixation against pH.
+
+Options:
+  --ph-low FLOAT                Lowest pH.  [default: 4.0]
+  --ph-high FLOAT               Highest pH.  [default: 10.0]
+  --points INTEGER              Grid points.  [default: 25]
+  --temperature FLOAT           Temperature in °C.  [default: 25.0]
+  --biomass-dgf FLOAT           Override ΔGf of the ⟨CH2O⟩ placeholder,
+                                kJ/mol, for a sensitivity run.
+  --catabolic / --no-catabolic  Also draw the arsenite/O2 catabolism that pays
+                                for the fixation.  [default: catabolic]
+  --save TEXT                   Write SVG and PNG to this path stem.
+  --show / --no-show            Open an interactive window.
+  --version                     Show the library and dependency versions, then
+                                exit.
+  --help                        Show this message and exit.
+```
+
 ## Files
 
 | path | purpose |
@@ -909,3 +985,4 @@ messages refer to them by number.
 | `microbial_thermo/` | the library |
 | `tests/` | unittest suite |
 | `notebooks/` | jupytext-paired teaching notebooks, committed with outputs and executed by the suite |
+| `examples/` | runnable analysis scripts, library-first with a CLI |

@@ -165,8 +165,17 @@ class TestSupplementalTable(unittest.TestCase):
 
     def test_everything_shipped_is_currently_unverified(self):
         """If a value is ever verified, this test should be updated -- it
-        exists so the flag cannot quietly drift."""
-        self.assertEqual(unverified_names(), ["Glucose(aq)", "NH2OH(aq)", "Pyruvate(aq)"])
+        exists so the flag cannot quietly drift.
+
+        Three of these are real compounds awaiting a primary source.
+        Biomass(aq) is not: <CH2O> is a modelling placeholder for cell carbon
+        and can never become "verified" in the same sense, so it should stay
+        on this list permanently.
+        """
+        self.assertEqual(
+            unverified_names(),
+            ["Biomass(aq)", "Glucose(aq)", "NH2OH(aq)", "Pyruvate(aq)"],
+        )
 
     def test_refuses_another_temperature_by_default(self):
         with self.assertRaises(OutOfRangeError):

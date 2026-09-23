@@ -305,3 +305,26 @@ metabolisms:
     key_element: As
     organisms: Alkalilimnicola ehrlichii MLHE-1
     note: Anaerobic chemolithotrophic arsenite oxidation, found in Mono Lake.
+
+  # --- carbon fixation ---
+  #
+  # The anabolic half of chemolithoautotrophy, kept separate from the catabolic
+  # entries above because it is the one reaction here that does NOT pay. That
+  # is the point of it: fixing CO2 costs energy, and an autotroph has to earn
+  # that back from its catabolism. Pairing this entry against
+  # arsenite_oxidation_oxygen is the cleanest way to show a whole organism's
+  # budget in two lines.
+  #
+  # The biomass term is a placeholder -- <CH2O>, cell carbon at oxidation state
+  # zero -- and it warns every time it is used. See supplemental_gibbs.yaml.
+  - name: arsenite_carbon_fixation
+    label: Carbon fixation driven by arsenite oxidation
+    group: carbon fixation
+    donor: ["As(III)", "As(V)"]
+    acceptor: ["Biomass(aq)", "CO2(aq)"]
+    key_element: C
+    organisms: Rhizobium sp. NT-26, Alkalilimnicola ehrlichii MLHE-1
+    note: >
+      Endergonic by design: this is the cost side of the ledger, not a
+      metabolism that runs on its own. Uses the unverified <CH2O> biomass
+      placeholder.

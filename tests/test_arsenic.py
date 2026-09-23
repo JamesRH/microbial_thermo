@@ -13,9 +13,11 @@ do, to a fifth of a kJ/mol across 0-100 C, is evidence about the data rather
 than about the arithmetic.
 """
 
+import math
 import unittest
 import warnings
 from fractions import Fraction
+from pathlib import Path
 
 import microbial_thermo as mt
 from microbial_thermo.balance import balance_half_reaction, verify_conservation
@@ -348,6 +350,198 @@ class TestArseniteOxidationUnderMonoLakeConditions(unittest.TestCase):
     def test_the_arsenite_is_ionised_there(self):
         at_lake_ph = by_backend("arsenite", pH=9.8, temperature_c=15.0)
         self.assertGreater(at_lake_ph["H2AsO3-"], 0.3)
+
+
+class TestBiomassPlaceholder(unittest.TestCase):
+    """The <CH2O> stand-in for cell carbon.
+
+    It is a modelling convention, not a measured compound, so what is tested
+    is mostly that it announces itself as one.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        warnings.simplefilter("ignore")
+
+    def test_it_resolves_under_the_obvious_names(self):
+        for name in ("biomass", "CH2O", "<CH2O>", "Biomass(aq)"):
+            with self.subTest(name=name):
+                self.assertEqual(resolve(name).backend, "Biomass(aq)")
+
+    def test_its_carbon_sits_at_oxidation_state_zero(self):
+        """Which is the whole reason CH2O is the conventional proxy: real
+        biomass averages near zero too."""
+        self.assertEqual(mean_oxidation_state("C", "CH2O"), Fraction(0))
+
+    def test_it_is_flagged_unverified(self):
+        from microbial_thermo.supplemental import unverified_names
+
+        self.assertIn("Biomass(aq)", unverified_names())
+
+    def test_using_it_warns(self):
+        """A placeholder that passed silently would be the dangerous kind.
+
+        The formation energy is memoised per species and temperature, so the
+        warning fires on the first use rather than literally every call --
+        clear the cache to make that deterministic rather than dependent on
+        which test ran first.
+        """
+        mt.get_backend()._gibbs_cache.clear()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            reaction(
+                "arsenite_carbon_fixation",
+                mt.Conditions(temperature_c=25.0, pH=7.0),
+            )
+        messages = " ".join(str(w.message) for w in caught)
+        self.assertIn("Biomass(aq)", messages)
+        self.assertIn("not been traced to a primary source", messages)
+
+    def test_any_figure_using_it_is_footnoted(self):
+        from microbial_thermo.figures.style import unverified_footnote
+
+        built = reaction("arsenite_carbon_fixation", mt.Conditions(temperature_c=25.0, pH=7.0))
+        self.assertIn("Biomass(aq)", unverified_footnote(built))
+
+    def test_it_is_consistent_with_the_library_glucose(self):
+        """The value is glucose / 6, so the two cannot drift apart silently."""
+        from microbial_thermo.supplemental import supplemental_species
+
+        table = supplemental_species()
+        glucose = table["Glucose(aq)"].delta_Gf_kJ_mol
+        biomass = table["Biomass(aq)"].delta_Gf_kJ_mol
+        self.assertAlmostEqual(biomass, glucose / 6.0, delta=0.05)
+
+
+class TestArseniteCarbonFixation(unittest.TestCase):
+    """The anabolic half: As(III) -> As(V) driving CO2 into biomass."""
+
+    @classmethod
+    def setUpClass(cls):
+        warnings.simplefilter("ignore")
+        cls.conditions = mt.Conditions(temperature_c=25.0, pH=7.0)
+        cls.built = reaction("arsenite_carbon_fixation", cls.conditions)
+
+    def test_it_balances(self):
+        verify_conservation(self.built.coefficients)
+
+    def test_it_passes_the_two_path_cross_check(self):
+        self.built.verify_consistency()
+
+    def test_it_does_not_pay(self):
+        """Endergonic by design -- this is the cost side of the ledger. A
+        negative number here would mean carbon fixation came free."""
+        self.assertGreater(self.built.delta_G_standard_prime.magnitude, 0.0)
+
+    def test_the_catabolism_more_than_covers_it_at_ph_7(self):
+        """Which is what makes the organism possible."""
+        income = reaction("arsenite_oxidation_oxygen", self.conditions).delta_G.magnitude
+        cost = self.built.delta_G.magnitude
+        self.assertLess(income + cost, 0.0)
+
+    def test_the_margin_is_thin_in_acid(self):
+        """At pH 4 a one-to-one budget does not even clear the biological
+        energy quantum, which is a real constraint rather than a rounding
+        detail."""
+        acid = mt.Conditions(temperature_c=25.0, pH=4.0)
+        net = (
+            reaction("arsenite_carbon_fixation", acid).delta_G.magnitude
+            + reaction("arsenite_oxidation_oxygen", acid).delta_G.magnitude
+        )
+        self.assertLess(net, 0.0)
+        self.assertGreater(net, -20.0)
+
+    def test_the_ph_slope_is_two_protons_worth(self):
+        """Two protons leave per electron pair, so the cost must fall by
+        2 x RT ln(10) = 11.4 kJ/mol per pH unit. Computed independently of
+        the reaction's own proton bookkeeping."""
+        rt_ln10 = 8.31446261815324e-3 * 298.15 * math.log(10)
+        low = reaction(
+            "arsenite_carbon_fixation", mt.Conditions(temperature_c=25.0, pH=6.0)
+        ).delta_G.magnitude
+        high = reaction(
+            "arsenite_carbon_fixation", mt.Conditions(temperature_c=25.0, pH=7.0)
+        ).delta_G.magnitude
+        self.assertAlmostEqual(high - low, -2 * rt_ln10, places=2)
+
+    def test_alkaline_water_is_kinder(self):
+        alkaline = mt.Conditions(temperature_c=25.0, pH=9.0)
+        self.assertLess(
+            reaction("arsenite_carbon_fixation", alkaline).delta_G.magnitude,
+            self.built.delta_G.magnitude,
+        )
+
+
+class TestTheExampleScript(unittest.TestCase):
+    """examples/arsenite_carbon_fixation.py, which the README points at."""
+
+    @classmethod
+    def setUpClass(cls):
+        warnings.simplefilter("ignore")
+        import sys
+
+        root = Path(__file__).resolve().parent.parent
+        sys.path.insert(0, str(root / "examples"))
+        import arsenite_carbon_fixation as module
+
+        cls.module = module
+
+    def test_the_sweep_returns_all_three_curves(self):
+        result = self.module.fixation_vs_ph(ph_values=[5.0, 7.0, 9.0])
+        for key in ("pH", "anabolic", "catabolic", "net"):
+            with self.subTest(key=key):
+                self.assertEqual(len(result[key]), 3)
+
+    def test_the_reported_slope_matches_the_prediction(self):
+        """The script prints this as a self-check; it had better hold."""
+        result = self.module.fixation_vs_ph(ph_values=[4.0, 7.0, 10.0])
+        slope = self.module.slope_per_ph_unit(result)
+        self.assertAlmostEqual(slope, -2 * self.module.RT_LN10_25C, places=2)
+
+    def test_the_biomass_override_moves_the_answer(self):
+        """Half a CH2O per electron pair, so a 22.9 kJ/mol change in its
+        formation energy must move dG by half that."""
+        base = self.module.fixation_vs_ph(ph_values=[7.0], include_catabolic=False)
+        shifted = self.module.fixation_vs_ph(
+            ph_values=[7.0], include_catabolic=False, biomass_dgf=-130.0
+        )
+        moved = shifted["anabolic"][0] - base["anabolic"][0]
+        self.assertAlmostEqual(moved, 0.5 * (-130.0 + 152.9), places=2)
+
+    def test_the_override_is_restored_afterwards(self):
+        """It mutates a cached table, so a leak would quietly corrupt every
+        later calculation in the process."""
+        before = self.module.fixation_vs_ph(ph_values=[7.0], include_catabolic=False)["anabolic"][0]
+        self.module.fixation_vs_ph(ph_values=[7.0], include_catabolic=False, biomass_dgf=-130.0)
+        after = self.module.fixation_vs_ph(ph_values=[7.0], include_catabolic=False)["anabolic"][0]
+        self.assertAlmostEqual(before, after, places=9)
+
+    def test_the_conclusion_survives_the_placeholder(self):
+        """The point of the sensitivity option: across any plausible biomass
+        energy, fixation stays uphill and the catabolism still covers it."""
+        for value in (-120.0, -152.9, -185.0):
+            with self.subTest(biomass_dgf=value):
+                result = self.module.fixation_vs_ph(ph_values=[7.0], biomass_dgf=value)
+                self.assertGreater(result["anabolic"][0], 0.0)
+                self.assertLess(result["net"][0], 0.0)
+
+    def test_it_renders_and_saves(self):
+        import tempfile
+
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        result = self.module.fixation_vs_ph(ph_values=[5.0, 7.0, 9.0])
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory) / "fixation"
+            figure, _ = self.module.plot_fixation_vs_ph(result=result, save=base)
+            try:
+                self.assertTrue(base.with_suffix(".svg").exists())
+                self.assertTrue(base.with_suffix(".png").exists())
+            finally:
+                plt.close(figure)
 
 
 if __name__ == "__main__":

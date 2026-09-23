@@ -59,3 +59,26 @@ species:
     provenance: >-
       Commonly cited value for aqueous pyruvate. NOT yet traced to a primary
       source. CHECK BEFORE USE.
+
+  - backend: "Biomass(aq)"
+    formula: "CH2O"
+    display: "\\langle CH_2O\\rangle"
+    phase: aq
+    aliases: [biomass, "CH2O", "<CH2O>", cells, "cell carbon"]
+    delta_Gf_kJ_mol: -152.9
+    temperature_c: 25.0
+    verified: false
+    provenance: >-
+      A PLACEHOLDER, not a measured compound. Biomass has no formation energy
+      in the sense the rest of this file does: <CH2O> is a stand-in for cell
+      carbon at oxidation state zero, and the value here is this library's own
+      aqueous glucose divided by six (-917.2 / 6 = -152.87), so the two are at
+      least mutually consistent. It therefore inherits glucose's unverified
+      status as well as its own.
+      Two things it gets wrong on purpose. Real biomass is nearer CH1.8O0.5N0.2
+      -- slightly more reduced than CH2O, so a little more costly to make --
+      and it contains nitrogen, so this term omits the cost of assimilating N
+      entirely. Treat any autotrophy yield built on it as an order-of-magnitude
+      statement about sign and scale, not a number to quote.
+      Vary delta_Gf and see whether your conclusion survives; if it does not,
+      the conclusion was never about the chemistry.

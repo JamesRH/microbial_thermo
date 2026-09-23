@@ -17,7 +17,7 @@ It must be **sourced**. `pygcc` comes from PyPI (not conda-forge) and is the one
 sanctioned `pip` in the project.
 
 ```bash
-python -m unittest discover -s tests     # full suite, 385 tests, ~165 s
+python -m unittest discover -s tests     # full suite, 404 tests, ~165 s
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # ~130 s
 python tests/test_balance.py             # one file, seconds — use this while iterating
 ruff format microbial_thermo tests && ruff check microbial_thermo tests
