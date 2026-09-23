@@ -20,4 +20,5 @@ couples:
   - {label: "NO3-/NH4+",        reduced: "NH4+",        oxidized: "NO3-",    group: nitrogen}
   - {label: "NO2-/NH4+",        reduced: "NH4+",        oxidized: "NO2-",    group: nitrogen}
   - {label: "NO3-/N2",          reduced: "N2(aq)",      oxidized: "NO3-",    group: nitrogen}
+  - {label: "As(V)/As(III)",    reduced: "As(III)",     oxidized: "As(V)",   key_element: As, group: metalloid}
   - {label: "O2/H2O",           reduced: "H2O",         oxidized: "O2(g)",   group: oxygen}

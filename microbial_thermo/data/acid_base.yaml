@@ -61,3 +61,17 @@ families:
   - name: sulfate
     members: ["HSO4-", "SO4--"]
     aliases: [sulfate, "total sulfate"]
+
+  # Arsenate's second pKa is 6.76, which falls right on the physiological pH.
+  # Neither H2AsO4- nor HAsO4-- can be treated as "the" arsenate species there,
+  # so anything quantitative should go through this family.
+  - name: arsenate
+    members: ["H3AsO4(aq)", "H2AsO4-", "HAsO4--", "AsO4---"]
+    aliases: ["total arsenate", "total As(V)", "As(V) total"]
+
+  # Arsenite stays neutral across the whole physiological range -- its first
+  # pKa is 9.2 -- which is why As(III) is the mobile, membrane-permeant and
+  # more toxic of the two states.
+  - name: arsenite
+    members: ["As(OH)3(aq)", "H2AsO3-"]
+    aliases: ["total arsenite", "total As(III)", "As(III) total"]

@@ -252,3 +252,56 @@ metabolisms:
     acceptor: ["H2(g)", "H+"]
     key_element: C
     organisms: "Syntrophus, the classic S organism"
+
+  # --- arsenic ---
+  #
+  # Arsenic is run in both directions: As(V) is respired as an electron
+  # acceptor and As(III) is oxidised as a donor, sometimes in the same
+  # sediment centimetres apart. The couple sits close to zero volts at pH 7,
+  # which is why both directions can pay depending on what is on the other
+  # side of the reaction.
+  - name: arsenate_respiration_hydrogen
+    label: Arsenate respiration with hydrogen
+    group: arsenic reduction
+    donor: ["H2(g)", "H+"]
+    acceptor: ["As(III)", "As(V)"]
+    key_element: As
+    organisms: Sulfurospirillum barnesii, Desulfitobacterium
+    note: Dissimilatory arsenate reduction (DARP), not the detoxifying ars operon.
+
+  - name: arsenate_respiration_acetate
+    label: Arsenate respiration with acetate
+    group: arsenic reduction
+    donor: [acetate, "CO2(aq)"]
+    acceptor: ["As(III)", "As(V)"]
+    key_element: C
+    organisms: Chrysiogenes arsenatis, Desulfotomaculum auripigmentum
+
+  - name: arsenate_respiration_lactate
+    label: Arsenate respiration with lactate
+    group: arsenic reduction
+    donor: ["Lactate(aq)", ["Acetate", "CO2(aq)"]]
+    acceptor: ["As(III)", "As(V)"]
+    key_element: C
+    organisms: Shewanella sp. ANA-3, Sulfurospirillum
+    note: >
+      Incomplete oxidation, stopping at acetate, as these organisms do. The
+      third carbon leaves as CO2, which conservation cannot infer on its own --
+      hence the two-species donor side.
+
+  - name: arsenite_oxidation_oxygen
+    label: Arsenite oxidation with oxygen
+    group: arsenic oxidation
+    donor: ["As(III)", "As(V)"]
+    acceptor: ["H2O", "O2(aq)"]
+    key_element: As
+    organisms: Rhizobium sp. NT-26, Thiomonas
+
+  - name: arsenite_oxidation_nitrate
+    label: Arsenite oxidation with nitrate
+    group: arsenic oxidation
+    donor: ["As(III)", "As(V)"]
+    acceptor: ["NO2-", "NO3-"]
+    key_element: As
+    organisms: Alkalilimnicola ehrlichii MLHE-1
+    note: Anaerobic chemolithotrophic arsenite oxidation, found in Mono Lake.

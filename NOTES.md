@@ -17,7 +17,7 @@ It must be **sourced**. `pygcc` comes from PyPI (not conda-forge) and is the one
 sanctioned `pip` in the project.
 
 ```bash
-python -m unittest discover -s tests     # full suite, 351 tests, ~155 s
+python -m unittest discover -s tests     # full suite, 385 tests, ~165 s
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # ~130 s
 python tests/test_balance.py             # one file, seconds — use this while iterating
 ruff format microbial_thermo tests && ruff check microbial_thermo tests
@@ -64,6 +64,23 @@ cache, and precompute grids for anything interactive.
 **Species names are legacy SUPCRT/GWB**: `Fe++`, `SO4--`, `S2--`, `Methane(aq)`,
 `Sulfur(s)`, `Acetate`. Not `CH4(aq)`, not `Fe+2`. That is what `species.yaml`
 exists to hide.
+
+**`resolve()` only sees `species_dict`, not minerals.** `delta_Gf` handles all
+three routes (HKF, GWB minerals, supplemental) but `backend.resolve()` checks
+only the HKF dictionary, so it raises for Goethite, Pyrolusite and
+`As(OH)3(aq)` while those species work perfectly well in reactions. The error
+message then suggests the name you just passed, which looks like a bug and is
+really this. Nothing downstream depends on `resolve` for those, so it has been
+left alone -- but do not use `resolve` as an existence check.
+
+**Arsenic has two As(III) representations differing by one water.**
+`As(OH)3` / `H2AsO3-` (arsenous) and `HAsO2` / `AsO2-` (metarsenous) are the
+same chemistry, and they agree to 0.21 kJ/mol over 0-100 C. They arrive by
+*different routes* -- `As(OH)3(aq)` through GWB log K, `HAsO2(aq)` as direct
+HKF -- so that agreement is real evidence. `HAsO2(aq)` is the single arsenic
+species the two databases disagree on (0.26 kJ/mol, declared in
+`KNOWN_DISAGREEMENTS`), which is why a bare `As(III)` resolves to
+`As(OH)3(aq)`.
 
 **Manganese oxides are in no direct-access database.** They come from GWB log K
 values combined with HKF basis species — see `backends/gwb.py`. That mixing of
@@ -120,6 +137,13 @@ pH 7. This is now *declared* rather than accidental: `canonical: true` in
 `species.yaml` picks the winner for each contested name, and
 `tests/test_ambiguity.py` fails if a new aqueous/gas pair is added without
 declaring one. It used to depend on file ordering.
+
+**An E°' is meaningless without naming the species.** The arsenate case makes
+this unmissable: As(V)/As(III) at pH 7 reads +0.160 V written against H3AsO4,
++0.020 V against H2AsO4-, and +0.013 V against HAsO4--, purely because the
+three differ in proton count. When checking a couple against a published
+number, check the *standard-state* form first -- that convention is
+unambiguous -- and only then argue about pH 7.
 
 **Measure matplotlib text extents with the Agg renderer**, even when exporting
 SVG; the SVG backend's metrics differ. And size equations by the *laid-out

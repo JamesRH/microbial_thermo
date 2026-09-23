@@ -41,15 +41,27 @@ class TestPkaValues(unittest.TestCase):
         "sulfite": [7.20],
         "nitrite": [3.25],
         "sulfate": [1.99],
+        "arsenate": [2.24, 6.96, 11.50],
+        "arsenite": [9.23],
     }
+
+    #: Families needing a wider tolerance than the default, with the reason.
+    #: Arsenic acid's second pKa is genuinely unsettled in the literature --
+    #: compilations put it anywhere from about 6.76 to 7.08 -- so holding the
+    #: database to 0.1 of any one of them would be asserting a precision the
+    #: published values do not have. speq21.dat gives 6.76, at the low end of
+    #: that range. The other two arsenate steps agree to better than 0.1.
+    TOLERANCE = {"arsenate": 0.25}
+    DEFAULT_TOLERANCE = 0.1
 
     def test_every_family_matches_published_values(self):
         for name, expected in self.PUBLISHED.items():
             with self.subTest(family=name):
                 computed = pKa_ladder(name, temperature_c=25.0)
                 self.assertEqual(len(computed), len(expected))
+                delta = self.TOLERANCE.get(name, self.DEFAULT_TOLERANCE)
                 for got, want in zip(computed, expected, strict=True):
-                    self.assertAlmostEqual(got, want, delta=0.1)
+                    self.assertAlmostEqual(got, want, delta=delta)
 
     def test_all_families_load(self):
         self.assertEqual(len(default_families()), len(self.PUBLISHED))

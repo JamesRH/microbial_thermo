@@ -403,9 +403,60 @@ Reaction.from_couples(
 VOSO₄ then goes unannotated on the half-reaction diagram, since its oxidation
 state cannot be assigned, but everything else is labelled normally.
 
+### Arsenic
+
+`As(III)` and `As(V)`, both from pyGCC — the arsenate ladder as direct HKF
+data, As(III) by the log K route. No hand-entered values.
+
+```python
+mt.Reaction.from_couples(donor=("H2(g)", "H+"), acceptor=("As(III)", "As(V)"))
+mt.Reaction.from_couples(donor=("As(III)", "As(V)"), acceptor=("H2O", "O2(aq)"))
+```
+
+Available: `As(OH)3(aq)`, `H2AsO3-`, `HAsO2(aq)`, `AsO2-` for As(III);
+`H3AsO4(aq)`, `H2AsO4-`, `HAsO4--`, `AsO4---` for As(V). A bare `As(III)` means
+`As(OH)3(aq)` and `As(V)` means `HAsO4--`.
+
+Arsenic is worth having because **the couple is run in both directions**.
+As(V)/As(III) sits at **+0.013 V** at pH 7 — almost exactly in the middle of
+the tower, above the sulfur and carbon donors and below the nitrogen and oxygen
+acceptors. So arsenate pays as a respiratory acceptor against hydrogen
+(−82 kJ/mol per electron pair) *and* arsenite pays as a lithotrophic donor
+against oxygen (−163 kJ/mol), and both organisms exist. Five metabolisms are
+catalogued, three reducing and two oxidising.
+
+Two things to know before quoting a number:
+
+- **As(III) has two representations** in SUPCRT-lineage data, differing by one
+  water: `As(OH)3` / `H2AsO3-` and `HAsO2` / `AsO2-`. Both are registered and
+  they agree to 0.21 kJ/mol over 0–100 °C. That agreement is worth something,
+  because the two arrive by *different routes* — `As(OH)3(aq)` through the GWB
+  log K path, `HAsO2(aq)` as direct HKF. `HAsO2(aq)` is the one species where
+  the two databases disagree at all (0.26 kJ/mol), which is why the bare name
+  resolves to `As(OH)3(aq)`.
+- **E°′ depends on which arsenate you write.** The three arsenate forms differ
+  in proton count, so at pH 7 the couple reads +0.160 V against `H3AsO4`,
+  +0.020 V against `H2AsO4-`, and +0.013 V against `HAsO4--`. Published E°′
+  values for As(V)/As(III) disagree largely for this reason. The standard-state
+  form is the unambiguous anchor: H₃AsO₄ + 2 H⁺ + 2 e⁻ → H₃AsO₃ + H₂O comes out
+  at **+0.574 V** against a published +0.560 V, agreeing to 14 mV.
+
+Arsenate's second p*K*a is **6.76**, right on physiological pH, so at pH 7 it is
+a 36:64 mixture of `H2AsO4-` and `HAsO4--` and neither form alone is "arsenate".
+Use the family for anything quantitative:
+
+```python
+mt.Conditions(pH=7.0, total_concentrations={"arsenate": 1e-6})
+```
+
+Arsenite, by contrast, is 99.4% the neutral `As(OH)3` at pH 7 — its p*K*a is
+9.2 — which is the reason As(III) is the mobile, membrane-permeant and more
+toxic state. It only ionises in genuinely alkaline water, which is where the
+Mono Lake organisms live.
+
 ### The curated metabolism library
 
-Thirty-one named metabolisms, so you need not remember which couples to pair.
+Thirty-six named metabolisms, so you need not remember which couples to pair.
 Nothing thermodynamic is stored — energies are computed at whatever conditions
 you ask for.
 
@@ -722,7 +773,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 351 tests, ~155 s
+python -m unittest discover -s tests     # 385 tests, ~165 s
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # skip the slow notebook runs
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests

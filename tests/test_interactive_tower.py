@@ -59,6 +59,7 @@ EXPECTED_PROTONS = {
     "NO3-/NH4+": 10,
     "NO3-/N2": 12,
     "Fe3+/Fe2+": 0,
+    "As(V)/As(III)": 4,
 }
 
 
@@ -150,7 +151,8 @@ class TestProtonSlopes(unittest.TestCase):
             )
             if abs(high - low) > 1e-4
         ]
-        self.assertEqual(len(moved), len(self.grid.labels) - 1)  # all but Fe
+        # Iron is the only proton-free couple here; everything else moves.
+        self.assertEqual(len(moved), len(self.grid.labels) - 1)
 
 
 class TestActivityRatio(unittest.TestCase):

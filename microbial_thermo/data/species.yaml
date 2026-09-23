@@ -131,3 +131,33 @@ species:
   - {backend: "V2O4",      formula: "V2O4",  display: "VO_2",       phase: s,  aliases: ["VO2", "vanadium dioxide", "vanadium(IV) oxide"]}
   - {backend: "V3O5",      formula: "V3O5",  display: "V_3O_5",     phase: s,  aliases: ["V3O5"]}
   - {backend: "VOSO4(aq)", formula: "VOSO4", display: "VOSO_4(aq)", phase: aq, aliases: ["VOSO4", "vanadyl sulfate", "vanadyl sulphate"]}
+
+  # --- arsenic ---
+  #
+  # The two states that matter biologically. Arsenate is a respiratory electron
+  # acceptor and arsenite an electron donor, so the As(V)/As(III) step is run in
+  # both directions by different organisms -- which is unusual enough to be
+  # worth a place on the tower.
+  #
+  # The arsenate ladder is HKF data from speq21.dat. As(III) has two parallel
+  # representations in SUPCRT-lineage data, differing by one water:
+  # As(OH)3 / H2AsO3- (arsenous acid) and HAsO2 / AsO2- (metarsenous acid).
+  # Both are registered. They agree to 0.21 kJ/mol over 0-100 C and their pKa
+  # to 0.03 -- and since As(OH)3(aq) reaches the backend by the GWB log K route
+  # while HAsO2(aq) is direct HKF, that agreement is a real cross-check of two
+  # independent data paths rather than a tautology. Asserted in
+  # tests/test_arsenic.py.
+  #
+  # A bare "As(III)" is As(OH)3(aq) and "As(V)" is HAsO4--, which is how the
+  # couple is written in the arsenic microbiology literature. At pH 7 arsenate
+  # is really a mixture -- pKa2 is 6.76, so H2AsO4- and HAsO4-- are both
+  # present in quantity -- so use the arsenate family for anything where that
+  # matters.
+  - {backend: "As(OH)3(aq)", formula: "AsH3O3",  display: "As(OH)_3",    phase: aq, aliases: ["As(III)", arsenite, "H3AsO3", "As(OH)3", "arsenous acid"]}
+  - {backend: "H2AsO3-",     formula: "H2AsO3-", display: "H_2AsO_3^-",  phase: aq, aliases: ["H2AsO3-", "dihydrogen arsenite"]}
+  - {backend: "HAsO2(aq)",   formula: "HAsO2",   display: "HAsO_2(aq)",  phase: aq, aliases: ["HAsO2", "metarsenous acid"]}
+  - {backend: "AsO2-",       formula: "AsO2-",   display: "AsO_2^-",     phase: aq, aliases: ["AsO2-", metaarsenite]}
+  - {backend: "H3AsO4(aq)",  formula: "H3AsO4",  display: "H_3AsO_4",    phase: aq, aliases: ["H3AsO4", "arsenic acid"]}
+  - {backend: "H2AsO4-",     formula: "H2AsO4-", display: "H_2AsO_4^-",  phase: aq, aliases: ["H2AsO4-", "dihydrogen arsenate"]}
+  - {backend: "HAsO4--",     formula: "HAsO4-2", display: "HAsO_4^{2-}", phase: aq, aliases: ["HAsO4-2", "As(V)", arsenate, "hydrogen arsenate"]}
+  - {backend: "AsO4---",     formula: "AsO4-3",  display: "AsO_4^{3-}",  phase: aq, aliases: ["AsO4-3", orthoarsenate]}

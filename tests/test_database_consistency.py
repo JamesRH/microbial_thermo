@@ -52,6 +52,13 @@ KNOWN_DISAGREEMENTS = {
     "Mn+++": 0.10,  # 0.4 kJ/mol, shared by the Mn(III)/Mn(VII) set
     "MnO4-": 0.10,
     "MnO4--": 0.10,
+    # 0.26 kJ/mol. The metarsenous acid tabulation is the one arsenic species
+    # the two databases disagree on at all; the rest of the As set agrees to
+    # 0.09 kJ/mol or better and HAsO4-- agrees exactly. This is the same
+    # discrepancy that shows up as the 0.17 kJ/mol gap between the As(OH)3 and
+    # HAsO2 representations in tests/test_arsenic.py, and it is why a bare
+    # "As(III)" resolves to As(OH)3(aq) rather than to HAsO2(aq).
+    "HAsO2(aq)": 0.06,
 }
 
 #: Everything else must agree this closely, in log K units (~0.17 kJ/mol).

@@ -35,6 +35,9 @@ _GROUP_COLOURS = {
     "sulfur": "#C9A227",
     "nitrogen": "#7B5EA7",
     "metal": "#A8613C",
+    # Kept well clear of the nitrogen purple and the metal brown, which it
+    # would otherwise sit right beside on the tower.
+    "metalloid": "#A8467A",
     "oxygen": "#3C7BA8",
     "other": PALETTE["muted"],
 }
