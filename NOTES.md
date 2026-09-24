@@ -1,6 +1,7 @@
 # Notes for whoever works on this next
 
-`AGENTS.md` sets the rules; `SPEC.md` describes the design and §15 records where
+`RESEARCH.md` surveys the outside world — other libraries, and where to get
+more minerals and organic compounds. `AGENTS.md` sets the rules; `SPEC.md` describes the design and §15 records where
 the implementation departed from it; `README.md` is the user-facing guide. This
 file is the accumulated operational knowledge — the things that cost time to
 discover and are not obvious from reading the code.

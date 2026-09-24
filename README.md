@@ -1027,7 +1027,10 @@ messages refer to them by number.
     overlaid.
 14. **Wider mineral support**: sulfides beyond pyrite, carbonates, and clays,
     all of which the GWB route already reaches — they need only registry
-    entries and validation.
+    entries and validation. **See `RESEARCH.md`** — the cheapest first step is
+    `supcrtbl.dat`, which pyGCC already ships and this library can already
+    load, and which carries arsenic minerals (arsenopyrite, scorodite,
+    amorphous ferric arsenate) that `speq21.dat` lacks.
 15. **Uncertainty propagation** through formation-energy uncertainties, with a
     tornado plot showing which variable dominates. Note that SUPCRT-lineage
     databases mostly do not carry uncertainties, so this likely needs
@@ -1108,6 +1111,7 @@ Options:
 | path | purpose |
 |---|---|
 | `NOTES.md` | operational knowledge for anyone picking this up: pyGCC's quirks, the conventions that must not drift, and the traps |
+| `RESEARCH.md` | survey of other libraries and databases — balancing, lookups, gas solubility, speciation, and where to get more minerals and organics |
 | `SPEC.md` | design specification, including verified backend findings |
 | `PROMPT.md` | the original project brief |
 | `AGENTS.md` | repository conventions for AI agents |
