@@ -467,6 +467,61 @@ Arsenite, by contrast, is 99.4% the neutral `As(OH)3` at pH 7 — its p*K*a is
 toxic state. It only ionises in genuinely alkaline water, which is where the
 Mono Lake organisms live.
 
+### Phototrophy: paying for an uphill reaction with light
+
+A phototroph's defining trick is running a reaction that does not pay.
+Photoferrotrophy, photoarsenotrophy and nitrite-driven photoautotrophy all fix
+CO₂ with a donor far too weak to do it in the dark.
+
+```python
+from microbial_thermo.photons import photon_energy, photons_required
+from microbial_thermo.figures import plot_light_budget
+from microbial_thermo.reaction import Couple, Reaction
+
+fixation = Reaction.from_couples(
+    donor=Couple.make("As(III)", "As(V)"),
+    acceptor=Couple.make("Biomass", "CO2"),   # (reduced, oxidized), as always
+    conditions=conditions,
+)
+fixation.delta_G_standard_prime          # +80.3 kJ/mol — uphill
+photon_energy("P870")                    # 137.5 kJ/mol per mole of photons
+photons_required(fixation.delta_G_standard_prime)   # 0.73
+plot_light_budget(fixation)
+```
+
+The reaction direction comes from which couple is the **acceptor**, not from
+the order within a couple. `acceptor=Couple.make("Biomass", "CO2")` reduces
+CO₂, so the reaction is written in the CO₂-fixation direction. Writing the
+couple backwards still gives the right energy — it only swaps the
+`reduced`/`oxidized` labels and the oxidation-state annotations.
+
+At 870 nm (bacteriochlorophyll *a*, the pigment of purple bacteria), the three
+donors rank:
+
+| donor | ΔG°′ (kJ/mol per 2 e⁻) | photons needed |
+|---|---|---|
+| Fe(II) → ferrihydrite | +51.2 | 0.52 |
+| As(III) → As(V) | +80.3 | 0.73 |
+| NO₂⁻ → NO₃⁻ | +156.4 | 1.28 |
+
+So one photon per electron pair covers iron and arsenite but **not** nitrite.
+Two things worth knowing before quoting any of that:
+
+- **`photon_energy` is an upper bound.** It returns $N_A hc/\lambda$; radiation
+  carries entropy and a reaction centre captures only part of the excitation.
+  Pass `efficiency=` to ask a less generous question.
+- **`photons_required` is a floor, not a quantum requirement.** Real anoxygenic
+  phototrophs run cyclic electron flow and reverse electron transport and spend
+  several photons per electron. This answers only "how many photons' worth of
+  energy is the reaction short by".
+
+Photoferrotrophy against ferrihydrite is the interesting one: it crosses zero
+near **pH 9 in the dark**, so above that the light is buying rate rather than
+thermodynamics.
+
+The `notebooks/photoAs`, `photoFe` and `photoNO2` notebooks work each donor
+through the same steps.
+
 ### The curated metabolism library
 
 Thirty-seven named metabolisms, so you need not remember which couples to pair.
@@ -879,9 +934,24 @@ messages refer to them by number.
    convention and mixing conventions silently corrupts a pathway sum.
 2. **Verify the supplemental values.** Hydroxylamine, glucose and pyruvate are
    hand-entered and flagged unverified. Each needs tracing to a primary source,
-   confirming against its standard state, and the flag setting.
+   confirming against its standard state, and the flag setting. `Biomass(aq)`
+   is the fourth entry on that list and is **deliberately permanent** — ⟨CH₂O⟩
+   is a modelling placeholder, not a compound, so it can never be traced to a
+   primary source and should keep warning forever.
 4. **Provenance export**: per-result record of pyGCC version, database file
    hash, and per-species source, dumpable as BibTeX.
+18. **`backend.resolve()` only sees the HKF dictionary** *(small)*. `delta_Gf`
+    handles all three routes, but `resolve` checks `species_dict` alone, so it
+    raises for Goethite, Pyrolusite and `As(OH)3(aq)` — species that work
+    perfectly well in reactions — and then suggests the name just passed,
+    which reads as a bug. Nothing downstream depends on it, so this is tidiness
+    rather than correctness, but the error message is actively misleading.
+19. **The test suite dirties the working tree** *(small)*. Executing notebook 02
+    rewrites `notebooks/explorer_methanogenesis.html` and
+    `tower_interactive.html`, and Plotly stamps a fresh random `div` id each
+    time, so `git status` is dirty after every run with a one-line diff that
+    means nothing. Both files are tracked deliberately. Either write the
+    exports somewhere untracked during tests, or pin the div id.
 
 ### Tier 2 — moderate, mostly new figures over existing machinery
 
@@ -910,61 +980,6 @@ messages refer to them by number.
     subsurface range pyGCC is actually built for.
 
 ---
-
-### Phototrophy: paying for an uphill reaction with light
-
-A phototroph's defining trick is running a reaction that does not pay.
-Photoferrotrophy, photoarsenotrophy and nitrite-driven photoautotrophy all fix
-CO₂ with a donor far too weak to do it in the dark.
-
-```python
-from microbial_thermo.photons import photon_energy, photons_required
-from microbial_thermo.figures import plot_light_budget
-from microbial_thermo.reaction import Couple, Reaction
-
-fixation = Reaction.from_couples(
-    donor=Couple.make("As(III)", "As(V)"),
-    acceptor=Couple.make("Biomass", "CO2"),   # (reduced, oxidized), as always
-    conditions=conditions,
-)
-fixation.delta_G_standard_prime          # +80.3 kJ/mol — uphill
-photon_energy("P870")                    # 137.5 kJ/mol per mole of photons
-photons_required(fixation.delta_G_standard_prime)   # 0.73
-plot_light_budget(fixation)
-```
-
-The reaction direction comes from which couple is the **acceptor**, not from
-the order within a couple. `acceptor=Couple.make("Biomass", "CO2")` reduces
-CO₂, so the reaction is written in the CO₂-fixation direction. Writing the
-couple backwards still gives the right energy — it only swaps the
-`reduced`/`oxidized` labels and the oxidation-state annotations.
-
-At 870 nm (bacteriochlorophyll *a*, the pigment of purple bacteria), the three
-donors rank:
-
-| donor | ΔG°′ (kJ/mol per 2 e⁻) | photons needed |
-|---|---|---|
-| Fe(II) → ferrihydrite | +51.2 | 0.52 |
-| As(III) → As(V) | +80.3 | 0.73 |
-| NO₂⁻ → NO₃⁻ | +156.4 | 1.28 |
-
-So one photon per electron pair covers iron and arsenite but **not** nitrite.
-Two things worth knowing before quoting any of that:
-
-- **`photon_energy` is an upper bound.** It returns $N_A hc/\lambda$; radiation
-  carries entropy and a reaction centre captures only part of the excitation.
-  Pass `efficiency=` to ask a less generous question.
-- **`photons_required` is a floor, not a quantum requirement.** Real anoxygenic
-  phototrophs run cyclic electron flow and reverse electron transport and spend
-  several photons per electron. This answers only "how many photons' worth of
-  energy is the reaction short by".
-
-Photoferrotrophy against ferrihydrite is the interesting one: it crosses zero
-near **pH 9 in the dark**, so above that the light is buying rate rather than
-thermodynamics.
-
-The `notebooks/photoAs`, `photoFe` and `photoNO2` notebooks work each donor
-through the same steps.
 
 ## Examples
 
