@@ -37,7 +37,7 @@ mthermo = "microbial_thermo.cli:main"
 include = ["microbial_thermo*"]
 
 [tool.setuptools.package-data]
-microbial_thermo = ["data/*.yaml"]
+microbial_thermo = ["data/*.yaml", "data/external/*.csv", "data/external/*.yaml"]
 
 [tool.ruff]
 line-length = 100

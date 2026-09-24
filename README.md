@@ -325,7 +325,7 @@ formate, propanoate, butanoate, sulfite, nitrite, sulfate.
 
 ### Where the numbers come from
 
-Four sources, consulted in this order. **A later source can only ever add a
+Five sources, consulted in this order. **A later source can only ever add a
 species; it never changes a number an earlier one already produced.**
 
 | order | source | route | what it carries |
@@ -333,7 +333,8 @@ species; it never changes a number an earlier one already produced.**
 | 1 | `speq23.dat` | HKF, direct | 1597 aqueous species, gases, common minerals |
 | 2 | `thermo.com.dat` | GWB log K + HKF basis | 2937 entries, chiefly minerals |
 | 3 | `supcrtbl.dat` | Holland & Powell (HP11) | 266 species nothing else has |
-| 4 | supplemental table | hand-entered | 4 species no database carries |
+| 4 | OBIGT (`data/external/`) | HKF, imported | 536 organic aqueous species with per-species citations |
+| 5 | supplemental table | hand-entered | 4 species no database carries |
 
 `speq23.dat` replaced pyGCC's default `speq21.dat` and the upgrade was free:
 a strict superset, +3 species, and **not one formation energy of the 85
@@ -359,6 +360,42 @@ lands you 4.184× out on a number that still looks perfectly plausible.
 What it buys: **scorodite** (FeAsO₄·2H₂O, −1287 kJ/mol), the phase that
 controls arsenic solubility in oxidised sediments, along with arsenopyrite
 variants, barium arsenates and 260-odd other minerals.
+
+### Imported external data
+
+`data/external/` holds data taken wholesale from a published database, with
+the source recorded once in `sources.yaml` rather than per species. That is
+the difference from the hand-entered supplemental table: these arrive with a
+citation already attached, so they are verified on arrival rather than
+pending.
+
+Currently one source: **OBIGT**, the database inside CHNOSZ. It is
+SUPCRT-lineage, so the standard state already matches — and that is checkable
+rather than asserted: **acetate's HKF parameters are identical in OBIGT and
+`speq23` to the last digit**, which is what licensed the import. 536 organic
+aqueous species arrive with full HKF parameters, so they carry real
+temperature dependence rather than a single 25 °C value.
+
+What it adds, measured: **432 genuinely new** species, 104 already present
+under a different spelling. Of the TCA cycle, succinate, fumarate and malate
+were already in `speq23` — the real additions are **citrate, isocitrate,
+oxaloacetate**, plus glutamate, aspartate, cysteine and the phosphoglycerates.
+
+**The ordering is the safety property, and it earned its keep here.** Of 103
+species both sources carry with the same formula, 78 agree to better than
+0.01 kJ/mol — but 25 do not, and the amino acids are the worst of it:
+**methionine differs by 181 kJ/mol**, tyrosine by 19, asparagine by 13.
+Because the import is consulted last, `speq23` wins every one of those and
+nothing moved. Had OBIGT been preferred, methionine would have shifted by
+181 kJ/mol without a word. That disagreement is asserted in
+`tests/test_external.py` so it cannot quietly go away.
+
+80 rows tabulated in joules rather than calories were **skipped, not
+converted**. CHNOSZ applies its energy unit to the HKF coefficients as well as
+to *G*, *H* and *S*, and a mis-scaled coefficient is wrong only away from
+25 °C — where nothing here would catch it. Worth doing carefully later; the
+prize is N-acetylglucosamine, N-acetylmuramic acid and diaminopimelic acid,
+i.e. peptidoglycan.
 
 ### Species pyGCC does not have
 
@@ -975,7 +1012,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 489 tests, ~180 s
+python -m unittest discover -s tests     # 504 tests, ~190 s
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # skip the slow notebook runs
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
@@ -1044,6 +1081,8 @@ measurements behind that decision and the survey of what else is out there.
 | 19 | Reproducible HTML exports | `EXPLORER_DIV_ID` in `figures/explorer.py`, `tests/test_provenance.py` |
 | 2 (part) | Glucose and pyruvate traced and verified | `data/supplemental_gibbs.yaml`, `tests/test_provenance.py` |
 | 21 | Minimal-integer balancing as an opt-in | `balance_equation(..., choose="minimal")`, `tests/test_ambiguity.py` |
+| 20 | Compatible datasets | `speq23` base, `supcrtbl` supplement, OBIGT import; `tests/test_datasets.py` |
+| 22 | External data, imported and provenance-tagged | `microbial_thermo/external.py`, `data/external/`, `tests/test_external.py` |
 
 ### Tier 1 — small, and builds directly on what exists
 
@@ -1090,34 +1129,6 @@ measurements behind that decision and the survey of what else is out there.
    digitised; that should settle it. `Biomass(aq)` is on the unverified list
    **permanently** and correctly: ⟨CH₂O⟩ is a modelling placeholder, not a
    compound.
-
-- **#20 · Compatible datasets** — **HIGH PRIORITY**, and the direction is decided
-    (24 September 2026; the measurements behind it are in `RESEARCH.md`).
-    **Layer, do not replace.** Keep the pyGCC/HKF backend, in three
-    independently testable steps:
-
-    1. `speq21.dat` → **`speq23.dat`**. A strict superset: 1594 → 1597 species,
-       nothing dropped, adding epsomite, hexahydrite and kieserite. Free.
-    2. Add **`supcrtbl.dat`** as a second mineral source — 444 species, 308 of
-       them not in `speq21`, including arsenopyrite, scorodite, arsenolite and
-       amorphous ferric arsenate. It cannot be a base (it lacks 1458 species we
-       use) but it is the phase data the arsenic work actually needs. SUPCRTBL
-       revised mineral end-members against Holland & Powell (2011), so
-       disagreements with `speq21` are **expected** — declare them in
-       `KNOWN_DISAGREEMENTS` with magnitudes, do not silence them.
-    3. Add **OBIGT** (CHNOSZ) as the organics source. SUPCRT-lineage, so the
-       standard state already matches, and every entry carries a citation.
-
-    Nothing to gain on the GWB side: `thermo.com.dat` is already the richest
-    file pyGCC ships. Small robustness fix that falls out of this work:
-    `PygccBackend(database=…)` should reject a GWB file with a clear message
-    rather than failing inside pyGCC's float parser.
-- **#22 · External data sources, imported and provenance-tagged** *(moderate)*.
-    Extend the mechanism behind the supplemental table from hand-entered
-    one-offs to whole external sources, so a species we lack can come from
-    OBIGT or elsewhere carrying its origin and a verification flag. This is
-    the deliberate second half of the "borrow algorithms, not data" rule —
-    allowed, but only where we have nothing, and never silently.
 
 ### Tier 2 — moderate, mostly new figures over existing machinery
 

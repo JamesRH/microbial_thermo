@@ -246,6 +246,9 @@ Two of the remaining entries deserve reading before touching anything nearby:
   untraced "commonly cited" value is worth. **Hydroxylamine is still
   outstanding** and is in neither pyGCC nor OBIGT; its provenance records
   where it was looked for. `Biomass(aq)` is unverified permanently by design.
-  **OBIGT is the place to look first** for anything pyGCC lacks: it is
-  SUPCRT-lineage, so the standard state already matches, and every entry
-  carries a citation key.
+  **OBIGT is now imported**, in `data/external/`, and is the place to look
+  first for anything pyGCC lacks. But note what the import turned up: OBIGT and
+  speq23 agree to the last digit on acetate and to better than 0.01 kJ/mol on
+  78 of 103 shared species -- and disagree badly on the rest, methionine by
+  181 kJ/mol. Convention-matched does not mean number-matched. Imports are
+  consulted LAST for exactly this reason; do not promote one.

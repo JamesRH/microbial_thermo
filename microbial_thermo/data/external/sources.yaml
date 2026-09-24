@@ -1,0 +1,58 @@
+# External thermodynamic data, imported and tagged.
+#
+# ================== HOW THIS DIFFERS FROM supplemental_gibbs.yaml ==========
+# That file holds values typed in by hand for species no database carries.
+# This one holds values imported wholesale from a published database, with the
+# source recorded once here rather than per species. The distinction matters:
+# a hand-entered number is somebody's transcription and warns until it is
+# traced, while these arrive with a citation already attached.
+#
+# They are still NOT the primary database. Every source here is consulted
+# AFTER speq23, after the GWB minerals and after supcrtbl, so importing one
+# can only ever add a species -- it can never move a number that already
+# resolved. That ordering is what keeps a single provenance per result.
+# ==========================================================================
+
+sources:
+  - name: OBIGT
+    file: obigt_organic_aq.csv
+    kind: hkf_aqueous
+    energy_units: cal
+    retrieved: 2026-09-24
+    url: https://github.com/jedick/CHNOSZ/blob/main/inst/extdata/OBIGT/organic_aq.csv
+    license: GPL-3.0 (CHNOSZ)
+    citation: >-
+      Dick, J. M. (2019). CHNOSZ: Thermodynamic calculations and diagrams for
+      geochemistry. Frontiers in Earth Science 7:180. Data taken from the
+      OBIGT database bundled with the package; each species carries its own
+      primary citation in the `citation` column.
+    note: >-
+      SUPCRT-lineage, so the standard state already matches this library:
+      aqueous, 1 molal, 25 C, dGf(H+) = 0, and the same revised-HKF equation
+      of state. The columns map one-to-one onto pyGCC's 13-element aqueous
+      entry, which is checkable -- acetate's parameters are identical in both
+      to the last digit.
+      Imported: 536 of 640 organic aqueous species. Skipped: 80 whose energies
+      are tabulated in joules rather than calories, and 24 missing an HKF
+      parameter. The joule rows are skipped deliberately rather than converted:
+      CHNOSZ applies E_units to the HKF coefficients as well as to G, H and S,
+      and a mis-scaled coefficient produces a number that is wrong only away
+      from 25 C, where nothing would catch it. Converting them is worth doing
+      carefully -- the prize is N-acetylglucosamine, N-acetylmuramic acid and
+      diaminopimelic acid, i.e. peptidoglycan.
+      What it adds, measured rather than guessed: 432 species genuinely new,
+      104 already present under a different spelling. Of the TCA cycle,
+      succinate, fumarate and malate were already in speq23 under their own
+      names -- the real additions are citrate, isocitrate and oxaloacetate,
+      plus glutamate, aspartate, cysteine and the phosphoglycerates.
+
+      IMPORTANT, and the reason this source is consulted last. Of 103 species
+      carried by both OBIGT and speq23 with the same formula, 78 agree to
+      better than 0.01 kJ/mol -- acetate is identical to the last digit, which
+      is what licensed the import in the first place -- but 25 do not, and some
+      disagree enormously: methionine by 181 kJ/mol, tyrosine by 19,
+      asparagine by 13. The amino acids are the worst of it. Preferring OBIGT
+      would have moved methionine by 181 kJ/mol without a word. The ordering
+      means speq23 wins every one of those, and the disagreement is asserted
+      in tests/test_external.py so it cannot be forgotten. Do not "fix" this
+      by promoting OBIGT ahead of the primary database.

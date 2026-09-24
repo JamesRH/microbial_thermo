@@ -272,6 +272,10 @@ class PygccBackend(ThermoBackend):
                 verified=entry.verified,
             )
 
+        if name in self.external_species:
+            imported = self.external_species[name]
+            return SpeciesRecord(name=name, backend_name=name, source=imported.provenance)
+
         raise SpeciesNotFoundError(name, suggestions=self.suggest(name))
 
     @property
@@ -288,6 +292,7 @@ class PygccBackend(ThermoBackend):
             list(self.species_dict)
             + list(self.minerals)
             + list(self.supplementary_species)
+            + list(self.external_species)
             + list(supplemental_species())
         )
         return difflib.get_close_matches(name, candidates, n=n, cutoff=0.6)
@@ -299,6 +304,7 @@ class PygccBackend(ThermoBackend):
             set(self.species_dict)
             | set(self.minerals)
             | set(self.supplementary_species)
+            | set(self.external_species)
             | set(supplemental_species())
         )
 
@@ -352,6 +358,8 @@ class PygccBackend(ThermoBackend):
                 return self._mineral_gibbs_cal(name, temperature_c, pressure)
             if name in self.supplementary_species:
                 return self._supplementary_gibbs_cal(name, temperature_c, pressure)
+            if name in self.external_species:
+                return self._external_gibbs_cal(name, temperature_c, pressure)
             supplemented = self._supplemental_gibbs_cal(name, temperature_c)
             if supplemented is not None:
                 return supplemented
@@ -383,6 +391,39 @@ class PygccBackend(ThermoBackend):
                 f"pyGCC returned a non-finite free energy for {name!r} at "
                 f"{temperature_c} C, P={pressure!r}. This usually means the "
                 "state point falls outside the equation of state's valid region."
+            )
+        return value
+
+    @property
+    def external_species(self) -> dict:
+        """Species imported from a published external database.
+
+        Consulted after every pyGCC source, so an import can only ever add.
+        """
+        from ..external import external_species
+
+        return external_species()
+
+    def _external_gibbs_cal(self, name: str, temperature_c: float, pressure) -> float:
+        """Formation energy from an imported source, in cal/mol.
+
+        These go through the same revised-HKF routine as the primary database,
+        because that is what they are: the manifest only admits a source whose
+        standard state and equation of state already match. The record is
+        reshaped into pyGCC's 13-element layout on the way in.
+        """
+        from pygcc.species_eos import supcrtaq
+
+        entry = list(self.external_species[name].entry)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            raw = supcrtaq(temperature_c, pressure, entry)
+        value = float(np.asarray(raw, dtype=float).ravel()[0])
+        if not np.isfinite(value):
+            raise MissingDataError(
+                f"the imported entry for {name!r} gave a non-finite free "
+                f"energy at {temperature_c} C; its HKF parameters may not "
+                "cover this state point."
             )
         return value
 
