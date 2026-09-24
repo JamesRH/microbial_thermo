@@ -161,3 +161,133 @@ species:
   - {backend: "H2AsO4-",     formula: "H2AsO4-", display: "H_2AsO_4^-",  phase: aq, aliases: ["H2AsO4-", "dihydrogen arsenate"]}
   - {backend: "HAsO4--",     formula: "HAsO4-2", display: "HAsO_4^{2-}", phase: aq, aliases: ["HAsO4-2", "As(V)", arsenate, "hydrogen arsenate"]}
   - {backend: "AsO4---",     formula: "AsO4-3",  display: "AsO_4^{3-}",  phase: aq, aliases: ["AsO4-3", orthoarsenate]}
+
+  # --- minerals, wider set ---
+  #
+  # Phases a sediment or a rock-hosted system actually contains, so a reaction
+  # can be written against the solid that is really there rather than against
+  # a dissolved proxy. Sources vary -- HKF where speq23 has the phase, the GWB
+  # log K route otherwise, supcrtbl for scorodite -- and `reaction.provenance()`
+  # will say which for any given result.
+  #
+  # Hydrates are written out rather than with the database's colon notation:
+  # gypsum is CaSO4H4O2, not "CaSO4:2H2O", because the colon is not a formula.
+  #
+  # Two deliberate omissions, both because the data is not good enough:
+  #
+  #   Wustite is Fe(0.947)O -- genuinely non-stoichiometric, and a fractional
+  #   subscript is not something this library's formula parser should learn to
+  #   accept just for one phase.
+  #
+  #   Arsenopyrite (FeAsS) is the one that matters and it is left out on
+  #   purpose. Three routes give three answers -- GWB -50.0, supcrtbl's two
+  #   polymorphs -109.6 and -125.5 kJ/mol -- and the GWB figure rests on a
+  #   single finite log K point. Until that is resolved against a primary
+  #   source, exposing any of them would be picking one at random. See the
+  #   Future work item.
+
+  # Iron sulfides. Both are tabulated as "FeS", so a bare formula is ambiguous
+  # and has to be declared. Troilite wins it: troilite IS stoichiometric FeS,
+  # while pyrrhotite is properly Fe(1-x)S and is only written FeS by the
+  # database's convention. Ask for pyrrhotite by name.
+  - {backend: "Troilite",    formula: "FeS",            display: "FeS",                   phase: s, canonical: true, aliases: [troilite]}
+  - {backend: "Pyrrhotite",  formula: "FeS",            display: "FeS",                   phase: s, aliases: [pyrrhotite]}
+
+  # Carbonates -- the carbonate system's solid end
+  # Calcite and aragonite are the same formula, so the bare one is declared:
+  # calcite is the polymorph stable at Earth-surface conditions, aragonite the
+  # metastable one. They differ by under a kJ/mol, which is exactly why leaving
+  # the choice to file ordering would be hard to notice.
+  - {backend: "Calcite",     formula: "CaCO3",          display: "CaCO_3",                phase: s, canonical: true, aliases: [calcite]}
+  - {backend: "Aragonite",   formula: "CaCO3",          display: "CaCO_3",                phase: s, aliases: [aragonite]}
+  - {backend: "Dolomite",    formula: "CaMg(CO3)2",     display: "CaMg(CO_3)_2",          phase: s, aliases: [dolomite]}
+  - {backend: "Magnesite",   formula: "MgCO3",          display: "MgCO_3",                phase: s, aliases: [magnesite]}
+
+  # Sulfates
+  - {backend: "Gypsum",      formula: "CaSO4H4O2",      display: "CaSO_4\\cdot 2H_2O",    phase: s, aliases: [gypsum]}
+  - {backend: "Anhydrite",   formula: "CaSO4",          display: "CaSO_4",                phase: s, aliases: [anhydrite]}
+  - {backend: "Barite",      formula: "BaSO4",          display: "BaSO_4",                phase: s, aliases: [barite, barytes]}
+  - {backend: "Jarosite",    formula: "KFe3(SO4)2(OH)6", display: "KFe_3(SO_4)_2(OH)_6",  phase: s, aliases: [jarosite]}
+
+  # Arsenic minerals
+  - {backend: "Scorodite",   formula: "FeAsH4O6",       display: "FeAsO_4\\cdot 2H_2O",   phase: s, aliases: [scorodite, "ferric arsenate"]}
+  - {backend: "Orpiment",    formula: "As2S3",          display: "As_2S_3",               phase: s, aliases: [orpiment]}
+  - {backend: "Claudetite",  formula: "As2O3",          display: "As_2O_3",               phase: s, aliases: [claudetite, "arsenic trioxide"]}
+
+  # Other metal sulfides -- the sinks trace metals end up in
+  - {backend: "Sphalerite",  formula: "ZnS",            display: "ZnS",                   phase: s, aliases: [sphalerite]}
+  - {backend: "Galena",      formula: "PbS",            display: "PbS",                   phase: s, aliases: [galena]}
+  - {backend: "Chalcopyrite", formula: "CuFeS2",        display: "CuFeS_2",               phase: s, aliases: [chalcopyrite]}
+  - {backend: "Covellite",   formula: "CuS",            display: "CuS",                   phase: s, aliases: [covellite]}
+  - {backend: "Millerite",   formula: "NiS",            display: "NiS",                   phase: s, aliases: [millerite]}
+  - {backend: "Cinnabar",    formula: "HgS",            display: "HgS",                   phase: s, aliases: [cinnabar]}
+
+  # Phosphate
+  - {backend: "Hydroxyapatite", formula: "Ca5(OH)(PO4)3", display: "Ca_5(OH)(PO_4)_3",    phase: s, aliases: [hydroxyapatite, apatite]}
+  - {backend: "Vivianite",   formula: "Fe3(PO4)2H16O8", display: "Fe_3(PO_4)_2\\cdot 8H_2O", phase: s, aliases: [vivianite]}
+
+  # --- elemental forms ---
+  #
+  # Needed for Frost and Latimer diagrams, where the element is the origin by
+  # definition. That they come out within 0.004 kJ/mol of zero through the GWB
+  # log K route is a free check on that route.
+  #
+  # Manganese is the exception and the reason this block is worth reading:
+  # elemental Mn evaluates to -2.5 kJ/mol, not zero. That is a database
+  # problem, not a rounding one, so a manganese Frost diagram drawn against
+  # this species inherits a 2.5 kJ/mol offset. Sulfur and carbon are omitted
+  # because Sulfur(s) and Graphite already cover them.
+  - {backend: "As",  formula: "As", display: "As(s)",  phase: s, aliases: ["As(s)", "arsenic metal", "elemental arsenic"]}
+  - {backend: "Se",  formula: "Se", display: "Se(s)",  phase: s, aliases: ["Se(s)", "selenium", "elemental selenium"]}
+  - {backend: "Fe",  formula: "Fe", display: "Fe(s)",  phase: s, aliases: ["Fe(s)", "iron metal", "zero-valent iron", ZVI]}
+  - {backend: "Mn",  formula: "Mn", display: "Mn(s)",  phase: s, aliases: ["Mn(s)", "manganese metal"]}
+  - {backend: "Cu",  formula: "Cu", display: "Cu(s)",  phase: s, aliases: ["Cu(s)", "copper metal"]}
+  - {backend: "Zn",  formula: "Zn", display: "Zn(s)",  phase: s, aliases: ["Zn(s)", "zinc metal"]}
+  - {backend: "Ni",  formula: "Ni", display: "Ni(s)",  phase: s, aliases: ["Ni(s)", "nickel metal"]}
+
+  # --- selenium ---
+  #
+  # Selenate and selenite respiration are real anaerobic metabolisms, and the
+  # Se(VI)/Se(IV)/Se(0) ladder is the textbook case of a metalloid reduced to
+  # an insoluble element -- the same trick arsenic does not do.
+  - {backend: "SeO4--",     formula: "SeO4-2",  display: "SeO_4^{2-}",   phase: aq, aliases: ["SeO4-2", selenate, "Se(VI)"]}
+  - {backend: "HSeO4-",     formula: "HSeO4-",  display: "HSeO_4^-",     phase: aq, aliases: ["HSeO4-", "hydrogen selenate"]}
+  - {backend: "SeO3--",     formula: "SeO3-2",  display: "SeO_3^{2-}",   phase: aq, aliases: ["SeO3-2", selenite, "Se(IV)"]}
+  - {backend: "HSeO3-",     formula: "HSeO3-",  display: "HSeO_3^-",     phase: aq, aliases: ["HSeO3-", "hydrogen selenite"]}
+
+  # --- chromium ---
+  - {backend: "CrO4--",     formula: "CrO4-2",  display: "CrO_4^{2-}",   phase: aq, aliases: ["CrO4-2", chromate, "Cr(VI)"]}
+  - {backend: "HCrO4-",     formula: "HCrO4-",  display: "HCrO_4^-",     phase: aq, aliases: ["HCrO4-", "hydrogen chromate"]}
+  - {backend: "Cr+++",      formula: "Cr+3",    display: "Cr^{3+}",      phase: aq, aliases: ["Cr+3", "Cr(III)", chromium]}
+  - {backend: "Cr++",       formula: "Cr+2",    display: "Cr^{2+}",      phase: aq, aliases: ["Cr+2", "Cr(II)"]}
+
+  # --- molybdenum, tungsten, uranium ---
+  - {backend: "MoO4--",     formula: "MoO4-2",  display: "MoO_4^{2-}",   phase: aq, aliases: ["MoO4-2", molybdate]}
+  - {backend: "WO4--",      formula: "WO4-2",   display: "WO_4^{2-}",    phase: aq, aliases: ["WO4-2", tungstate]}
+  - {backend: "UO2++",      formula: "UO2+2",   display: "UO_2^{2+}",    phase: aq, aliases: ["UO2+2", uranyl, "U(VI)"]}
+  - {backend: "U++++",      formula: "U+4",     display: "U^{4+}",       phase: aq, aliases: ["U+4", "U(IV)"]}
+  - {backend: "Uraninite",  formula: "UO2",     display: "UO_2",         phase: s,  aliases: [uraninite, pitchblende]}
+
+  # --- aqueous metal ions, the counterparts of the sulfides above ---
+  #
+  # A metal sulfide is unusable without them: writing sphalerite against
+  # sulfate needs somewhere for the zinc to go, and this library will not
+  # invent it.
+  - {backend: "Zn++",  formula: "Zn+2", display: "Zn^{2+}", phase: aq, aliases: ["Zn+2", "Zn(II)", zinc]}
+  - {backend: "Cu++",  formula: "Cu+2", display: "Cu^{2+}", phase: aq, aliases: ["Cu+2", "Cu(II)", cupric]}
+  - {backend: "Cu+",   formula: "Cu+",  display: "Cu^+",    phase: aq, aliases: ["Cu(I)", cuprous]}
+  - {backend: "Ni++",  formula: "Ni+2", display: "Ni^{2+}", phase: aq, aliases: ["Ni+2", "Ni(II)", nickel]}
+  - {backend: "Co++",  formula: "Co+2", display: "Co^{2+}", phase: aq, aliases: ["Co+2", "Co(II)", cobalt]}
+  - {backend: "Co+++", formula: "Co+3", display: "Co^{3+}", phase: aq, aliases: ["Co+3", "Co(III)"]}
+  - {backend: "Cd++",  formula: "Cd+2", display: "Cd^{2+}", phase: aq, aliases: ["Cd+2", cadmium]}
+  - {backend: "Pb++",  formula: "Pb+2", display: "Pb^{2+}", phase: aq, aliases: ["Pb+2", lead]}
+  - {backend: "Hg++",  formula: "Hg+2", display: "Hg^{2+}", phase: aq, aliases: ["Hg+2", mercury, mercuric]}
+  - {backend: "Ag+",   formula: "Ag+",  display: "Ag^+",    phase: aq, aliases: [silver]}
+
+  # --- major ions, needed by the carbonates and sulfates ---
+  - {backend: "Ca++", formula: "Ca+2", display: "Ca^{2+}", phase: aq, aliases: ["Ca+2", calcium]}
+  - {backend: "Mg++", formula: "Mg+2", display: "Mg^{2+}", phase: aq, aliases: ["Mg+2", magnesium]}
+  - {backend: "Ba++", formula: "Ba+2", display: "Ba^{2+}", phase: aq, aliases: ["Ba+2", barium]}
+  - {backend: "K+",   formula: "K+",   display: "K^+",     phase: aq, aliases: [potassium]}
+  - {backend: "Na+",  formula: "Na+",  display: "Na^+",    phase: aq, aliases: [sodium]}
+  - {backend: "Cl-",  formula: "Cl-",  display: "Cl^-",    phase: aq, aliases: [chloride]}

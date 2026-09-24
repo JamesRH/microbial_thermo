@@ -29,7 +29,12 @@ class TestPhaseAmbiguity(unittest.TestCase):
         self.assertEqual(undeclared, {}, f"undeclared ambiguities: {sorted(undeclared)}")
 
     def test_the_contested_names_are_the_ones_expected(self):
-        self.assertEqual(sorted(self.registry.ambiguities()), ["ch4", "co2", "h2", "n2", "o2"])
+        self.assertEqual(
+            sorted(self.registry.ambiguities()),
+            # caco3 and fes joined when the mineral set was widened: calcite
+            # and aragonite share a formula, as do troilite and pyrrhotite.
+            ["caco3", "ch4", "co2", "fes", "h2", "n2", "o2"],
+        )
 
     def test_a_bare_name_means_the_dissolved_form(self):
         """What a cell actually sees. The gas needs saying explicitly."""

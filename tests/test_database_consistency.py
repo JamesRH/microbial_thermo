@@ -59,6 +59,17 @@ KNOWN_DISAGREEMENTS = {
     # HAsO2 representations in tests/test_arsenic.py, and it is why a bare
     # "As(III)" resolves to As(OH)3(aq) rather than to HAsO2(aq).
     "HAsO2(aq)": 0.06,
+    # Exposed when the mineral and trace-metal set was widened. All three use
+    # the HKF value; these tolerances record how far the GWB route differs,
+    # which is information a user of these species should have.
+    "Cr++": 3.0,  # 14.8 kJ/mol
+    "Cr+++": 1.5,  # 7.6 kJ/mol
+    # 51 kJ/mol, by far the largest disagreement in the library. Hydroxyapatite
+    # is a solid-solution mineral whose composition varies, and the two
+    # databases have evidently made different choices about it. Quote a
+    # phosphate saturation state computed with it only with that caveat
+    # attached; for anything quantitative, check both routes first.
+    "Hydroxyapatite": 10.0,
 }
 
 #: Everything else must agree this closely, in log K units (~0.17 kJ/mol).

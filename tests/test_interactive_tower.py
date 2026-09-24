@@ -60,7 +60,15 @@ EXPECTED_PROTONS = {
     "NO3-/N2": 12,
     "Fe3+/Fe2+": 0,
     "As(V)/As(III)": 4,
+    "SeO3-2/Se0": 6,
+    "SeO4-2/SeO3-2": 2,
+    "CrO4-2/Cr3+": 8,
+    "UO2+2/UO2(s)": 0,
 }
+
+#: Couples whose reduction consumes no protons, so pH does not move them.
+#: Uranyl to uraninite joined iron here when the metal set was widened.
+PROTON_FREE = {"Fe3+/Fe2+", "UO2+2/UO2(s)"}
 
 
 def small_grid():
@@ -151,8 +159,7 @@ class TestProtonSlopes(unittest.TestCase):
             )
             if abs(high - low) > 1e-4
         ]
-        # Iron is the only proton-free couple here; everything else moves.
-        self.assertEqual(len(moved), len(self.grid.labels) - 1)
+        self.assertEqual(len(moved), len(self.grid.labels) - len(PROTON_FREE))
 
 
 class TestActivityRatio(unittest.TestCase):

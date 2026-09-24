@@ -328,3 +328,58 @@ metabolisms:
       Endergonic by design: this is the cost side of the ledger, not a
       metabolism that runs on its own. Uses the unverified <CH2O> biomass
       placeholder.
+
+  # --- metal and metalloid respiration ---
+  #
+  # Anaerobes that breathe things other than oxygen, sulfate or nitrate. Each
+  # is a described metabolism with an isolated organism, and each is also an
+  # environmental remediation route -- the reduced product is the insoluble
+  # one, so the metabolism immobilises the contaminant.
+  - name: selenate_respiration_hydrogen
+    label: Selenate respiration with hydrogen
+    group: metalloid reduction
+    donor: ["H2(g)", "H+"]
+    acceptor: ["SeO3--", "SeO4--"]
+    key_element: Se
+    organisms: Thauera selenatis, Sulfurospirillum barnesii
+    note: Se(VI) to Se(IV); the first step of the selenium reduction chain.
+
+  - name: selenate_respiration_acetate
+    label: Selenate respiration with acetate
+    group: metalloid reduction
+    donor: [acetate, "CO2(aq)"]
+    acceptor: ["SeO3--", "SeO4--"]
+    key_element: C
+    organisms: Thauera selenatis
+
+  - name: selenite_reduction_hydrogen
+    label: Selenite reduction to elemental selenium
+    group: metalloid reduction
+    donor: ["H2(g)", "H+"]
+    acceptor: ["Se", "SeO3--"]
+    key_element: Se
+    note: >
+      Se(IV) to Se(0). The product is insoluble red elemental selenium, which
+      is why selenium-reducing organisms are used to strip selenium from
+      irrigation drainage. Arsenic has no equivalent step -- As(III) stays
+      dissolved, which is exactly why arsenic is the harder problem.
+
+  - name: chromate_reduction_acetate
+    label: Chromate reduction with acetate
+    group: metal reduction
+    donor: [acetate, "CO2(aq)"]
+    acceptor: ["Cr+++", "CrO4--"]
+    key_element: C
+    organisms: Shewanella oneidensis, Desulfovibrio vulgaris
+    note: Cr(VI) is soluble and carcinogenic; Cr(III) precipitates as hydroxide.
+
+  - name: uranium_reduction_acetate
+    label: Uranium(VI) reduction with acetate
+    group: metal reduction
+    donor: [acetate, "CO2(aq)"]
+    acceptor: [Uraninite, "UO2++"]
+    key_element: C
+    organisms: Geobacter sulfurreducens, Desulfovibrio
+    note: >
+      The basis of acetate-amended uranium bioremediation at Rifle, Colorado:
+      soluble uranyl is reduced to uraninite and drops out of the groundwater.

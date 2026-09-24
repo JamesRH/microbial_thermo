@@ -693,9 +693,55 @@ Species
   H2O         <- IAPWS-95 via pygcc.iapws95
 ```
 
+### Minerals and trace metals
+
+Phases a sediment actually contains, so a reaction can be written against the
+solid that is really there. Sources vary by phase — `reaction.provenance()`
+says which for any result.
+
+| group | available |
+|---|---|
+| iron | goethite, hematite, magnetite, siderite, pyrite, ferrihydrite, **pyrrhotite**, **troilite**, **vivianite**, **jarosite** |
+| manganese | pyrolusite, manganite, hausmannite, bixbyite, birnessite, rhodochrosite |
+| carbonates | **calcite**, **aragonite**, **dolomite**, **magnesite** |
+| sulfates | **gypsum**, **anhydrite**, **barite** |
+| arsenic | **scorodite**, **orpiment**, **claudetite** |
+| metal sulfides | **sphalerite**, **galena**, **chalcopyrite**, **covellite**, **millerite**, **cinnabar** |
+| phosphate | **hydroxyapatite** |
+| uranium | **uraninite** |
+
+Plus the aqueous ions they need — Zn²⁺, Cu²⁺/Cu⁺, Ni²⁺, Co²⁺/Co³⁺, Cd²⁺,
+Pb²⁺, Hg²⁺, Ag⁺, Ca²⁺, Mg²⁺, Ba²⁺, K⁺, Na⁺, Cl⁻ — and the redox-active
+metalloids: **selenate/selenite/Se(0)**, **chromate/Cr(III)**, molybdate,
+tungstate, **uranyl/uraninite**. Elemental As, Se, Fe, Mn, Cu, Zn and Ni are
+registered too, as the origin a Frost or Latimer diagram needs.
+
+**A mineral needs its counter-ion.** Writing sphalerite against sulfate leaves
+the zinc nowhere to go, and this library will not invent it:
+
+```python
+Couple.make("Sphalerite", "SO4-2", key_element="S")        # refused
+Couple.make("Sphalerite", ["SO4-2", "Zn++"], key_element="S")   # works
+```
+
+Three caveats worth meeting here rather than in the audit:
+
+- **Hydroxyapatite disagrees by 51 kJ/mol** between the two databases — the
+  largest gap in the library. It is a solid-solution mineral and they have
+  made different choices. Fine for a qualitative argument; check both routes
+  before quoting a phosphate saturation state.
+- **Chromium ions** disagree by 15 (Cr²⁺) and 8 (Cr³⁺) kJ/mol.
+- **Arsenopyrite is deliberately absent.** Three routes give −50, −110 and
+  −126 kJ/mol, and the first rests on a single log K point. Exposing any would
+  be picking one at random.
+
+Elemental forms come out within 0.004 kJ/mol of zero, as they must — a free
+check on the log K route — **except manganese**, which evaluates to
+−2.5 kJ/mol. A manganese Frost diagram inherits that offset.
+
 ### The curated metabolism library
 
-Thirty-seven named metabolisms, so you need not remember which couples to pair.
+Forty-two named metabolisms, so you need not remember which couples to pair.
 Nothing thermodynamic is stored — energies are computed at whatever conditions
 you ask for.
 
@@ -1012,7 +1058,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 504 tests, ~190 s
+python -m unittest discover -s tests     # 539 tests, ~185 s
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # skip the slow notebook runs
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
@@ -1084,6 +1130,7 @@ measurements behind that decision and the survey of what else is out there.
 | 20 | Compatible datasets | `speq23` base, `supcrtbl` supplement, OBIGT import; `tests/test_datasets.py` |
 | 22 | External data, imported and provenance-tagged | `microbial_thermo/external.py`, `data/external/`, `tests/test_external.py` |
 | 27 | Oxidation states cross-checked independently | `tests/test_oxidation_crosscheck.py` (pymatgen, test-only) |
+| 14 | Wider mineral and trace-metal support | `data/species.yaml`, `tests/test_minerals.py` |
 
 ### Tier 1 — small, and builds directly on what exists
 
@@ -1150,12 +1197,6 @@ measurements behind that decision and the survey of what else is out there.
     mixing those with our HKF aqueous species would put two provenances inside
     one diagram. `PourbaixEntry` can be built by hand, so read the algorithm
     and feed it our own ΔGf. CHNOSZ does exactly this in R.
-- **#14 · Wider mineral support**: sulfides beyond pyrite, carbonates, and clays,
-    all of which the GWB route already reaches — they need only registry
-    entries and validation. **See `RESEARCH.md`** — the cheapest first step is
-    `supcrtbl.dat`, which pyGCC already ships and this library can already
-    load, and which carries arsenic minerals (arsenopyrite, scorodite,
-    amorphous ferric arsenate) that `speq21.dat` lacks.
 - **#15 · Uncertainty propagation** through formation-energy uncertainties, with a
     tornado plot showing which variable dominates. Note that SUPCRT-lineage
     databases mostly do not carry uncertainties, so this likely needs
