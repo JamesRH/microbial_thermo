@@ -27,6 +27,8 @@ dependencies:
   - ipywidgets
   # nbclient executes the teaching notebooks in the test suite.
   - nbclient>=0.9
+  # Test-only: cross-checks mineral oxidation states independently.
+  - pymatgen
   - ruff
   - pip
   - pip:

@@ -28,7 +28,9 @@ dependencies = [
 [project.optional-dependencies]
 figures = ["seaborn>=0.13", "rdkit>=2024.03"]
 # nbclient executes the teaching notebooks in the test suite.
-dev = ["ruff", "jupytext", "ipykernel", "ipywidgets", "nbclient>=0.9"]
+# pymatgen is TEST-ONLY: it cross-checks our mineral oxidation states against
+# an independent (ICSD-statistics) method. Nothing at runtime imports it.
+dev = ["ruff", "jupytext", "ipykernel", "ipywidgets", "nbclient>=0.9", "pymatgen"]
 
 [project.scripts]
 mthermo = "microbial_thermo.cli:main"

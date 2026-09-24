@@ -1083,6 +1083,7 @@ measurements behind that decision and the survey of what else is out there.
 | 21 | Minimal-integer balancing as an opt-in | `balance_equation(..., choose="minimal")`, `tests/test_ambiguity.py` |
 | 20 | Compatible datasets | `speq23` base, `supcrtbl` supplement, OBIGT import; `tests/test_datasets.py` |
 | 22 | External data, imported and provenance-tagged | `microbial_thermo/external.py`, `data/external/`, `tests/test_external.py` |
+| 27 | Oxidation states cross-checked independently | `tests/test_oxidation_crosscheck.py` (pymatgen, test-only) |
 
 ### Tier 1 — small, and builds directly on what exists
 
@@ -1187,17 +1188,6 @@ measurements behind that decision and the survey of what else is out there.
     precomputed grid. **This is the point of building them rather than
     borrowing**: a diagram that recomputes at the working pH and temperature
     is something no textbook version can do.
-- **#27 · Cross-check oxidation states against an independent method** *(small)*.
-    `oxidation.py` partitions bonds by electronegativity over SMILES, which is
-    the right approach for organics and is where RDKit already earns its keep.
-    For **inorganic solids** it is weakest, because it has no structural
-    information. pymatgen's `Composition.oxi_state_guesses()` (ICSD statistics)
-    and `BVAnalyzer` (bond valence) are more robust there. Use them as a
-    **test-suite cross-check**, not a runtime dependency — assert that our
-    assignment for arsenopyrite, pyrite and the manganese oxides agrees with an
-    independent method. Same shape as the existing cross-database audit, and it
-    would catch a class of error nothing currently catches.
-
 ---
 
 ## Examples
