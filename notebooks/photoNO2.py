@@ -47,7 +47,7 @@ from microbial_thermo.figures import (
 )
 from microbial_thermo.photons import photon_energy, photons_required
 from microbial_thermo.reaction import Couple, Reaction
-from microbial_thermo.sweep import concentration_axis, ph_axis
+from microbial_thermo.sweep import concentration_axis, partial_pressure_axis, ph_axis
 
 conditions = mt.Conditions(temperature_c=25.0, pH=7)
 
@@ -96,34 +96,49 @@ plt.show()
 # %% [markdown]
 # ## Which species the explorer should sweep
 #
-# `Couple` itself has no `backend` — the backend name lives on the `Species`
-# at `couple.oxidized` and `couple.reduced`. For a couple whose side names
-# several species, `oxidized_side` is a tuple of `(Species, coefficient)`
-# pairs, so index into that instead.
+# Take them straight off the reaction rather than naming the couples one at a
+# time. Every species carrying a coefficient is a candidate; three are worth
+# dropping:
+#
+# * **H⁺** because that is pH, and pH gets its own axis below — sweeping it as
+#   a concentration as well would plot the same variable twice.
+# * **H₂O** because it is the solvent, held at unit activity.
+# * **e⁻** because it never survives into a balanced full reaction, so this is
+#   only defensive.
+#
+# Reading it off `reaction.coefficients` also survives a couple whose side
+# names several species, which naming `couple.reduced` and `couple.oxidized`
+# by hand does not. (Note `Couple` itself has no `.backend` — the backend name
+# lives on the `Species`, at `couple.oxidized.backend`.)
 
 # %%
 Elist = [
-    reaction.acceptor_half.couple.oxidized.backend,
-    reaction.acceptor_half.couple.reduced.backend,
-    reaction.donor_half.couple.oxidized.backend,
-    reaction.donor_half.couple.reduced.backend,
+    s.backend for s in reaction.coefficients if s.backend not in ("H+", "H2O", "e-")
 ]
 Elist
 
 # %% [markdown]
-# The general form, which also survives a multi-species side and drops the
-# things there is no point sweeping:
+# Then pH, plus one axis per species. Two details worth branching on, which is
+# what `sweep.default_axes` does internally:
+#
+# * A **solid** sits at unit activity, so a concentration axis for one is a
+#   flat line. `Fe(OH)3` in the iron notebook is exactly that case — it would
+#   give the dropdown an entry that does nothing.
+# * A **gas** takes a partial pressure rather than a concentration.
 
 # %%
-sweepable = [
-    s.backend for s in reaction.coefficients if s.backend not in ("H+", "H2O", "e-")
-]
-sweepable
+axes = [ph_axis(low=0.0, high=14.0, n=29)]
+for species in reaction.coefficients:
+    if species.backend not in Elist:
+        continue
+    if species.is_gas:
+        axes.append(partial_pressure_axis(species.backend, n=13))
+    elif species.is_aqueous:
+        axes.append(concentration_axis(species.backend, n=13))
+
+print(f"{len(axes)} axes: " + ", ".join(a.label for a in axes))
 
 # %%
-axes = [ph_axis(low=0.0, high=14.0, n=29)] + [
-    concentration_axis(name, n=13) for name in sweepable if name != "H2O"
-]
 figure = plot_energy_explorer(reaction, axes=axes)
 figure.show()
 
