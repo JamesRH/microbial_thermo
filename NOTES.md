@@ -17,7 +17,7 @@ It must be **sourced**. `pygcc` comes from PyPI (not conda-forge) and is the one
 sanctioned `pip` in the project.
 
 ```bash
-python -m unittest discover -s tests     # full suite, 404 tests, ~165 s
+python -m unittest discover -s tests     # full suite, 431 tests, ~165 s
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # ~130 s
 python tests/test_balance.py             # one file, seconds — use this while iterating
 ruff format microbial_thermo tests && ruff check microbial_thermo tests
@@ -137,6 +137,19 @@ pH 7. This is now *declared* rather than accidental: `canonical: true` in
 `species.yaml` picks the winner for each contested name, and
 `tests/test_ambiguity.py` fails if a new aqueous/gas pair is added without
 declaring one. It used to depend on file ordering.
+
+**Couple order does not set reaction direction.** `Couple.make(a, b)` is
+always `(reduced, oxidized)`, but writing one backwards does *not* flip the
+reaction: direction comes from which couple is passed as `donor=` and which as
+`acceptor=`. A backwards couple gives identical n, E and dG, and only swaps
+the `reduced`/`oxidized` labels and the oxidation-state annotations. So the
+symptom is a mislabelled figure or a wrong `couple.reduced.backend`, never a
+wrong energy. Confirmed by building both ways.
+
+**`Couple` has no `.backend`.** The backend name lives on the `Species`, at
+`couple.oxidized.backend` / `couple.reduced.backend`. For a multi-species side
+use `couple.oxidized_side`, a tuple of `(Species, coefficient)` pairs -- note
+a simple couple's side has length 1, so indexing `[1]` raises.
 
 **An E°' is meaningless without naming the species.** The arsenate case makes
 this unmissable: As(V)/As(III) at pH 7 reads +0.160 V written against H3AsO4,
