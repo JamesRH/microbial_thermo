@@ -522,6 +522,62 @@ thermodynamics.
 The `notebooks/photoAs`, `photoFe` and `photoNO2` notebooks work each donor
 through the same steps.
 
+### Reference state and ionic strength
+
+```python
+mt.Conditions.biochemical()                    # pH 7, 25 °C, I = 0.25 M, b-dot
+mt.Conditions.biochemical(ionic_strength=0.7)  # seawater
+reaction.activity_correction()                 # what the coefficients are worth
+```
+
+`Conditions.biochemical()` is the biochemical reference state: pH 7, 25 °C and
+**I = 0.25 M**, the ionic strength the transformed biochemical tables are
+quoted at and close to physiological.
+
+**It will not reconcile a number here with an Alberty-convention table**, and
+it is worth being precise about why. An ionic strength scales activity
+*coefficients*. ΔG°′ is defined at unit activity, so there is nothing for a
+coefficient to multiply and the shift is not small but exactly **zero** —
+measured, not argued. What remains is the *convention* difference, and no
+choice of ionic strength touches it.
+
+Where ionic strength does bite is a reaction with stated concentrations.
+`activity_correction()` reports exactly how much:
+
+| ionic strength | ΔG (kJ/mol) | activity correction |
+|---|---|---|
+| 0 (ideal) | −10.97 | 0 |
+| 0.10 | −10.49 | +0.48 |
+| 0.25 | −10.32 | +0.65 |
+| 0.70 (seawater) | −10.12 | +0.85 |
+
+Under a kJ/mol from fresh water to seawater for this reaction — a real
+correction, but not the reason two sources disagree by ten.
+
+### Provenance
+
+```python
+record = reaction.provenance()
+record.to_text()      # human-readable block to paste under a figure
+record.to_dict()      # JSON-ready
+record.to_bibtex()    # a citable @misc entry
+record.unverified     # species resting on hand-entered values
+```
+
+Records the four things a computed number rests on: software versions, the
+database files **with their hashes**, a per-species source line, and the
+standard-state conventions applied. The hash matters more than it looks —
+pyGCC ships several SUPCRT and GWB files, they are revised between releases,
+and nothing in a computed value otherwise records which one was read.
+
+```
+Species
+  As(OH)3(aq) <- thermo.com.dat (log K route)
+  Biomass(aq) <- hand-entered supplemental table (A PLACEHOLDER…)  [UNVERIFIED]
+  CO2(aq)     <- pyGCC speq21.dat (pyGCC default)
+  H2O         <- IAPWS-95 via pygcc.iapws95
+```
+
 ### The curated metabolism library
 
 Thirty-seven named metabolisms, so you need not remember which couples to pair.
@@ -841,7 +897,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 431 tests, ~165 s
+python -m unittest discover -s tests     # 458 tests, ~170 s
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # skip the slow notebook runs
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
@@ -894,64 +950,53 @@ messages refer to them by number.
 | 7 | Phase-ambiguous species names | `canonical:` in `species.yaml`, `registry.ambiguities()`, notebook 04 |
 | 10 | Interactive redox tower | `tower.tower_grid`, `figures/interactive_tower.py`, notebook 02 |
 | 11 | Per-atom oxidation states on the half-reaction figure | `oxidation.format_per_atom_states`, `per_atom=True`, notebook 04 |
+| 1 | Ionic-strength reference state | `Conditions.biochemical()`, `Reaction.activity_correction()`, `tests/test_reference_state.py` |
+| 4 | Provenance export | `microbial_thermo/provenance.py`, `Reaction.provenance()`, `tests/test_provenance.py` |
+| 18 | `resolve()` covering every route | `backends/pygcc_backend.py`, `tests/test_provenance.py` |
+| 19 | Reproducible HTML exports | `EXPLORER_DIV_ID` in `figures/explorer.py`, `tests/test_provenance.py` |
 
 ### Tier 1 — small, and builds directly on what exists
 
-1. **Ionic-strength convention for literature comparison** *(small, worthwhile)*.
-   Alberty-convention biochemical tables are quoted at I = 0.25 M rather than
-   I = 0. Defaulting `Conditions` to that when someone is comparing against such
-   a table would close most of the remaining gap, and the B-dot machinery for it
-   already exists.
+> **A standing note on the transformed (Legendre) standard state.** It was
+> evaluated and deliberately declined; the reasoning is kept here so it does
+> not get relitigated.
+>
+> - There are two conventions, not one. The *microbial bioenergetics*
+>   literature — Thauer, Jungermann & Decker; Amend & Shock; LaRowe & Amend —
+>   writes reactions with explicit species and explicit protons. **That is
+>   already what this library computes**, and our −152.2 kJ/mol for
+>   hydrogenotrophic sulfate reduction sits on the ≈−152 kJ/mol tabulated
+>   there. The *biochemical* convention (Alberty, IUBMB, eQuilibrator) is the
+>   one we do not match.
+> - The two agree more than expected. For a reaction whose every reactant is a
+>   single species, hydrogen conservation forces the transformed result to
+>   equal our species-level ΔG°′ *exactly*; the transform is pure rebookkeeping
+>   there. They diverge only through pseudoisomer grouping, bounded by the
+>   mixing entropy $RT\ln(\text{populated forms})$ — at most ≈1.7 kJ/mol, for a
+>   diprotic reactant sitting exactly on its p$K_a$.
+> - **Ionic strength does not close the gap.** This was the original plan for
+>   item 1, and measuring it killed the idea: an ionic strength scales activity
+>   *coefficients*, and ΔG°′ is defined at unit activity, so the shift there is
+>   not small but exactly **zero**. `Conditions.biochemical()` now exists and is
+>   the right reference state for concentration-dependent work, but it does not
+>   reconcile anything with an Alberty table.
+> - The cost is not small: a second balancing path (dropping both the hydrogen
+>   and charge rows from the conservation matrix), a transformed analogue of
+>   the two-path cross-check, group identities throughout the reaction layer,
+>   and figures that lose their H⁺ terms — which for a biogeochemistry course
+>   is a regression, since proton stoichiometry is precisely what teaches why
+>   pH moves the energetics.
+>
+> Revisit only to interoperate with eQuilibrator values or to do
+> metabolic-pathway thermodynamics, where everything upstream is in Alberty's
+> convention and mixing conventions silently corrupts a pathway sum.
 
-   **Not** recommended: the full transformed (Legendre) standard state. It was
-   evaluated and deliberately declined. The reasoning, so it does not get
-   relitigated:
-
-   - There are two conventions, not one. The *microbial bioenergetics*
-     literature — Thauer, Jungermann & Decker; Amend & Shock; LaRowe & Amend —
-     writes reactions with explicit species and explicit protons. **That is
-     already what this library computes**, and our −152.2 kJ/mol for
-     hydrogenotrophic sulfate reduction sits on the ≈−152 kJ/mol tabulated
-     there. The *biochemical* convention (Alberty, IUBMB, eQuilibrator) is the
-     one we do not match.
-   - The two agree more than expected. For a reaction whose every reactant is a
-     single species, hydrogen conservation forces the transformed result to
-     equal our species-level ΔG°′ *exactly*; the transform is pure rebookkeeping
-     there. They diverge only through pseudoisomer grouping, bounded by the
-     mixing entropy $RT\ln(\text{populated forms})$ — at most ≈1.7 kJ/mol, for a
-     diprotic reactant sitting exactly on its p$K_a$.
-   - Ionic strength is the larger discrepancy, and item 1 above addresses it
-     without touching anything structural.
-   - The cost is not small: a second balancing path (dropping both the hydrogen
-     and charge rows from the conservation matrix), a transformed analogue of
-     the two-path cross-check, group identities throughout the reaction layer,
-     and figures that lose their H⁺ terms — which for a biogeochemistry course
-     is a regression, since proton stoichiometry is precisely what teaches why
-     pH moves the energetics.
-
-   Revisit only to interoperate with eQuilibrator values or to do
-   metabolic-pathway thermodynamics, where everything upstream is in Alberty's
-   convention and mixing conventions silently corrupts a pathway sum.
 2. **Verify the supplemental values.** Hydroxylamine, glucose and pyruvate are
    hand-entered and flagged unverified. Each needs tracing to a primary source,
    confirming against its standard state, and the flag setting. `Biomass(aq)`
    is the fourth entry on that list and is **deliberately permanent** — ⟨CH₂O⟩
    is a modelling placeholder, not a compound, so it can never be traced to a
    primary source and should keep warning forever.
-4. **Provenance export**: per-result record of pyGCC version, database file
-   hash, and per-species source, dumpable as BibTeX.
-18. **`backend.resolve()` only sees the HKF dictionary** *(small)*. `delta_Gf`
-    handles all three routes, but `resolve` checks `species_dict` alone, so it
-    raises for Goethite, Pyrolusite and `As(OH)3(aq)` — species that work
-    perfectly well in reactions — and then suggests the name just passed,
-    which reads as a bug. Nothing downstream depends on it, so this is tidiness
-    rather than correctness, but the error message is actively misleading.
-19. **The test suite dirties the working tree** *(small)*. Executing notebook 02
-    rewrites `notebooks/explorer_methanogenesis.html` and
-    `tower_interactive.html`, and Plotly stamps a fresh random `div` id each
-    time, so `git status` is dirty after every run with a one-line diff that
-    means nothing. Both files are tracked deliberately. Either write the
-    exports somewhere untracked during tests, or pin the div id.
 
 ### Tier 2 — moderate, mostly new figures over existing machinery
 

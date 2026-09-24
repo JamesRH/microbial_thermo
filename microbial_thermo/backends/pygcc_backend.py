@@ -21,6 +21,7 @@ Implementation notes, all verified against pyGCC 1.5.3:
 from __future__ import annotations
 
 import difflib
+import os
 import warnings
 from typing import Any
 
@@ -176,12 +177,46 @@ class PygccBackend(ThermoBackend):
     # --- species resolution ----------------------------------------------------
 
     def resolve(self, name: str) -> SpeciesRecord:
+        """Where this species' formation energy comes from.
+
+        Follows the same dispatch order as :meth:`_compute_gibbs_cal` --
+        water, HKF, GWB log K, hand-entered -- so anything ``delta_Gf`` can
+        evaluate, this can describe. Checking only the HKF dictionary, as this
+        once did, made it raise for Goethite and ``As(OH)3(aq)`` while those
+        species worked perfectly well in reactions, and then suggest the name
+        just passed, which reads as a bug rather than a scope limit.
+        """
         if name in _WATER_NAMES:
             return SpeciesRecord(name=name, backend_name="H2O", source="IAPWS-95 via pygcc.iapws95")
-        species = self.species_dict
-        if name in species:
+
+        if name in self.species_dict:
             return SpeciesRecord(name=name, backend_name=name, source=f"pyGCC {self.database_name}")
+
+        if name in self.minerals:
+            return SpeciesRecord(
+                name=name,
+                backend_name=name,
+                source=f"{self.mineral_database_name} (log K route)",
+            )
+
+        from ..supplemental import supplemental_species
+
+        entry = supplemental_species().get(name)
+        if entry is not None:
+            return SpeciesRecord(
+                name=name,
+                backend_name=name,
+                source=f"hand-entered supplemental table ({entry.provenance_summary})",
+                verified=entry.verified,
+            )
+
         raise SpeciesNotFoundError(name, suggestions=self.suggest(name))
+
+    @property
+    def mineral_database_name(self) -> str:
+        from .gwb import default_gwb_path
+
+        return os.path.basename(self._mineral_database or default_gwb_path())
 
     def suggest(self, name: str, n: int = 5) -> list[str]:
         """Closest species names, for error messages."""

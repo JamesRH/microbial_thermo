@@ -33,6 +33,11 @@ from ..units import (
 )
 from .style import PALETTE
 
+#: Pinned so a re-export is byte-identical when nothing has changed. Plotly
+#: stamps a fresh random div id otherwise, which left every test run showing a
+#: one-line diff in a tracked file that meant nothing.
+EXPLORER_DIV_ID = "energy-explorer"
+
 #: Passed to Plotly so the modebar's download button yields SVG.
 SVG_CONFIG = {
     "toImageButtonOptions": {"format": "svg", "filename": "free_energy"},
@@ -107,7 +112,7 @@ def plot_energy_explorer(
     if save_html is not None:
         path = Path(save_html).with_suffix(".html")
         path.parent.mkdir(parents=True, exist_ok=True)
-        figure.write_html(path, include_plotlyjs=True, config=SVG_CONFIG)
+        figure.write_html(path, include_plotlyjs=True, config=SVG_CONFIG, div_id=EXPLORER_DIV_ID)
     return figure
 
 

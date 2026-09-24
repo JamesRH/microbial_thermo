@@ -9,6 +9,14 @@ from .units import STANDARD_BIOCHEMICAL_PH
 #: Activity models available for aqueous species.
 ACTIVITY_MODELS = ("bdot", "ideal", "unit")
 
+#: Ionic strength at which the biochemical literature quotes transformed
+#: thermodynamic tables -- Alberty, and eQuilibrator after him. Physiological
+#: ionic strength is near this, which is why the convention was chosen.
+BIOCHEMICAL_IONIC_STRENGTH = 0.25
+
+#: A rough seawater ionic strength, for marine work.
+SEAWATER_IONIC_STRENGTH = 0.7
+
 
 @dataclass
 class Conditions:
@@ -71,6 +79,41 @@ class Conditions:
         from dataclasses import replace as _replace
 
         return _replace(self, **changes)
+
+    @classmethod
+    def biochemical(
+        cls,
+        pH: float = STANDARD_BIOCHEMICAL_PH,
+        temperature_c: float = 25.0,
+        ionic_strength: float = BIOCHEMICAL_IONIC_STRENGTH,
+        **changes,
+    ) -> Conditions:
+        """Conditions on the biochemical reference state: pH 7, 25 C, I = 0.25 M.
+
+        This is the state the biochemical literature quotes its transformed
+        tables at, and it is close to physiological ionic strength.
+
+        **Read this before using it to compare against a published table.**
+        Setting an ionic strength changes activity *coefficients*, so it moves
+        ``delta_G`` for a reaction whose species have stated concentrations. It
+        does **not** move ``delta_G_standard_prime``, which is defined at unit
+        activity and where no activity coefficient appears -- measured
+        directly, the shift there is exactly zero.
+
+        So this does not by itself reconcile a number here with an
+        Alberty-convention table. That gap is the *convention* difference --
+        species-level with explicit protons here, Legendre-transformed and
+        pseudoisomer-grouped there -- and no choice of ionic strength closes
+        it. What this constructor gives you is the right reference state for
+        concentration-dependent work, and a defensible one to quote.
+        """
+        return cls(
+            pH=pH,
+            temperature_c=temperature_c,
+            ionic_strength=ionic_strength,
+            activity_model=changes.pop("activity_model", "bdot"),
+            **changes,
+        )
 
     def standard(self) -> Conditions:
         """The same T and P, but every activity at unity ([H+] = 1 M)."""

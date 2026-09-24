@@ -38,19 +38,54 @@ def teaching_notebooks() -> list[Path]:
     return sorted(path for path in NOTEBOOK_DIR.glob("*.py") if TEACHING_PATTERN.match(path.name))
 
 
+#: A notebook that has not finished in this long has hung, not slowed down.
+#: The slowest here runs in about 15 seconds, so this is generous by an order
+#: of magnitude -- but it is the difference between a hung run costing four
+#: minutes and costing fifteen.
+CELL_TIMEOUT_S = 240
+
+#: Kernels occasionally hang partway through execution: the process is alive
+#: and idle, the client waits forever. Seen three times over the life of this
+#: suite, on unchanged notebooks that pass on the next run. It is a jupyter
+#: infrastructure flake rather than anything about the library, so one retry
+#: is allowed -- but ONLY for kernel-level failures. A CellExecutionError is a
+#: real bug in the notebook and is never retried.
+KERNEL_FLAKE_RETRIES = 1
+
+
 def execute(path: Path):
     """Run one notebook to completion, returning the executed notebook.
 
     Raises whatever the notebook raised, with the failing cell's traceback
     attached, which is what makes a failure here readable.
     """
+    from nbclient.exceptions import CellTimeoutError, DeadKernelError
+
+    last = None
+    for attempt in range(KERNEL_FLAKE_RETRIES + 1):
+        try:
+            return _execute_once(path)
+        except (CellTimeoutError, DeadKernelError) as exc:
+            # The kernel, not the notebook. Retry once, then give up loudly.
+            last = exc
+            if attempt < KERNEL_FLAKE_RETRIES:
+                continue
+    raise AssertionError(
+        f"{path.name}: the kernel hung or died on every attempt "
+        f"({KERNEL_FLAKE_RETRIES + 1}). Last error: {type(last).__name__}. "
+        "This is usually a jupyter flake rather than a notebook bug -- run "
+        "the notebook by hand before assuming the library broke."
+    ) from last
+
+
+def _execute_once(path: Path):
     import jupytext
     from nbclient import NotebookClient
 
     notebook = jupytext.read(path)
     client = NotebookClient(
         notebook,
-        timeout=900,
+        timeout=CELL_TIMEOUT_S,
         # A kernel that fails to come up must fail, not hang. One run of this
         # suite sat on a kernel that never started; without this it waits
         # forever and looks like a slow test rather than a stuck one.

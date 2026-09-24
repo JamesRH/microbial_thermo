@@ -527,6 +527,46 @@ class Reaction:
 
         return derivation(self)
 
+    def activity_correction(self):
+        """How much the activity coefficients are worth, in kJ/mol.
+
+        The difference between this reaction's free energy and the same
+        reaction with every activity coefficient set to 1. Zero unless the
+        conditions use a non-ideal activity model *and* give concentrations --
+        at unit activity there is nothing for a coefficient to act on.
+
+        Worth reporting when comparing against a table quoted at a stated
+        ionic strength, since it is exactly the part of the difference that
+        ionic strength explains.
+        """
+        from .units import KJ_PER_MOL_STR, Quantity, as_magnitude
+
+        if self.conditions.activity_model in ("ideal", "unit"):
+            return Quantity(0.0, KJ_PER_MOL_STR)
+        ideal = Reaction.from_couples(
+            donor=self.donor,
+            acceptor=self.acceptor,
+            conditions=self.conditions.replace(activity_model="ideal", ionic_strength=0.0),
+            backend=self.backend,
+            n_electrons=self.n_electrons,
+        )
+        return Quantity(
+            as_magnitude(self.delta_G, KJ_PER_MOL_STR)
+            - as_magnitude(ideal.delta_G, KJ_PER_MOL_STR),
+            KJ_PER_MOL_STR,
+        )
+
+    def provenance(self):
+        """Where every number in this reaction came from.
+
+        Software versions, database files with their hashes, a per-species
+        source line, and the standard-state conventions applied. Has
+        ``to_text()``, ``to_dict()`` and ``to_bibtex()``.
+        """
+        from .provenance import provenance_for
+
+        return provenance_for(self)
+
     def summary(self) -> str:
         """A short multi-line report, useful at a notebook prompt."""
         lines = [

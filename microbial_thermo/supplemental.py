@@ -53,6 +53,20 @@ class SupplementalSpecies:
     verified: bool = False
     provenance: str = ""
 
+    @property
+    def provenance_summary(self) -> str:
+        """First sentence of the provenance, for a one-line record.
+
+        The stored provenance runs to a paragraph -- deliberately, since it
+        has to say what is wrong with the value as well as where it came from
+        -- which is too much to carry in a source field.
+        """
+        text = " ".join(self.provenance.split())
+        if not text:
+            return "no provenance recorded"
+        head, _, _ = text.partition(". ")
+        return head.rstrip(".") + ("." if head else "")
+
     def gibbs_kJ_mol(self, temperature_c: float, allow_extrapolation: bool = False) -> float:
         """Formation energy at ``temperature_c``.
 

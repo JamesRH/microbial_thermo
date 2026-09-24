@@ -17,7 +17,7 @@ It must be **sourced**. `pygcc` comes from PyPI (not conda-forge) and is the one
 sanctioned `pip` in the project.
 
 ```bash
-python -m unittest discover -s tests     # full suite, 431 tests, ~165 s
+python -m unittest discover -s tests     # full suite, 458 tests, ~170 s
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # ~130 s
 python tests/test_balance.py             # one file, seconds — use this while iterating
 ruff format microbial_thermo tests && ruff check microbial_thermo tests
@@ -168,11 +168,15 @@ long equations overrun.
 is 1, not 8.314. Convert first: `R.to("J/(mol*K)")`. Likewise a bare float
 temperature will not cancel against R — it needs `kelvin * ureg.kelvin`.
 
-**An nbclient kernel can hang on startup and look like a slow test.** One full
-run sat for ten minutes on a kernel that never came up, with no output, because
-the pipeline was buffering. `startup_timeout` is now set on the client. When a
-run seems slow, check `ps` for a live `ipykernel_launcher` before assuming the
-suite got heavier.
+**nbclient kernels hang intermittently, and it is not the library's fault.**
+Seen three times: a kernel starts, goes idle mid-notebook, and the client waits
+forever on unchanged notebooks that pass on the next run. Once was a laptop
+suspend; twice was not, so do not write it off as sleep the way I first did.
+`tests/test_notebooks.py` now retries once on `CellTimeoutError` or
+`DeadKernelError` and caps cell time at 240 s -- a `CellExecutionError` is a
+real notebook bug and is never retried. When a run seems slow, check `ps` for a
+live `ipykernel_launcher` at ~1% CPU before assuming the suite got heavier; the
+giveaway is wall time far above the usual ~165 s with no new output.
 
 **Plotly's native sliders cannot express independent dimensions.** A slider's
 steps cannot read the other sliders' positions, so two sliders cannot select a

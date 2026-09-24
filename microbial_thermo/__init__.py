@@ -107,8 +107,12 @@ def versions() -> dict[str, str]:
     return out
 
 
+from .provenance import Provenance, provenance_for  # noqa: E402
+
 __all__ = [
     "Conditions",
+    "Provenance",
+    "provenance_for",
     "half_reaction",
     "default_library",
     "energy_table",
