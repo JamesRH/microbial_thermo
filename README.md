@@ -899,6 +899,42 @@ slider's steps have no access to the other sliders' positions — so the exporte
 page builds its own sliders and redoes the Nernst shift in JavaScript. Both
 implementations agree to five decimal places, which is itself a cross-check.
 
+### Eh–pH (Pourbaix) diagrams
+
+Which form of an element wins, and where.
+
+```python
+from microbial_thermo.figures import plot_pourbaix
+
+plot_pourbaix("Fe")                       # Fe–S–CO2 at 25 °C
+plot_pourbaix("As", activity=1e-8)
+plot_pourbaix("Fe", fixed={"S": ("SO4-2", 1e-5)})
+```
+
+Every species of the element is formed from a common basis — the element,
+water, protons and electrons — and at each point the one with the lowest free
+energy per mole of element is drawn. Defaults exist for As, Fe, Mn, S, Se, N,
+C, Cr, U and Cu; pass `species=` for anything else.
+
+**Two inputs that are not details.** The **dissolved activity** sets where
+solids appear, and lowering it *shrinks* the solid fields — dilution moves you
+further from saturation. And a species containing another element only has a
+field because that element is present at some concentration: iron's pyrite
+field exists because there is sulfide about. Those are declared through
+`fixed=` and printed on the figure. A species whose extra elements are not
+covered is **refused**, not silently mis-weighted.
+
+The water stability lines are computed from the library's own couples using
+O₂(g) and H₂(g) at 1 bar, which reproduces the published 1.229 V exactly.
+(Against O₂(aq) at unit activity it comes out 43 mV higher — a different
+reference state, and the wrong one here.)
+
+**It reproduces the speciation layer independently.** The vertical boundaries
+of the arsenate fields fall at pH 2.28, 6.77 and 11.61; the pKa ladder
+computed from formation energies by a completely different route gives 2.26,
+6.76 and 11.60. Sulfur's boundaries land on 2 and 7, matching bisulfate and
+H₂S. That agreement is asserted in the tests.
+
 ### Sweeps without plotting
 
 ```python
@@ -1058,7 +1094,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 539 tests, ~185 s
+python -m unittest discover -s tests     # 569 tests, ~180 s
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # skip the slow notebook runs
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
@@ -1131,6 +1167,7 @@ measurements behind that decision and the survey of what else is out there.
 | 22 | External data, imported and provenance-tagged | `microbial_thermo/external.py`, `data/external/`, `tests/test_external.py` |
 | 27 | Oxidation states cross-checked independently | `tests/test_oxidation_crosscheck.py` (pymatgen, test-only) |
 | 14 | Wider mineral and trace-metal support | `data/species.yaml`, `tests/test_minerals.py` |
+| 13 | Eh–pH (Pourbaix) diagrams | `figures/pourbaix.py`, `tests/test_pourbaix.py` |
 
 ### Tier 1 — small, and builds directly on what exists
 
@@ -1190,13 +1227,6 @@ measurements behind that decision and the survey of what else is out there.
 
 ### Tier 3 — larger, or needing data the current backend lacks
 
-- **#13 · Eh–pH (Pourbaix) diagrams** with water stability lines and the couples
-    overlaid. **Borrow the geometry, not the data**: pymatgen has a mature
-    `PourbaixDiagram`, but its pipeline wants a Materials Project API key and
-    builds entries from DFT solid energies plus experimental ion energies —
-    mixing those with our HKF aqueous species would put two provenances inside
-    one diagram. `PourbaixEntry` can be built by hand, so read the algorithm
-    and feed it our own ΔGf. CHNOSZ does exactly this in R.
 - **#15 · Uncertainty propagation** through formation-energy uncertainties, with a
     tornado plot showing which variable dominates. Note that SUPCRT-lineage
     databases mostly do not carry uncertainties, so this likely needs
