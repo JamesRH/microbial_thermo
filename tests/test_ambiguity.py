@@ -6,6 +6,7 @@ either declared in the data or asked of the caller.
 """
 
 import unittest
+import warnings
 
 import microbial_thermo as mt
 from microbial_thermo.balance import balance_equation, verify_conservation
@@ -143,6 +144,102 @@ class TestUnderdeterminedEquations(unittest.TestCase):
         )
         for option in (first, second):
             verify_conservation(option)
+
+
+class TestMinimalChoice(unittest.TestCase):
+    """``choose='minimal'`` -- an answer, explicitly not *the* answer.
+
+    The integer program picks the member of the solution family with the
+    smallest coefficients. That is an arithmetic preference, not a chemical
+    one, so what these tests mostly pin is that it says so.
+    """
+
+    AMBIGUOUS = TestUnderdeterminedEquations.AMBIGUOUS
+
+    def _minimal(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return balance_equation(self.AMBIGUOUS, choose="minimal")
+
+    def test_it_returns_something_that_balances(self):
+        verify_conservation(self._minimal())
+
+    def test_the_coefficients_are_whole_numbers(self):
+        for value in self._minimal().values():
+            with self.subTest(value=value):
+                self.assertEqual(value.denominator, 1)
+
+    def test_it_agrees_with_chempy_on_this_equation(self):
+        """chempy solves the same integer program through its own parser and
+        gets 5 HS- + 7 O2 -> H+ + 2 H2O + 2 S + 3 SO4-2. Two independent
+        formulations landing on the same answer is worth asserting."""
+        by_name = {s.backend: int(v) for s, v in self._minimal().items()}
+        self.assertEqual(
+            by_name,
+            {"HS-": -5, "O2(aq)": -7, "SO4--": 3, "Sulfur(s)": 2, "H2O": 2, "H+": 1},
+        )
+
+    def test_every_species_written_still_participates(self):
+        """A solution that drops one of them is answering a different
+        question from the one that was asked."""
+        self.assertEqual(len(self._minimal()), 6)
+
+    def test_signs_follow_the_side_each_was_written_on(self):
+        by_name = {s.backend: v for s, v in self._minimal().items()}
+        self.assertLess(by_name["HS-"], 0)
+        self.assertLess(by_name["O2(aq)"], 0)
+        self.assertGreater(by_name["SO4--"], 0)
+
+    def test_it_warns_that_it_chose(self):
+        """The whole safety of this mode. A determined-looking number that is
+        not determined is exactly what the rest of this module prevents."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            balance_equation(self.AMBIGUOUS, choose="minimal")
+        messages = " ".join(str(w.message) for w in caught)
+        self.assertIn("picked one of them", messages)
+        self.assertIn("not a chemical one", messages)
+
+    def test_it_is_not_the_default(self):
+        with self.assertRaises(AmbiguousReactionError):
+            balance_equation(self.AMBIGUOUS)
+
+    def test_the_error_advertises_it(self):
+        with self.assertRaises(AmbiguousReactionError) as caught:
+            balance_equation(self.AMBIGUOUS)
+        self.assertIn("choose='minimal'", str(caught.exception))
+
+    def test_it_can_disagree_with_a_constrained_answer(self):
+        """Both balance; they are different reactions. That is the point of
+        refusing by default."""
+        minimal = {s.backend: v for s, v in self._minimal().items()}
+        constrained = {
+            s.backend: v
+            for s, v in balance_equation(self.AMBIGUOUS, fix={"HS-": 4, "Sulfur(s)": 2}).items()
+        }
+        self.assertNotEqual(minimal, constrained)
+
+    def test_a_determined_equation_ignores_the_option(self):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            got = balance_equation("methane + O2(aq) -> CO2(aq) + H2O", choose="minimal")
+        self.assertEqual(
+            {s.backend: int(v) for s, v in got.items()},
+            {"Methane(aq)": -1, "O2(aq)": -2, "CO2(aq)": 1, "H2O": 2},
+        )
+        self.assertEqual([w for w in caught if "picked one" in str(w.message)], [])
+
+    def test_an_unknown_choice_is_refused(self):
+        with self.assertRaises(BalancingError):
+            balance_equation(self.AMBIGUOUS, choose="whatever")
+
+    def test_a_solver_is_actually_available(self):
+        """CBC is open source and ships with either pulp or conda-forge. If
+        this fails, the environment is missing it -- `mamba install
+        coin-or-cbc`."""
+        from microbial_thermo.balance import _pulp_solver
+
+        self.assertTrue(_pulp_solver().available())
 
 
 if __name__ == "__main__":

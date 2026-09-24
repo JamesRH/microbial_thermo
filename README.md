@@ -531,6 +531,38 @@ thermodynamics.
 The `notebooks/photoAs`, `photoFe` and `photoNO2` notebooks work each donor
 through the same steps.
 
+### An arbitrary answer, when you want one
+
+`balance_equation` refuses an underdetermined equation by default, because
+conservation genuinely does not pick an answer. `choose="minimal"` overrides
+that: it solves an integer program for the smallest whole-number coefficients
+and **warns that it chose**.
+
+```python
+balance_equation("HS- + O2 -> SO4-2 + Sulfur(s) + H2O + H+", choose="minimal")
+# UserWarning: ...has 2 independent balanced solutions and choose='minimal'
+#              picked one of them by minimising the coefficients. That is an
+#              arithmetic preference, not a chemical one...
+# 5 HS- + 7 O2 -> 3 SO4-2 + 2 S + 2 H2O + H+
+```
+
+Use it to explore, never for a number you intend to quote — `fix=` is how you
+say which reaction you actually mean, and it gives a different, equally valid
+answer.
+
+This is the same integer program `chempy.balance_stoichiometry(...,
+underdetermined=None)` solves, through the same free CBC solver, and the two
+agree on this equation. It is solved here rather than delegated because
+chempy parses its own formula strings and this library's backend names are not
+formulas — `Acetate`, `Methane(aq)`, `SO4--` — so the round trip would fail or
+silently re-parse a species into something else.
+
+**Solver note.** CBC is COIN-OR, open source. `pulp` from PyPI vendors a
+binary; conda-forge's does not but installs `cbc` on PATH, which is why
+chempy's own underdetermined mode fails on a conda install with the misleading
+message *"check permissions on cbc"*. This library asks for whichever is
+available, so it works either way.
+
 ### Reference state and ionic strength
 
 ```python
@@ -974,6 +1006,7 @@ measurements behind that decision and the survey of what else is out there.
 | 18 | `resolve()` covering every route | `backends/pygcc_backend.py`, `tests/test_provenance.py` |
 | 19 | Reproducible HTML exports | `EXPLORER_DIV_ID` in `figures/explorer.py`, `tests/test_provenance.py` |
 | 2 (part) | Glucose and pyruvate traced and verified | `data/supplemental_gibbs.yaml`, `tests/test_provenance.py` |
+| 21 | Minimal-integer balancing as an opt-in | `balance_equation(..., choose="minimal")`, `tests/test_ambiguity.py` |
 
 ### Tier 1 — small, and builds directly on what exists
 
@@ -1042,13 +1075,6 @@ measurements behind that decision and the survey of what else is out there.
     file pyGCC ships. Small robustness fix that falls out of this work:
     `PygccBackend(database=…)` should reject a GWB file with a clear message
     rather than failing inside pyGCC's float parser.
-- **#21 · chempy's underdetermined balancing as an opt-in mode** *(small)*. The
-    solver problem is solved: chempy asks pulp for its vendored CBC, which
-    conda-forge does not ship, but a system `cbc` is present and pulp exposes
-    it as `COIN_CMD`. One line of wiring makes it work. **Expose it as a
-    choice, never as the default** — it returns one arbitrary member of the
-    solution family, chosen by integer minimisation rather than by chemistry,
-    and says nothing about having chosen. Refuse-and-ask stays the default.
 - **#22 · External data sources, imported and provenance-tagged** *(moderate)*.
     Extend the mechanism behind the supplemental table from hand-entered
     one-offs to whole external sources, so a species we lack can come from

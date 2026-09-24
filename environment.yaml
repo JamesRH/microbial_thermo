@@ -17,6 +17,11 @@ dependencies:
   - rdkit>=2024.03
   - click>=8.1
   - jupytext>=1.16
+  # balance_equation(choose="minimal") solves an integer program. pulp is the
+  # interface; coin-or-cbc is the solver, and conda-forge's pulp does not
+  # vendor one, so it must be installed alongside. Both are open source.
+  - pulp>=2.7
+  - coin-or-cbc
   - pyyaml>=6.0
   - ipykernel
   - ipywidgets

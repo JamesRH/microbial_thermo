@@ -486,7 +486,100 @@ def _describe_solution(coefficients: dict) -> str:
     return " , ".join(f"{v}·{s.backend}" for s, v in coefficients.items())
 
 
-def balance_equation(equation: str, registry=None, fix=None) -> dict:
+def _pulp_solver():
+    """A CBC solver, however this environment happens to ship one.
+
+    ``pulp`` from PyPI vendors a CBC binary and exposes it as
+    ``PULP_CBC_CMD``; conda-forge strips that binary but installs ``cbc`` on
+    PATH, which pulp exposes as ``COIN_CMD``. chempy only ever asks for the
+    first, which is why its underdetermined mode fails on a conda install with
+    the misleading message "check permissions on cbc". Ask for whichever is
+    actually available.
+
+    CBC is COIN-OR, open source under the EPL, so there is no licensing
+    question here -- only a packaging one.
+    """
+    import pulp
+
+    for name in ("PULP_CBC_CMD", "COIN_CMD"):
+        candidate = getattr(pulp, name, None)
+        if candidate is None:
+            continue
+        try:
+            solver = candidate(msg=False)
+            if solver.available():
+                return solver
+        except Exception:
+            continue
+    raise BalancingError(
+        "choose='minimal' needs an integer-program solver and none is "
+        "available. Install one with `mamba install coin-or-cbc` (CBC is "
+        "open source), or supply the stoichiometry yourself with fix=."
+    )
+
+
+def _minimal_integer_solution(species, reactants, rows, equation, dimension):
+    """The smallest whole-number coefficients that balance the equation.
+
+    An escape hatch, not an answer. Conservation genuinely does not determine
+    this stoichiometry -- that is what ``dimension > 1`` means -- so this picks
+    one member of the family by minimising the sum of the coefficients, which
+    is an arithmetic preference and not a chemical one. It warns every time,
+    because a number that looks determined and is not is the failure mode this
+    whole code path exists to avoid.
+
+    Every species written in the equation is required to participate, since
+    the caller put it there; a solution that quietly drops one is answering a
+    different question.
+    """
+    import warnings
+
+    import pulp
+
+    problem = pulp.LpProblem("balance", pulp.LpMinimize)
+    magnitudes = [pulp.LpVariable(f"n{i}", lowBound=1, cat="Integer") for i in range(len(species))]
+    # Reactants are consumed, products produced; the sign is not the solver's
+    # to choose, only the magnitude is.
+    signs = [-1 if entry in set(reactants) else 1 for entry in species]
+
+    for row in rows:
+        problem += (
+            pulp.lpSum(
+                sign * int(value) * variable
+                for sign, value, variable in zip(signs, row, magnitudes, strict=True)
+            )
+            == 0
+        )
+    problem += pulp.lpSum(magnitudes)
+
+    status = problem.solve(_pulp_solver())
+    if pulp.LpStatus[status] != "Optimal":
+        raise BalancingError(
+            f"{equation!r} has {dimension} degrees of freedom and the solver "
+            f"could not find whole-number coefficients for it "
+            f"(status: {pulp.LpStatus[status]}). Supply the stoichiometry with "
+            "fix= instead."
+        )
+
+    coefficients = {}
+    for entry, sign, variable in zip(species, signs, magnitudes, strict=True):
+        _add(coefficients, entry, Fraction(sign * int(round(variable.value()))))
+    coefficients = {k: v for k, v in coefficients.items() if v != 0}
+
+    warnings.warn(
+        f"{equation!r} has {dimension} independent balanced solutions and "
+        "choose='minimal' picked one of them by minimising the coefficients. "
+        "That is an arithmetic preference, not a chemical one: a different "
+        "member of the family is an equally valid reaction. Use fix= to say "
+        "which you mean before quoting this.",
+        UserWarning,
+        stacklevel=3,
+    )
+    verify_conservation(coefficients)
+    return coefficients
+
+
+def balance_equation(equation: str, registry=None, fix=None, choose=None) -> dict:
     """Balance a full reaction string into signed, Species-keyed coefficients.
 
     Solves the homogeneous system ``A x = 0`` where the rows of ``A`` are the
@@ -507,10 +600,18 @@ def balance_equation(equation: str, registry=None, fix=None) -> dict:
     it the raised :class:`AmbiguousReactionError` carries the solution basis in
     readable form, so you can see what the choices actually are.
 
-    ``chempy.balance_stoichiometry`` is deliberately not used here: its
-    ``underdetermined=None`` mode solves an integer program through ``pulp``,
-    needing an external CBC binary that is not in the environment, and it
-    offers no way to inspect the nullspace.
+    ``choose="minimal"`` is the escape hatch for when you want *an* answer
+    rather than the right one: it solves an integer program for the smallest
+    whole-number coefficients that balance, and warns that it picked. Use it
+    for exploration, never for a number you intend to quote.
+
+    ``chempy.balance_stoichiometry`` is deliberately not called here even
+    though it offers the same thing. It parses its own formula strings, and
+    this library's backend names are not formulas -- ``Acetate``,
+    ``Methane(aq)``, ``SO4--`` -- so the round trip would either fail or
+    silently re-parse a species into something else. The integer program below
+    runs on the conservation matrix we already built, through the same free
+    CBC solver chempy would have used.
     """
     from sympy import Matrix, Rational
 
@@ -537,6 +638,12 @@ def balance_equation(equation: str, registry=None, fix=None) -> dict:
             "as H2O, H+, or an electron acceptor."
         )
 
+    if len(nullspace) > 1 and fix is None and choose == "minimal":
+        return _minimal_integer_solution(species, reactants, rows, equation, len(nullspace))
+
+    if len(nullspace) > 1 and fix is None and choose is not None:
+        raise BalancingError(f"unknown choose={choose!r}; the only value is 'minimal'")
+
     if len(nullspace) > 1 and fix is None:
         options = _readable_basis(species, nullspace)
         listed = "; ".join(f"({i}) {_describe_solution(o)}" for i, o in enumerate(options))
@@ -548,7 +655,8 @@ def balance_equation(equation: str, registry=None, fix=None) -> dict:
             "per degree of freedom, which sets both the ratio and the scale, so "
             f"{len(nullspace)} here -- or "
             "specify the donor and acceptor couples with "
-            "Reaction.from_couples instead.",
+            "Reaction.from_couples instead. To get an arbitrary member of the "
+            "family instead of an answer, pass choose='minimal'.",
             basis=options,
         )
 
