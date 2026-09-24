@@ -227,7 +227,11 @@ recomputing the formula inside the test would not.
 `README.md`, *Future work*, in three tiers by effort and dependency, with a
 *Completed* table above them. **Item numbers are stable** — completed items keep
 their number rather than being renumbered, because this file and the commit
-messages refer to them by number. Items 3, 5, 6, 7, 10 and 11 are done.
+messages refer to them by number. They are written as plain bullets with
+literal `#N` labels for a reason: as an ordered list, Markdown renumbered them
+from the first item and the rendered README showed different numbers than the
+file, so a request for "#19" meant one thing to the reader and another to the
+repo. Do not turn them back into an ordered list. Items 3, 5, 6, 7, 10 and 11 are done.
 
 Two of the remaining entries deserve reading before touching anything nearby:
 

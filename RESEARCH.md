@@ -365,7 +365,7 @@ class of error nothing currently catches.
 
 The dataset direction was **decided on 24 September 2026**: layer on top of
 the existing backend rather than replace it. These are now *Future work* items
-20–25 in `README.md`.
+#20, #21, #22, #24, #25, #26 and #27 in `README.md`.
 
 1. **Compatible datasets** — `speq21` → `speq23` (free), then `supcrtbl.dat`
    as a second mineral source, then OBIGT for organics. Extend
