@@ -164,6 +164,16 @@ SVG; the SVG backend's metrics differ. And size equations by the *laid-out
 extent*, not the sum of token widths — the latter omits inter-token gaps and lets
 long equations overrun.
 
+**pyGCC has two database doors and they are not interchangeable.**
+`dbaccess=` takes SUPCRT sequential files (`speq21`, `speq23`, `supcrtbl`,
+`berman`); `sourcedb=` + `sourceformat=` takes GWB, EQ3/6 and PHREEQC files
+(`thermo.com.dat`, `thermo.2021.dat`, `data0.dat`, `phreeqc.dat`). Handing a
+GWB file to `dbaccess=` dies inside pyGCC's float parser with
+`could not convert string to float: '*'`, which looks like a corrupt file and
+is not. I reported that as a pyGCC bug once; it was my mistake. This library
+reads the GWB ones with its own parser in `backends/gwb.py`. pyGCC lives on
+**Bitbucket**, not GitHub.
+
 **`R` and `FARADAY` have magnitude 1.** They are defined as
 `1 * ureg.molar_gas_constant` and `1 * ureg.faraday_constant`, so `R.magnitude`
 is 1, not 8.314. Convert first: `R.to("J/(mol*K)")`. Likewise a bare float

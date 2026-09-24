@@ -949,6 +949,10 @@ items unblock later ones.
 the list below rather than being renumbered, because `NOTES.md` and commit
 messages refer to them by number.
 
+**Next up:** item **20, compatible datasets** — high priority, direction
+decided, and every other dataset item waits on it. `RESEARCH.md` carries the
+measurements behind that decision and the survey of what else is out there.
+
 ### Completed
 
 | # | Item | Where it lives |
@@ -1011,6 +1015,41 @@ messages refer to them by number.
    **permanently** and correctly: ⟨CH₂O⟩ is a modelling placeholder, not a
    compound.
 
+20. **Compatible datasets** — **HIGH PRIORITY**, and the direction is decided
+    (24 September 2026; the measurements behind it are in `RESEARCH.md`).
+    **Layer, do not replace.** Keep the pyGCC/HKF backend, in three
+    independently testable steps:
+
+    1. `speq21.dat` → **`speq23.dat`**. A strict superset: 1594 → 1597 species,
+       nothing dropped, adding epsomite, hexahydrite and kieserite. Free.
+    2. Add **`supcrtbl.dat`** as a second mineral source — 444 species, 308 of
+       them not in `speq21`, including arsenopyrite, scorodite, arsenolite and
+       amorphous ferric arsenate. It cannot be a base (it lacks 1458 species we
+       use) but it is the phase data the arsenic work actually needs. SUPCRTBL
+       revised mineral end-members against Holland & Powell (2011), so
+       disagreements with `speq21` are **expected** — declare them in
+       `KNOWN_DISAGREEMENTS` with magnitudes, do not silence them.
+    3. Add **OBIGT** (CHNOSZ) as the organics source. SUPCRT-lineage, so the
+       standard state already matches, and every entry carries a citation.
+
+    Nothing to gain on the GWB side: `thermo.com.dat` is already the richest
+    file pyGCC ships. Small robustness fix that falls out of this work:
+    `PygccBackend(database=…)` should reject a GWB file with a clear message
+    rather than failing inside pyGCC's float parser.
+21. **chempy's underdetermined balancing as an opt-in mode** *(small)*. The
+    solver problem is solved: chempy asks pulp for its vendored CBC, which
+    conda-forge does not ship, but a system `cbc` is present and pulp exposes
+    it as `COIN_CMD`. One line of wiring makes it work. **Expose it as a
+    choice, never as the default** — it returns one arbitrary member of the
+    solution family, chosen by integer minimisation rather than by chemistry,
+    and says nothing about having chosen. Refuse-and-ask stays the default.
+22. **External data sources, imported and provenance-tagged** *(moderate)*.
+    Extend the mechanism behind the supplemental table from hand-entered
+    one-offs to whole external sources, so a species we lack can come from
+    OBIGT or elsewhere carrying its origin and a verification flag. This is
+    the deliberate second half of the "borrow algorithms, not data" rule —
+    allowed, but only where we have nothing, and never silently.
+
 ### Tier 2 — moderate, mostly new figures over existing machinery
 
 8. **Environmental gradient profiles**: read a CSV of depth, T, pH and
@@ -1024,7 +1063,12 @@ messages refer to them by number.
 ### Tier 3 — larger, or needing data the current backend lacks
 
 13. **Eh–pH (Pourbaix) diagrams** with water stability lines and the couples
-    overlaid.
+    overlaid. **Borrow the geometry, not the data**: pymatgen has a mature
+    `PourbaixDiagram`, but its pipeline wants a Materials Project API key and
+    builds entries from DFT solid energies plus experimental ion energies —
+    mixing those with our HKF aqueous species would put two provenances inside
+    one diagram. `PourbaixEntry` can be built by hand, so read the algorithm
+    and feed it our own ΔGf. CHNOSZ does exactly this in R.
 14. **Wider mineral support**: sulfides beyond pyrite, carbonates, and clays,
     all of which the GWB route already reaches — they need only registry
     entries and validation. **See `RESEARCH.md`** — the cheapest first step is
@@ -1039,6 +1083,40 @@ messages refer to them by number.
     move from hand calculation to full speciation modelling.
 17. **Pressure beyond near-surface**, opening up the hydrothermal and deep
     subsurface range pyGCC is actually built for.
+24. **Latimer diagrams** for every element with more than two redox forms in
+    the registry — the condensed chain of couples with E°′ on each arrow.
+    **Nothing in Python draws these.** Cheap: it is the couples we already
+    compute, laid out in oxidation-state order. Two prerequisites, both found
+    by checking rather than assumed: elemental forms (`As`, `S`, `Fe`…) are in
+    the backend but **not in the registry**, so `Couple.make("As", …)` fails
+    today; and the diagram must use the species that actually dominates at the
+    working pH, which the speciation layer can already decide.
+25. **Frost–Ebsworth diagrams** — volt-equivalent *N*·*E*° against oxidation
+    state, where the slope between two points is the couple potential and
+    convexity shows disproportionation. Also absent from Python. Feasibility
+    is **confirmed**: computed for arsenic from our own data it gives +2.427 V
+    for HAsO₄²⁻ at pH 0 against −0.472 V at pH 7, and recomputes cleanly at
+    2 °C and 60 °C. One caution: the volt-equivalent convention for **negative**
+    oxidation states needs deriving properly — a quick pass produced an AsH₃
+    number that does not look right.
+26. **Interactive Latimer, Frost and Pourbaix** on the pattern item 10
+    established: precompute the expensive axes on a grid, apply the cheap ones
+    in closed form, ship ipywidgets for notebooks and standalone HTML with
+    hand-built sliders for everyone else. Latimer and Frost are *cheaper* than
+    the tower; Pourbaix is the expensive one and the best candidate for a
+    precomputed grid. **This is the point of building them rather than
+    borrowing**: a diagram that recomputes at the working pH and temperature
+    is something no textbook version can do.
+27. **Cross-check oxidation states against an independent method** *(small)*.
+    `oxidation.py` partitions bonds by electronegativity over SMILES, which is
+    the right approach for organics and is where RDKit already earns its keep.
+    For **inorganic solids** it is weakest, because it has no structural
+    information. pymatgen's `Composition.oxi_state_guesses()` (ICSD statistics)
+    and `BVAnalyzer` (bond valence) are more robust there. Use them as a
+    **test-suite cross-check**, not a runtime dependency — assert that our
+    assignment for arsenopyrite, pyrite and the manganese oxides agrees with an
+    independent method. Same shape as the existing cross-database audit, and it
+    would catch a class of error nothing currently catches.
 
 ---
 
