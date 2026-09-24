@@ -167,15 +167,14 @@ class TestSupplementalTable(unittest.TestCase):
         """If a value is ever verified, this test should be updated -- it
         exists so the flag cannot quietly drift.
 
-        Three of these are real compounds awaiting a primary source.
-        Biomass(aq) is not: <CH2O> is a modelling placeholder for cell carbon
-        and can never become "verified" in the same sense, so it should stay
-        on this list permanently.
+        Glucose and pyruvate were traced to OBIGT (and through it to Amend &
+        Plyasunov 2001 and Canovas & Shock 2016) and are now verified.
+        Hydroxylamine is still outstanding -- it is in no pyGCC database and
+        not in OBIGT either. Biomass(aq) is a permanent resident: <CH2O> is a
+        modelling placeholder, not a compound, so it can never become
+        "verified" in this sense.
         """
-        self.assertEqual(
-            unverified_names(),
-            ["Biomass(aq)", "Glucose(aq)", "NH2OH(aq)", "Pyruvate(aq)"],
-        )
+        self.assertEqual(unverified_names(), ["Biomass(aq)", "NH2OH(aq)"])
 
     def test_refuses_another_temperature_by_default(self):
         with self.assertRaises(OutOfRangeError):
@@ -190,9 +189,11 @@ class TestSupplementalTable(unittest.TestCase):
             value = lenient.delta_Gf("NH2OH(aq)", 60.0).magnitude
         self.assertNotAlmostEqual(value, -23.5, places=2)
 
-        # Glucose carries no enthalpy, so it cannot be extrapolated at all.
+        # The biomass placeholder carries no enthalpy, so it cannot be
+        # extrapolated at all. (Glucose and pyruvate used to serve here; both
+        # gained enthalpies when they were traced to OBIGT.)
         with self.assertRaises(OutOfRangeError):
-            lenient.delta_Gf("Glucose(aq)", 60.0)
+            lenient.delta_Gf("Biomass(aq)", 60.0)
 
     def test_provenance_is_recorded(self):
         for entry in supplemental_species().values():

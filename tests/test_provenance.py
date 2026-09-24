@@ -56,7 +56,11 @@ class TestResolveCoversEveryRoute(unittest.TestCase):
     def test_the_supplemental_route_reports_its_provenance(self):
         record = self.backend.resolve("Glucose(aq)")
         self.assertIn("hand-entered", record.source)
-        self.assertFalse(record.verified)
+        self.assertIn("Amend", record.source)  # traced to its primary source
+        self.assertTrue(record.verified)
+
+    def test_a_still_unverified_entry_says_so(self):
+        self.assertFalse(self.backend.resolve("NH2OH(aq)").verified)
 
     def test_the_placeholder_is_marked_unverified(self):
         self.assertFalse(self.backend.resolve("Biomass(aq)").verified)
@@ -92,6 +96,73 @@ class TestResolveCoversEveryRoute(unittest.TestCase):
                 summary = entry.provenance_summary
                 self.assertNotIn("\n", summary)
                 self.assertLess(len(summary), len(entry.provenance) + 1)
+
+
+class TestTracedSupplementalValues(unittest.TestCase):
+    """The two entries traced to a primary source.
+
+    Both came from the OBIGT database of CHNOSZ, which stores calories. The
+    conversion is pinned here so the values cannot drift away from the source
+    they claim -- which is the whole point of having verified them.
+    """
+
+    #: OBIGT's own numbers, cal/mol, and the citation each carries.
+    OBIGT = {
+        "Glucose(aq)": (-218100, -301600, "Amend"),
+        "Pyruvate(aq)": (-113600, -137400, "Canovas"),
+    }
+    CAL_TO_J = 4.184
+
+    @classmethod
+    def setUpClass(cls):
+        warnings.simplefilter("ignore")
+        from microbial_thermo.supplemental import supplemental_species
+
+        cls.table = supplemental_species()
+
+    def test_the_gibbs_energies_match_obigt(self):
+        for name, (gibbs_cal, _, _) in self.OBIGT.items():
+            with self.subTest(species=name):
+                self.assertAlmostEqual(
+                    self.table[name].delta_Gf_kJ_mol,
+                    gibbs_cal * self.CAL_TO_J / 1000.0,
+                    places=3,
+                )
+
+    def test_the_enthalpies_match_obigt(self):
+        for name, (_, enthalpy_cal, _) in self.OBIGT.items():
+            with self.subTest(species=name):
+                self.assertAlmostEqual(
+                    self.table[name].delta_Hf_kJ_mol,
+                    enthalpy_cal * self.CAL_TO_J / 1000.0,
+                    places=3,
+                )
+
+    def test_each_names_its_primary_source(self):
+        for name, (_, _, author) in self.OBIGT.items():
+            with self.subTest(species=name):
+                self.assertIn(author, self.table[name].provenance)
+                self.assertIn("OBIGT", self.table[name].provenance)
+
+    def test_they_are_marked_verified(self):
+        for name in self.OBIGT:
+            with self.subTest(species=name):
+                self.assertTrue(self.table[name].verified)
+
+    def test_having_an_enthalpy_now_allows_extrapolation(self):
+        """Tracing them gained an enthalpy as well as a citation, which is
+        what makes a van 't Hoff correction possible at all."""
+        for name in self.OBIGT:
+            with self.subTest(species=name):
+                self.assertIsNotNone(self.table[name].delta_Hf_kJ_mol)
+
+    def test_hydroxylamine_records_where_it_was_looked_for(self):
+        """A negative result is worth writing down: the next person should
+        not repeat the search."""
+        provenance = self.table["NH2OH(aq)"].provenance
+        self.assertIn("OBIGT", provenance)
+        self.assertIn("Wagman", provenance)
+        self.assertFalse(self.table["NH2OH(aq)"].verified)
 
 
 class TestExportsAreReproducible(unittest.TestCase):

@@ -410,7 +410,7 @@ class TestBiomassPlaceholder(unittest.TestCase):
         table = supplemental_species()
         glucose = table["Glucose(aq)"].delta_Gf_kJ_mol
         biomass = table["Biomass(aq)"].delta_Gf_kJ_mol
-        self.assertAlmostEqual(biomass, glucose / 6.0, delta=0.05)
+        self.assertAlmostEqual(biomass, glucose / 6.0, delta=0.01)
 
 
 class TestArseniteCarbonFixation(unittest.TestCase):
@@ -499,14 +499,17 @@ class TestTheExampleScript(unittest.TestCase):
         self.assertAlmostEqual(slope, -2 * self.module.RT_LN10_25C, places=2)
 
     def test_the_biomass_override_moves_the_answer(self):
-        """Half a CH2O per electron pair, so a 22.9 kJ/mol change in its
-        formation energy must move dG by half that."""
+        """Half a CH2O per electron pair, so a change in its formation energy
+        must move dG by half that."""
         base = self.module.fixation_vs_ph(ph_values=[7.0], include_catabolic=False)
         shifted = self.module.fixation_vs_ph(
             ph_values=[7.0], include_catabolic=False, biomass_dgf=-130.0
         )
         moved = shifted["anabolic"][0] - base["anabolic"][0]
-        self.assertAlmostEqual(moved, 0.5 * (-130.0 + 152.9), places=2)
+        from microbial_thermo.supplemental import supplemental_species
+
+        default = supplemental_species()["Biomass(aq)"].delta_Gf_kJ_mol
+        self.assertAlmostEqual(moved, 0.5 * (-130.0 - default), places=2)
 
     def test_the_override_is_restored_afterwards(self):
         """It mutates a cached table, so a leak would quietly corrupt every

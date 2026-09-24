@@ -29,9 +29,15 @@ species:
     temperature_c: 25.0
     verified: false
     provenance: >-
-      Commonly cited value for aqueous hydroxylamine; NOT yet traced to a
-      primary source. Central nitrification intermediate, absent from every
-      pyGCC database. CHECK BEFORE USE.
+      STILL UNVERIFIED. Commonly cited value for aqueous hydroxylamine, not
+      traced to a primary source. Central nitrification intermediate.
+      Searched and NOT found in: all fifteen databases bundled with pyGCC
+      (speq21/23, supcrtbl, thermo.com, thermoddem, berman, data0, phreeqc,
+      pitzer and the rest), and the OBIGT database of CHNOSZ, in both its
+      inorganic_aq and organic_aq tables. The likely primary source is the NBS
+      tables -- Wagman, D. D. et al. (1982), J. Phys. Chem. Ref. Data 11,
+      Suppl. 2 -- which are not machine-readable from here; NIST has since
+      published a digitised version that would settle it. CHECK BEFORE USE.
 
   - backend: "Glucose(aq)"
     formula: "C6H12O6"
@@ -39,13 +45,19 @@ species:
     phase: aq
     smiles: "OCC1OC(O)C(O)C(O)C1O"
     aliases: [glucose, dextrose, "C6H12O6"]
-    delta_Gf_kJ_mol: -917.2
+    delta_Gf_kJ_mol: -912.530
+    delta_Hf_kJ_mol: -1261.894
     temperature_c: 25.0
-    verified: false
+    verified: true
     provenance: >-
-      Commonly cited value for aqueous D-glucose; sources differ by a few
-      kJ/mol (roughly -915 to -919). NOT yet traced to a primary source.
-      CHECK BEFORE USE.
+      Amend, J. P. and Plyasunov, A. V. (2001), Geochimica et Cosmochimica
+      Acta 65, 3901-3917 -- the HKF treatment of aqueous saccharides. Taken
+      from the OBIGT database of CHNOSZ (Dick 2019), entry "glucose", as
+      -218100 cal/mol, converted at 4.184 J/cal. OBIGT is SUPCRT-lineage, so
+      the standard state matches the rest of this library: aqueous, 1 molal,
+      25 C, dGf(H+) = 0. Replaces a previous hand-entered -917.2 of unknown
+      origin, a 4.7 kJ/mol change. Read from OBIGT rather than from the paper
+      itself; if you need the primary numbers, that is the citation.
 
   - backend: "Pyruvate(aq)"
     formula: "C3H3O3-"
@@ -53,27 +65,34 @@ species:
     phase: aq
     smiles: "CC(=O)C(=O)[O-]"
     aliases: [pyruvate]
-    delta_Gf_kJ_mol: -474.5
+    delta_Gf_kJ_mol: -475.302
+    delta_Hf_kJ_mol: -574.882
     temperature_c: 25.0
-    verified: false
+    verified: true
     provenance: >-
-      Commonly cited value for aqueous pyruvate. NOT yet traced to a primary
-      source. CHECK BEFORE USE.
+      Canovas, P. A. III and Shock, E. L. (2016), Geochimica et Cosmochimica
+      Acta 195, 293-322. Taken from the OBIGT database of CHNOSZ (Dick 2019),
+      entry "pyruvate", as -113600 cal/mol, converted at 4.184 J/cal. OBIGT is
+      SUPCRT-lineage, so the standard state matches the rest of this library.
+      Replaces a hand-entered -474.5 of unknown origin, a 0.8 kJ/mol change --
+      close enough that the old value was probably the same number rounded
+      through a different route. Read from OBIGT rather than from the paper.
 
   - backend: "Biomass(aq)"
     formula: "CH2O"
     display: "\\langle CH_2O\\rangle"
     phase: aq
     aliases: [biomass, "CH2O", "<CH2O>", cells, "cell carbon"]
-    delta_Gf_kJ_mol: -152.9
+    delta_Gf_kJ_mol: -152.088
     temperature_c: 25.0
     verified: false
     provenance: >-
       A PLACEHOLDER, not a measured compound. Biomass has no formation energy
       in the sense the rest of this file does: <CH2O> is a stand-in for cell
       carbon at oxidation state zero, and the value here is this library's own
-      aqueous glucose divided by six (-917.2 / 6 = -152.87), so the two are at
-      least mutually consistent. It therefore inherits glucose's unverified
+      aqueous glucose divided by six (-912.530 / 6 = -152.088), so the two are
+      at least mutually consistent. Glucose is now traceable to Amend &
+      Plyasunov (2001); this remains a placeholder regardless. It therefore inherits glucose's unverified
       status as well as its own.
       Two things it gets wrong on purpose. Real biomass is nearer CH1.8O0.5N0.2
       -- slightly more reduced than CH2O, so a little more costly to make --

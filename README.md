@@ -334,8 +334,17 @@ below.
 literature figures typed in by hand, not computed from an equation of state and
 not cross-checked against a second source the way the mineral data was. Each
 carries a `verified` flag, an unverified one **warns every time it is used**, and
-any figure resting on one is footnoted in red. All four currently ship unverified — trace them to a primary source and
-set the flag before relying on them.
+any figure resting on one is footnoted in red. **Two of the four are now traced.** Glucose and pyruvate come from the OBIGT
+database of CHNOSZ, and through it from Amend & Plyasunov (2001) and Canovas &
+Shock (2016) respectively. OBIGT is SUPCRT-lineage, so the standard state
+matches the rest of this library. Tracing them also gained each an enthalpy,
+which is what makes a van 't Hoff correction possible away from 25 °C. Glucose
+moved 4.7 kJ/mol in the process (−917.2 → −912.5), which is a useful reminder
+of what an untraced "commonly cited" number is worth.
+
+Hydroxylamine is still unverified, and its provenance now records where it was
+looked for and not found, so nobody repeats the search. `Biomass(aq)` is
+unverified permanently and by design.
 
 **`Biomass(aq)` is not a compound at all.** `<CH2O>` is a stand-in for cell
 carbon at oxidation state zero, and its value is this library's own glucose
@@ -897,7 +906,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 458 tests, ~170 s
+python -m unittest discover -s tests     # 465 tests, ~165 s
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # skip the slow notebook runs
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
@@ -954,6 +963,7 @@ messages refer to them by number.
 | 4 | Provenance export | `microbial_thermo/provenance.py`, `Reaction.provenance()`, `tests/test_provenance.py` |
 | 18 | `resolve()` covering every route | `backends/pygcc_backend.py`, `tests/test_provenance.py` |
 | 19 | Reproducible HTML exports | `EXPLORER_DIV_ID` in `figures/explorer.py`, `tests/test_provenance.py` |
+| 2 (part) | Glucose and pyruvate traced and verified | `data/supplemental_gibbs.yaml`, `tests/test_provenance.py` |
 
 ### Tier 1 — small, and builds directly on what exists
 
@@ -991,12 +1001,15 @@ messages refer to them by number.
 > metabolic-pathway thermodynamics, where everything upstream is in Alberty's
 > convention and mixing conventions silently corrupts a pathway sum.
 
-2. **Verify the supplemental values.** Hydroxylamine, glucose and pyruvate are
-   hand-entered and flagged unverified. Each needs tracing to a primary source,
-   confirming against its standard state, and the flag setting. `Biomass(aq)`
-   is the fourth entry on that list and is **deliberately permanent** — ⟨CH₂O⟩
-   is a modelling placeholder, not a compound, so it can never be traced to a
-   primary source and should keep warning forever.
+2. **Verify the supplemental values** — *partly done*. Glucose and pyruvate
+   are now traced and verified (see the Completed table). **Hydroxylamine is
+   still outstanding**: it is in none of the fifteen databases bundled with
+   pyGCC and not in CHNOSZ's OBIGT either, in either its inorganic or organic
+   tables. The likely primary source is the NBS tables — Wagman *et al.*
+   (1982), *J. Phys. Chem. Ref. Data* **11**, Suppl. 2 — which NIST has since
+   digitised; that should settle it. `Biomass(aq)` is on the unverified list
+   **permanently** and correctly: ⟨CH₂O⟩ is a modelling placeholder, not a
+   compound.
 
 ### Tier 2 — moderate, mostly new figures over existing machinery
 

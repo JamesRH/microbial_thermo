@@ -17,7 +17,7 @@ It must be **sourced**. `pygcc` comes from PyPI (not conda-forge) and is the one
 sanctioned `pip` in the project.
 
 ```bash
-python -m unittest discover -s tests     # full suite, 458 tests, ~170 s
+python -m unittest discover -s tests     # full suite, 465 tests, ~165 s
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # ~130 s
 python tests/test_balance.py             # one file, seconds — use this while iterating
 ruff format microbial_thermo tests && ruff check microbial_thermo tests
@@ -225,6 +225,12 @@ Two of the remaining entries deserve reading before touching anything nearby:
   this library already matches the microbial bioenergetics convention, the two
   agree exactly for single-species reactants, and ionic strength is the larger
   discrepancy.
-- **Item 2** is the one real correctness debt: hydroxylamine, glucose and
-  pyruvate are hand-entered, flagged `verified: false`, warn on every use, and
-  footnote any figure that depends on them. They need tracing to primary sources.
+- **Item 2** was the one real correctness debt. Glucose and pyruvate are now
+  traced through CHNOSZ's OBIGT to Amend & Plyasunov (2001) and Canovas &
+  Shock (2016); glucose moved 4.7 kJ/mol in the process, which is what an
+  untraced "commonly cited" value is worth. **Hydroxylamine is still
+  outstanding** and is in neither pyGCC nor OBIGT; its provenance records
+  where it was looked for. `Biomass(aq)` is unverified permanently by design.
+  **OBIGT is the place to look first** for anything pyGCC lacks: it is
+  SUPCRT-lineage, so the standard state already matches, and every entry
+  carries a citation key.
