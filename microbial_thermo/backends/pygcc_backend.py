@@ -42,6 +42,7 @@ _MAX_TEMPERATURE_C = 100.0
 #: different, shorter set and must be routed through ``heatcap`` instead.
 _HKF_ENTRY_LENGTH = 13
 
+
 #: Names for liquid water, which never appears in the species database.
 _WATER_NAMES = {"H2O", "H2O(l)", "water", "WATER"}
 
@@ -94,6 +95,29 @@ ION_SIZE_ANGSTROM: dict[str, float] = {
 _DEFAULT_ION_SIZE = 4.5
 
 
+#: The HKF database this library pins. pyGCC's own default is speq21.dat;
+#: speq23 is a strict superset of it -- 1594 -> 1597 species, nothing removed,
+#: and not one formation energy of the species we expose moves by so much as
+#: 1e-9 kJ/mol (checked across all 85). It adds epsomite, hexahydrite and
+#: kieserite. Pinning it by name rather than relying on pyGCC's default also
+#: means the provenance record can say which file was read.
+DEFAULT_HKF_DATABASE = "speq23.dat"
+
+#: Extra HKF sources consulted after the primary one, in order, for species it
+#: does not carry. supcrtbl.dat is SUPCRTBL (Zimmer et al. 2016), which revised
+#: SUPCRT92's mineral end-members against Holland & Powell (2011) and added
+#: arsenic minerals. It holds only 444 species and lacks 1458 that speq23 has,
+#: so it can only ever be a supplement -- never a base.
+SUPPLEMENTARY_HKF_DATABASES = {"supcrtbl.dat": "HP11"}
+
+
+def bundled_database(filename: str) -> str:
+    """Absolute path to a database file shipped inside pyGCC."""
+    import pygcc
+
+    return os.path.join(os.path.dirname(pygcc.__file__), "default_db", filename)
+
+
 class PygccBackend(ThermoBackend):
     """Formation energies and solvent properties from pyGCC."""
 
@@ -116,13 +140,16 @@ class PygccBackend(ThermoBackend):
             )
         self._water_convention = water_convention
         self._water_offset_cal: float | None = None
-        self._database = database
+        self._database = (
+            database if database is not None else bundled_database(DEFAULT_HKF_DATABASE)
+        )
         self._dielectric_method = dielectric_method
         self._mineral_database = mineral_database
         self._use_minerals = use_minerals
         self._db: Any = None
         self._species: dict[str, Any] | None = None
         self._minerals: dict[str, Any] | None = None
+        self._supplementary: dict[str, Any] | None = None
         self._gibbs_cache: dict[tuple[str, float, Any], float] = {}
         self._solvent_cache: dict[tuple[float, Any], dict] = {}
 
@@ -135,11 +162,42 @@ class PygccBackend(ThermoBackend):
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                self._db = (
-                    db_reader() if self._database is None else db_reader(dbaccess=self._database)
-                )
+                self._db = db_reader(dbaccess=self._database)
             self._species = self._db.dbaccessdic
         return self._species
+
+    @property
+    def supplementary_species(self) -> dict:
+        """Species from the supplementary HKF files, keyed name -> (entry, method).
+
+        Consulted **last**, after the primary database and the GWB minerals, so
+        adding a file here can only ever add species -- it never changes a
+        number that already resolved. That matters because SUPCRTBL is not a
+        newer edition of the same data: it revised SUPCRT92's mineral
+        end-members against Holland & Powell (2011), and the two disagree by
+        real amounts (hematite 1.7, goethite 2.4, magnetite 3.4 kJ/mol).
+        Preferring it silently would move published numbers.
+
+        Its entries also need a different equation of state. A SUPCRT92 mineral
+        carries Maier-Kelley coefficients in calories; a SUPCRTBL one carries
+        Holland & Powell parameters in kJ, in a longer record. pyGCC can
+        evaluate both, but only if told which -- hence the method tag travelling
+        with each entry.
+        """
+        if self._supplementary is None:
+            from pygcc.pygcc_utils import db_reader
+
+            self._supplementary = {}
+            for filename, method in SUPPLEMENTARY_HKF_DATABASES.items():
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        entries = db_reader(dbaccess=bundled_database(filename)).dbaccessdic
+                except Exception:
+                    continue
+                for name, entry in entries.items():
+                    self._supplementary.setdefault(name, (entry, method, filename))
+        return self._supplementary
 
     @property
     def minerals(self) -> dict:
@@ -172,7 +230,7 @@ class PygccBackend(ThermoBackend):
 
     @property
     def database_name(self) -> str:
-        return self._database or "speq21.dat (pyGCC default)"
+        return os.path.basename(self._database)
 
     # --- species resolution ----------------------------------------------------
 
@@ -199,6 +257,10 @@ class PygccBackend(ThermoBackend):
                 source=f"{self.mineral_database_name} (log K route)",
             )
 
+        if name in self.supplementary_species:
+            _, method, filename = self.supplementary_species[name]
+            return SpeciesRecord(name=name, backend_name=name, source=f"{filename} ({method})")
+
         from ..supplemental import supplemental_species
 
         entry = supplemental_species().get(name)
@@ -222,13 +284,23 @@ class PygccBackend(ThermoBackend):
         """Closest species names, for error messages."""
         from ..supplemental import supplemental_species
 
-        candidates = list(self.species_dict) + list(self.minerals) + list(supplemental_species())
+        candidates = (
+            list(self.species_dict)
+            + list(self.minerals)
+            + list(self.supplementary_species)
+            + list(supplemental_species())
+        )
         return difflib.get_close_matches(name, candidates, n=n, cutoff=0.6)
 
     def available_species(self) -> list[str]:
         from ..supplemental import supplemental_species
 
-        return sorted(set(self.species_dict) | set(self.minerals) | set(supplemental_species()))
+        return sorted(
+            set(self.species_dict)
+            | set(self.minerals)
+            | set(self.supplementary_species)
+            | set(supplemental_species())
+        )
 
     def search(self, pattern: str) -> list[str]:
         """Case-insensitive substring search over species names."""
@@ -278,6 +350,8 @@ class PygccBackend(ThermoBackend):
         if name not in species:
             if name in self.minerals:
                 return self._mineral_gibbs_cal(name, temperature_c, pressure)
+            if name in self.supplementary_species:
+                return self._supplementary_gibbs_cal(name, temperature_c, pressure)
             supplemented = self._supplemental_gibbs_cal(name, temperature_c)
             if supplemented is not None:
                 return supplemented
@@ -324,6 +398,33 @@ class PygccBackend(ThermoBackend):
             return self._compute_gibbs_cal(species_name, temperature_c, pressure)
 
         return mineral_gibbs_cal(self.minerals[name], temperature_c, basis)
+
+    def _supplementary_gibbs_cal(self, name: str, temperature_c: float, pressure) -> float:
+        """Formation energy from a supplementary HKF file, in cal/mol.
+
+        These carry a different equation of state from the primary database --
+        Holland & Powell rather than Maier-Kelley -- so the method has to be
+        passed explicitly; pyGCC defaults to SUPCRT and would misread the
+        record entirely.
+
+        The unit needs no handling, which is worth stating because it looks as
+        though it should. A SUPCRTBL record stores kJ where a SUPCRT92 one
+        stores calories -- Pyrite is -160.16 against -38293.0 -- but
+        ``heatcap`` converts internally and returns calories either way.
+        Converting again here lands you a factor of 4.184 out, on a number
+        that still looks entirely plausible.
+        """
+        from pygcc import heatcap
+
+        entry, method, _ = self.supplementary_species[name]
+        raw = heatcap(
+            T=temperature_c,
+            P=pressure,
+            Species_ppt=entry,
+            Species=name,
+            method=method,
+        ).dG
+        return float(raw if not hasattr(raw, "__len__") else raw[0])
 
     def _supplemental_gibbs_cal(self, name: str, temperature_c: float):
         """Hand-entered value for a species no database carries, or None.

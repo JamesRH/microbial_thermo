@@ -323,6 +323,43 @@ a proton-only treatment gets wrong by tens of p*K* units.
 Twelve families ship: sulfide, carbonate, ammonia, phosphate, acetate, lactate,
 formate, propanoate, butanoate, sulfite, nitrite, sulfate.
 
+### Where the numbers come from
+
+Four sources, consulted in this order. **A later source can only ever add a
+species; it never changes a number an earlier one already produced.**
+
+| order | source | route | what it carries |
+|---|---|---|---|
+| 1 | `speq23.dat` | HKF, direct | 1597 aqueous species, gases, common minerals |
+| 2 | `thermo.com.dat` | GWB log K + HKF basis | 2937 entries, chiefly minerals |
+| 3 | `supcrtbl.dat` | Holland & Powell (HP11) | 266 species nothing else has |
+| 4 | supplemental table | hand-entered | 4 species no database carries |
+
+`speq23.dat` replaced pyGCC's default `speq21.dat` and the upgrade was free:
+a strict superset, +3 species, and **not one formation energy of the 85
+species this library exposes moved by as much as 1e-9 kJ/mol**. That is
+asserted, not assumed. Pinning the file by name also lets the provenance
+record say which one was read.
+
+**`supcrtbl.dat` is a supplement, never a base.** SUPCRTBL (Zimmer *et al.*
+2016) revised SUPCRT92's mineral end-members against Holland & Powell (2011),
+so it is not a newer edition of the same numbers — it disagrees with
+`speq23`/GWB by real amounts (hematite 1.7, goethite 2.4, magnetite 3.4
+kJ/mol). Consulting it last means those disagreements cannot silently move a
+published figure. It also holds only 444 species and lacks 1458 that
+`speq23` has, so it could not be a base even if we wanted it.
+
+It needs a different equation of state, and this is the trap worth knowing: a
+SUPCRT92 mineral record carries Maier–Kelley coefficients in **calories**, a
+SUPCRTBL one carries Holland & Powell parameters in **kJ** — pyrite is
+`-38293.0` against `-160.16`. pyGCC evaluates both but has to be told which,
+and it converts internally, returning calories either way. Converting again
+lands you 4.184× out on a number that still looks perfectly plausible.
+
+What it buys: **scorodite** (FeAsO₄·2H₂O, −1287 kJ/mol), the phase that
+controls arsenic solubility in oxidised sediments, along with arsenopyrite
+variants, barium arsenates and 260-odd other minerals.
+
 ### Species pyGCC does not have
 
 Hydroxylamine, glucose and pyruvate are in none of pyGCC's databases, so they
@@ -938,7 +975,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 465 tests, ~165 s
+python -m unittest discover -s tests     # 489 tests, ~180 s
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # skip the slow notebook runs
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests

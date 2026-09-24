@@ -36,7 +36,7 @@ class TestResolveCoversEveryRoute(unittest.TestCase):
 
     def test_the_hkf_route(self):
         record = self.backend.resolve("Fe++")
-        self.assertIn("speq21", record.source)
+        self.assertIn("speq23", record.source)
         self.assertTrue(record.verified)
 
     def test_the_water_route(self):
@@ -75,6 +75,13 @@ class TestResolveCoversEveryRoute(unittest.TestCase):
             except SpeciesNotFoundError:
                 unresolvable.append(name)
         self.assertEqual(unresolvable, [], f"{len(unresolvable)} names disagree")
+
+    def test_the_supplementary_hkf_route(self):
+        """Scorodite reaches us only through supcrtbl.dat, on the Holland &
+        Powell equation of state rather than Maier-Kelley."""
+        record = self.backend.resolve("Scorodite")
+        self.assertIn("supcrtbl", record.source)
+        self.assertIn("HP11", record.source)
 
     def test_a_genuinely_unknown_name_still_raises(self):
         with self.assertRaises(SpeciesNotFoundError):
