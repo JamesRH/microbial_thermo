@@ -127,6 +127,14 @@ plt.show()
 # exactly the disequilibrium this figure says should not exist.
 
 # %% [markdown]
+# ## Interactive
+
+# %%
+from microbial_thermo.figures import interactive_element
+
+interactive_element("N", initial_ph=7.0, initial_log_activity=-5.0)
+
+# %% [markdown]
 # ## Who lives on each step
 
 # %%

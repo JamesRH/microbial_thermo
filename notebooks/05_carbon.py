@@ -106,6 +106,10 @@ plot_frost("C", pH=7.0, annotate_slopes=True)
 plt.show()
 
 # %%
+plot_frost("C", pH=0, annotate_slopes=True)
+plt.show()
+
+# %%
 frost = frost_diagram("C", pH=7.0)
 print("most stable form:", frost.most_stable.backend)
 for event in frost.disproportionation():
