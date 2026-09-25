@@ -178,16 +178,29 @@ def _unverified_footnote(provenance) -> None:
 # --- shared conditions panel (sidebar, §6.4) --------------------------------
 
 
+def _reset_conditions() -> None:
+    # Bumping a generation counter -- rather than just deleting the cond_*
+    # session_state entries -- changes every widget's key below, so
+    # Streamlit mounts brand-new frontend widget instances instead of
+    # updating existing ones in place. Deleting session_state alone left
+    # session_state verifiably reset server-side (confirmed by hand) while
+    # some number_input widgets kept displaying their pre-reset value: a
+    # frontend widget can fail to re-sync to a changed `value` prop on an
+    # existing component instance, but it can't skip picking up a new
+    # default when it's a genuinely new instance under a new key.
+    st.session_state["cond_gen"] = st.session_state.get("cond_gen", 0) + 1
+    for k in list(st.session_state.keys()):
+        if k.startswith("cond_") and k != "cond_gen":
+            del st.session_state[k]
+
+
 def render_conditions_sidebar() -> mt.Conditions:
     st.sidebar.header("Conditions")
     st.sidebar.caption("Feeds tools 2 and 3. Tool 1 only uses temperature and pressure.")
 
-    if st.sidebar.button("Reset to standard state"):
-        for k in list(st.session_state.keys()):
-            if k.startswith("cond_"):
-                del st.session_state[k]
-        st.rerun()
+    st.sidebar.button("Reset to standard state", on_click=_reset_conditions)
 
+    gen = st.session_state.get("cond_gen", 0)
     defaults = mt.Conditions()
 
     temperature_c = st.sidebar.number_input(
@@ -196,16 +209,16 @@ def render_conditions_sidebar() -> mt.Conditions:
         max_value=100.0,
         value=defaults.temperature_c,
         step=1.0,
-        key="cond_temperature",
+        key=f"cond_temperature_{gen}",
         help="pyGCC's supported window is 0.01-100 °C at near-surface pressure.",
     )
-    pH = st.sidebar.number_input("pH", value=defaults.pH, step=0.1, key="cond_pH")
+    pH = st.sidebar.number_input("pH", value=defaults.pH, step=0.1, key=f"cond_pH_{gen}")
 
     activity_model = st.sidebar.selectbox(
         "Activity model",
         ACTIVITY_MODELS,
         index=ACTIVITY_MODELS.index(defaults.activity_model),
-        key="cond_activity_model",
+        key=f"cond_activity_model_{gen}",
     )
     ionic_strength = defaults.ionic_strength
     if activity_model == "bdot":
@@ -214,24 +227,24 @@ def render_conditions_sidebar() -> mt.Conditions:
             min_value=0.0001,
             value=0.25,
             step=0.05,
-            key="cond_ionic_strength",
+            key=f"cond_ionic_strength_{gen}",
             help="Required by the 'bdot' activity model.",
         )
 
     set_pressure = st.sidebar.checkbox(
-        "Set pressure explicitly", key="cond_set_pressure", value=False
+        "Set pressure explicitly", key=f"cond_set_pressure_{gen}", value=False
     )
     pressure_bar = None
     if set_pressure:
         pressure_bar = st.sidebar.number_input(
-            "Pressure (bar)", value=1.0, step=0.1, key="cond_pressure"
+            "Pressure (bar)", value=1.0, step=0.1, key=f"cond_pressure_{gen}"
         )
 
     st.sidebar.caption("Concentrations (species → molality)")
     conc_rows = st.sidebar.data_editor(
         pd.DataFrame({"species": pd.Series(dtype="str"), "molality": pd.Series(dtype="float")}),
         num_rows="dynamic",
-        key="cond_concentrations_editor",
+        key=f"cond_concentrations_editor_{gen}",
         hide_index=True,
         use_container_width=True,
     )
@@ -247,7 +260,7 @@ def render_conditions_sidebar() -> mt.Conditions:
             {"family": pd.Series(dtype="str"), "total_molality": pd.Series(dtype="float")}
         ),
         num_rows="dynamic",
-        key="cond_total_editor",
+        key=f"cond_total_editor_{gen}",
         hide_index=True,
         use_container_width=True,
     )
@@ -257,7 +270,7 @@ def render_conditions_sidebar() -> mt.Conditions:
     pp_rows = st.sidebar.data_editor(
         pd.DataFrame({"species": pd.Series(dtype="str"), "bar": pd.Series(dtype="float")}),
         num_rows="dynamic",
-        key="cond_pp_editor",
+        key=f"cond_pp_editor_{gen}",
         hide_index=True,
         use_container_width=True,
     )
@@ -295,36 +308,22 @@ def render_conditions_sidebar() -> mt.Conditions:
 # --- tool 1: compound dGf lookup (§6.1) -------------------------------------
 
 
-def render_tool1() -> None:
+def render_tool1(conditions: mt.Conditions) -> None:
     st.subheader("Compound formation energy (ΔG_f°) lookup")
+    st.caption(
+        "Uses the sidebar's temperature and pressure; pH and concentrations don't apply to a formation energy."
+    )
 
     if "tool1_history" not in st.session_state:
         st.session_state.tool1_history = []
 
-    col1, col2, col3 = st.columns([3, 1, 1])
-    with col1:
-        name = st.text_input(
-            "Species name", key="tool1_name", placeholder="e.g. HS-, SO4-2, Acetate"
-        )
-    with col2:
-        temperature_c = st.number_input(
-            "Temperature (°C)",
-            min_value=0.01,
-            max_value=100.0,
-            value=25.0,
-            step=1.0,
-            key="tool1_temp",
-        )
-    with col3:
-        use_pressure = st.checkbox("Set pressure", key="tool1_use_pressure")
-        pressure_bar = None
-        if use_pressure:
-            pressure_bar = st.number_input(
-                "Pressure (bar)", value=1.0, step=0.1, key="tool1_pressure"
-            )
+    name = st.text_input("Species name", key="tool1_name", placeholder="e.g. HS-, SO4-2, Acetate")
 
     if not name.strip():
         return
+
+    temperature_c = conditions.temperature_c
+    pressure_bar = conditions.pressure_bar
 
     try:
         species = lookup_species(name)
@@ -400,7 +399,7 @@ def render_tool1() -> None:
 # --- tool 2: half-reaction E°/E°′ lookup (§6.2) -----------------------------
 
 
-def _render_half_reaction(result: mt.HalfReactionResult) -> None:
+def _render_half_reaction(result: mt.HalfReactionResult, result_ph7: mt.HalfReactionResult) -> None:
     st.code(str(result), language=None)
     oxidation_state, reduced_state = result.oxidation_states()
     st.caption(
@@ -408,7 +407,12 @@ def _render_half_reaction(result: mt.HalfReactionResult) -> None:
         f"state {oxidation_state} → {reduced_state}"
     )
     c1, c2, c3 = st.columns(3)
-    c1.metric("E°′ (headline)", f"{result.E_standard_prime.to('V').magnitude:+.3f} V")
+    c1.metric(
+        "E°′ (headline, pH 7)",
+        f"{result_ph7.E_standard_prime.to('V').magnitude:+.3f} V",
+        help="Fixed at pH 7, unit activity otherwise -- the biochemical reference "
+        "point. It tracks the sidebar's temperature but not its pH.",
+    )
     c2.metric("E°", f"{result.E_standard.to('V').magnitude:+.3f} V")
     c3.metric("E (conditions)", f"{result.E.to('V').magnitude:+.3f} V")
 
@@ -461,6 +465,11 @@ def render_tool2(conditions: mt.Conditions) -> None:
             tuple(_parse_multi(oxidized_input)),
             conditions_key(conditions),
         )
+        result_ph7 = lookup_half_reaction(
+            tuple(_parse_multi(reduced_input)),
+            tuple(_parse_multi(oxidized_input)),
+            conditions_key(conditions.replace(pH=7.0)),
+        )
     except mt.MissingDataError as exc:
         st.error(str(exc))
     except mt.OutOfRangeError as exc:
@@ -468,7 +477,7 @@ def render_tool2(conditions: mt.Conditions) -> None:
     except mt.ThermodynamicConsistencyError as exc:
         st.error(f"Internal consistency check failed -- this is a bug, please report it. {exc}")
     else:
-        _render_half_reaction(result)
+        _render_half_reaction(result, result_ph7)
 
 
 # --- tool 3: reaction balancer, reveal dG°′ (§6.3) --------------------------
@@ -501,16 +510,22 @@ def _render_ambiguity_basis(basis) -> None:
         st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
 
 
-def _render_reaction(reaction: mt.Reaction) -> None:
+def _render_reaction(reaction: mt.Reaction, reaction_ph7: mt.Reaction) -> None:
     c1, c2 = st.columns(2)
     with c1:
         st.markdown("**Donor (oxidation)**")
         st.code(reaction.donor_half.format("oxidation"), language=None)
-        st.metric("E°′", f"{reaction.donor_half.E_standard_prime.to('V').magnitude:+.3f} V")
+        st.metric(
+            "E°′ (pH 7)",
+            f"{reaction_ph7.donor_half.E_standard_prime.to('V').magnitude:+.3f} V",
+        )
     with c2:
         st.markdown("**Acceptor (reduction)**")
         st.code(reaction.acceptor_half.format("reduction"), language=None)
-        st.metric("E°′", f"{reaction.acceptor_half.E_standard_prime.to('V').magnitude:+.3f} V")
+        st.metric(
+            "E°′ (pH 7)",
+            f"{reaction_ph7.acceptor_half.E_standard_prime.to('V').magnitude:+.3f} V",
+        )
 
     st.caption(f"n = {reaction.n_electrons} electrons")
     st.code(str(reaction), language=None)
@@ -520,7 +535,12 @@ def _render_reaction(reaction: mt.Reaction) -> None:
     show_dg = st.toggle("Reveal ΔG°′", key="tool3_reveal")
     if show_dg:
         d1, d2 = st.columns(2)
-        d1.metric("ΔG°′", f"{reaction.delta_G_standard_prime.to('kJ/mol').magnitude:+.1f} kJ/mol")
+        d1.metric(
+            "ΔG°′ (1M, pH 7)",
+            f"{reaction_ph7.delta_G_standard_prime.to('kJ/mol').magnitude:+.1f} kJ/mol",
+            help="Fixed at unit activity and pH 7 regardless of the sidebar's pH. "
+            "It tracks the sidebar's temperature.",
+        )
         d2.metric("ΔG (in-situ)", f"{reaction.delta_G.to('kJ/mol').magnitude:+.1f} kJ/mol")
 
 
@@ -548,6 +568,13 @@ def _render_couple_picker_fallback(conditions: mt.Conditions) -> None:
                 acceptor_oxidized,
                 conditions_key(conditions),
             )
+            reaction_ph7 = lookup_reaction_from_couples(
+                donor_reduced,
+                donor_oxidized,
+                acceptor_reduced,
+                acceptor_oxidized,
+                conditions_key(conditions.replace(pH=7.0)),
+            )
         except mt.SpeciesNotFoundError as exc:
             st.error(str(exc))
             _suggestion_buttons(exc.suggestions, "tool3_couple_suggest", "tool3_donor_reduced")
@@ -556,7 +583,7 @@ def _render_couple_picker_fallback(conditions: mt.Conditions) -> None:
         except mt.ThermodynamicConsistencyError as exc:
             st.error(f"Internal consistency check failed -- this is a bug, please report it. {exc}")
         else:
-            _render_reaction(reaction)
+            _render_reaction(reaction, reaction_ph7)
 
 
 def render_tool3(conditions: mt.Conditions) -> None:
@@ -570,6 +597,7 @@ def render_tool3(conditions: mt.Conditions) -> None:
 
     try:
         reaction = lookup_reaction(equation, conditions_key(conditions))
+        reaction_ph7 = lookup_reaction(equation, conditions_key(conditions.replace(pH=7.0)))
     except mt.AmbiguousReactionError as exc:
         st.error(str(exc))
         _render_ambiguity_basis(exc.basis)
@@ -588,7 +616,7 @@ def render_tool3(conditions: mt.Conditions) -> None:
     except mt.ThermodynamicConsistencyError as exc:
         st.error(f"Internal consistency check failed -- this is a bug, please report it. {exc}")
     else:
-        _render_reaction(reaction)
+        _render_reaction(reaction, reaction_ph7)
 
 
 # --- page --------------------------------------------------------------------
@@ -608,7 +636,7 @@ def main() -> None:
         ["1. Compound ΔG_f° lookup", "2. Half-reaction potentials", "3. Reaction balancer"]
     )
     with tab1:
-        render_tool1()
+        render_tool1(conditions)
     with tab2:
         render_tool2(conditions)
     with tab3:
