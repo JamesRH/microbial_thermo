@@ -1,4 +1,9 @@
-# microbial_thermo
+# microbial_thermo <a href="https://github.com/JamesRH/microbial_thermo"> <img src="https://raw.githubusercontent.com/JamesRH/microbial_thermo/main/static/logo.jpeg"  align="left" height="250"/></a>
+
+<!-- badges: start -->
+![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)
+![Python 3.11](https://img.shields.io/badge/python-3.6-blue.svg)
+<!-- badges: end -->
 
 Thermodynamic calculations and figures for microbial physiology and
 biogeochemistry. Given a redox couple or a whole reaction, it balances the
