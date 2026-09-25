@@ -349,6 +349,19 @@ the real exported script in node and compares: volt equivalents and Latimer
 potentials to 1e-9, hulls identical, Eh-pH fields cell by cell. It skips where
 node is absent rather than pretending to pass.
 
+**A disproportionation needs no special support.** Donor and acceptor can name
+the same element -- `donor: ["Sulfur(s)", "SO4--"]`, `acceptor: ["HS-",
+"Sulfur(s)"]` -- and `Reaction.from_couples` balances it without knowing that
+is what it is doing. It falls out of the couple algebra, which is the right
+reason for it to work.
+
+**The library and the Frost diagram agree on elemental sulfur, by different
+routes.** The curated `sulfur_disproportionation` comes out at +6.7 kJ/mol e-
+at pH 7 and unit activity, from balancing two half reactions and looking up
+formation energies. The Frost diagram independently puts S(0) *on* the convex
+hull at the same conditions, which is the same statement without a sign. Worth
+keeping as a cross-check: they share the backend but nothing else.
+
 **A zero activity means absent, and is handled by name rather than by
 infinity.** `fixed={"S": ("SO4-2", 0)}` used to reach `rt * log(0)`, putting
 every sulfide phase at `+inf`. The picture was right -- they lose everywhere --

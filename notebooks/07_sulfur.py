@@ -199,6 +199,60 @@ table = mt.energy_table(conditions).set_index("name")
 table.loc[sulfur][["label", "dG per e- (kJ/mol)", "reaction"]]
 
 # %% [markdown]
+# ### The disproportionations, as named metabolisms
+#
+# The three reactions this notebook has been circling are in the curated
+# library, and they are the only entries in it where the donor and the
+# acceptor are the same element:
+
+# %%
+table.loc[
+    [
+        "sulfur_disproportionation",
+        "sulfite_disproportionation",
+        "thiosulfate_disproportionation",
+    ]
+][["label", "dG per e- (kJ/mol)", "reaction"]]
+
+# %% [markdown]
+# **The +6.7 on the first row is the same result as the Frost diagram**, by a
+# completely different route: the library balanced two half reactions and
+# looked up formation energies, while the diagram compared a point to a chord
+# on a convex hull. They agree because they are the same thermodynamics, and
+# the agreement is worth checking rather than assuming:
+
+# %%
+standard = frost_diagram("S", pH=7.0, activity=1.0)
+chord_energy = [e for e in standard.disproportionation() if e.species == "Sulfur(s)"]
+print("Frost diagram says:", chord_energy or "S(0) is on the hull — nothing to disproportionate")
+print(f"library says:       {table.loc['sulfur_disproportionation', 'dG per e- (kJ/mol)']:+.1f} kJ/mol e-")
+
+# %% [markdown]
+# The Frost diagram says nothing, because at unit activity elemental sulfur is
+# *on* the hull; the library says +6.7 kJ/mol e⁻, which is the same statement
+# with a sign: the reaction is uphill and will not run. Take the sulfide away
+# and both change together.
+#
+# **Sulfite is the easy one** at about −39 kJ/mol e⁻, and thiosulfate sits
+# between them at −3. That ordering is the reason sulfur disproportionators
+# were found on sulfite and thiosulfate first: those two pay without needing
+# anything else to happen, and elemental sulfur does not.
+#
+# ### Why an iron-rich sediment is the habitat
+#
+# Put the pieces together. Disproportionation needs the sulfide drawn below
+# about 10⁻⁵ to clear the biological energy quantum. The thing that draws
+# sulfide down in a real sediment is **iron**, precipitating FeS and
+# ultimately pyrite. So the organism does not merely tolerate iron — it
+# requires an iron supply, and the rate of its metabolism is set by a mineral
+# reaction it has no control over.
+#
+# This is the general shape of a lot of biogeochemistry: an organism living on
+# a reaction that is only viable because a *different* process is removing one
+# of its products. Syntrophy (notebook 02) is the same argument with hydrogen
+# instead of sulfide.
+
+# %% [markdown]
 # ## One thing worth taking away
 #
 # A Frost diagram is a picture of a *chosen* state, not of the element. The

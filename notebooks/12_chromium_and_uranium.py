@@ -142,9 +142,29 @@ plt.show()
 # %%
 conditions = mt.Conditions(temperature_c=25.0, pH=7.0)
 table = mt.energy_table(conditions).set_index("name")
-table.loc[["chromate_reduction_acetate", "uranium_reduction_acetate"]][
-    ["label", "dG per e- (kJ/mol)", "reaction"]
-]
+table.loc[
+    [
+        "chromate_reduction_acetate",
+        "chromate_reduction_hydrogen",
+        "uranium_reduction_acetate",
+    ]
+][["label", "dG per e- (kJ/mol)", "reaction"]]
+
+# %% [markdown]
+# Chromate on either donor pays like a respiration, because that is what it
+# is: *Shewanella* and *Desulfovibrio* reduce Cr(VI) as an electron acceptor,
+# not as a detoxification. The engineering problem is delivery, not energy.
+#
+# There is a catch that the thermodynamics cannot show, and it is worth
+# stating because it is where this kind of analysis stops being sufficient.
+# Cr(VI) crosses cell membranes on the **sulfate transporter** — chromate and
+# sulfate are near-identical in size and charge — so it gets inside, and once
+# inside, partial reduction produces Cr(V) and Cr(IV) radicals that damage
+# DNA. The reaction that makes chromium safe in a sediment is the same
+# reaction that makes it carcinogenic in a cell.
+#
+# Nothing on a Frost or Eh–pH diagram will ever tell you that. They constrain
+# what is possible; toxicity lives in the kinetics and the transport.
 
 # %% [markdown]
 # ## One thing worth taking away

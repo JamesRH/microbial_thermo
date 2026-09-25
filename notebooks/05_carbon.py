@@ -250,9 +250,11 @@ carbon = [
     "hydrogenotrophic_methanogenesis",
     "acetoclastic_methanogenesis",
     "acetogenesis",
+    "syntrophic_acetate_oxidation",
     "aerobic_acetate_oxidation",
     "aerobic_methanotrophy",
     "anaerobic_methane_oxidation",
+    "n_damo",
 ]
 table = mt.energy_table(conditions).set_index("name")
 table.loc[carbon][["label", "dG per e- (kJ/mol)", "reaction"]]
@@ -264,6 +266,43 @@ table.loc[carbon][["label", "dG per e- (kJ/mol)", "reaction"]]
 # organisms most often found sitting within a few kJ of the thermodynamic
 # limit. Aerobic acetate oxidation runs the same carbon uphill in the other
 # direction against oxygen and pays roughly twenty times better.
+
+# %% [markdown]
+# Two pairs in that table are worth reading against each other, because each
+# pair is the *same carbon* going the *same direction* with a different
+# partner.
+#
+# **Acetate, up or down.** `acetogenesis` makes acetate from CO₂ and hydrogen;
+# `syntrophic_acetate_oxidation` takes acetate apart into CO₂ and hydrogen.
+# They are the same reaction written backwards, so one is exergonic exactly
+# insofar as the other is not:
+
+# %%
+for name in ("acetogenesis", "syntrophic_acetate_oxidation"):
+    print(f"{table.loc[name, 'label']:38s} {table.loc[name, 'dG per e- (kJ/mol)']:+7.1f} kJ/mol e-")
+
+# %% [markdown]
+# Both organisms exist, in the same sediments. Which one runs is decided by
+# the hydrogen partial pressure, not by the table — and that is the syntrophy
+# window of notebook 02, in its other guise. Syntrophic acetate oxidisers take
+# over from acetoclastic methanogens in hot or ammonia-rich digesters, which
+# is a practical problem in wastewater treatment and a thermodynamic one
+# underneath.
+#
+# **Methane, against two acceptors.** `anaerobic_methane_oxidation` uses
+# sulfate and `n_damo` uses nitrite. Same substrate, thirty-fold difference:
+
+# %%
+for name in ("anaerobic_methane_oxidation", "n_damo"):
+    print(f"{table.loc[name, 'label']:38s} {table.loc[name, 'dG per e- (kJ/mol)']:+7.1f} kJ/mol e-")
+
+# %% [markdown]
+# The sulfate-dependent version is *inside the biological energy quantum* —
+# it barely clears the minimum thought to sustain a cell, which is why it is
+# run by slow consortia rather than by a single organism. And yet it consumes
+# most of the methane produced in marine sediment, because there is a great
+# deal of sulfate and a great deal of time. Thermodynamics sets the ceiling on
+# yield; it says nothing about flux.
 
 # %% [markdown]
 # ## One thing worth taking away

@@ -131,7 +131,12 @@ for element, solid in (("Se", "Se"), ("As", "As")):
 
 # %%
 conditions = mt.Conditions(temperature_c=25.0, pH=7.0)
-selenium = ["selenate_respiration_hydrogen", "selenate_respiration_acetate", "selenite_reduction_hydrogen"]
+selenium = [
+    "selenate_respiration_hydrogen",
+    "selenate_respiration_acetate",
+    "selenite_reduction_hydrogen",
+    "selenite_reduction_acetate",
+]
 table = mt.energy_table(conditions).set_index("name")
 table.loc[selenium][["label", "dG per e- (kJ/mol)", "reaction"]]
 
@@ -144,6 +149,38 @@ table.loc[selenium][["label", "dG per e- (kJ/mol)", "reaction"]]
 # selenium you can filter out.
 #
 # There is no arsenic equivalent, because there is no arsenic solid to make.
+
+# %% [markdown]
+# Both steps have an entry on both donors, which is the point: **selenium
+# reduction is a complete two-step pathway that ends in a solid**, and either
+# step can be run on hydrogen or on organic carbon. That is what makes a
+# bioreactor design possible — feed it either, and the selenium comes out as
+# a filterable red precipitate.
+#
+# It is worth noticing what the second step is *not* doing:
+
+# %%
+for name in ("selenite_reduction_acetate", "selenate_respiration_acetate"):
+    print(f"{table.loc[name, 'label']:38s} {table.loc[name, 'dG per e- (kJ/mol)']:+7.1f} kJ/mol e-")
+
+# %% [markdown]
+# Reducing selenite to the element pays *less* per electron than reducing
+# selenate to selenite. An organism optimising purely for energy would stop at
+# selenite — and some do. The ones used industrially go the whole way, which
+# means the useful step for remediation is the one the organism has least
+# incentive to take. Enrichment conditions matter as much as thermodynamics.
+#
+# ### The environmental reason anyone cares
+#
+# Selenium is the textbook case of a nutrient with a narrow window: essential
+# in selenocysteine and selenoproteins at trace level, toxic not far above it,
+# with the gap between the two among the smallest of any element. Irrigation
+# of seleniferous soils concentrates selenate in drainage water, and selenate
+# is the mobile, bioavailable form — the Kesterson Reservoir deformities in
+# the 1980s are what put selenium into environmental regulation.
+#
+# The Eh–pH diagram above is the remediation strategy in one picture: get the
+# water into the lower half of it and the problem precipitates.
 
 # %% [markdown]
 # ## One thing worth taking away

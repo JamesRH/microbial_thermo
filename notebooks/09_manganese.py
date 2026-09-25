@@ -165,9 +165,29 @@ for temperature in (2.0, 25.0, 60.0):
 # %%
 conditions = mt.Conditions(temperature_c=25.0, pH=7.0)
 table = mt.energy_table(conditions).set_index("name")
-table.loc[["manganese_oxidation_oxygen", "manganese_reduction_acetate"]][
-    ["label", "dG per e- (kJ/mol)", "reaction"]
-]
+table.loc[
+    [
+        "manganese_oxidation_oxygen",
+        "manganese_reduction_acetate",
+        "manganese_reduction_hydrogen",
+    ]
+][["label", "dG per e- (kJ/mol)", "reaction"]]
+
+# %% [markdown]
+# Put manganese reduction beside iron reduction on the same donor and the
+# redox zonation stops being a list to memorise:
+
+# %%
+for name in ("manganese_reduction_hydrogen", "goethite_reduction_hydrogen"):
+    print(f"{table.loc[name, 'label']:44s} {table.loc[name, 'dG per e- (kJ/mol)']:+7.1f} kJ/mol e-")
+
+# %% [markdown]
+# Hydrogen against manganese oxide pays about −79 kJ/mol e⁻; hydrogen against
+# goethite does not pay at all at standard state. That gap is why manganese is
+# consumed above iron in a sediment profile, and it is larger than most
+# textbook ladders suggest — because those ladders draw MnO₂ and FeOOH as
+# though they were comparable phases, and thermodynamically they are not
+# close.
 
 # %% [markdown]
 # ## One thing worth taking away

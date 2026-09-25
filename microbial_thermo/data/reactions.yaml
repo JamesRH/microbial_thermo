@@ -383,3 +383,156 @@ metabolisms:
     note: >
       The basis of acetate-amended uranium bioremediation at Rifle, Colorado:
       soluble uranyl is reduced to uraninite and drops out of the groundwater.
+
+  # --- disproportionation ---
+  #
+  # The donor and the acceptor are the same element: part of it is oxidised
+  # and part reduced, with no external partner. Sulfur does this at three
+  # oxidation states and it is the reason a sulfur cycle can run without any
+  # net input of oxidant.
+  #
+  # These are the entries where standard state is most misleading. Elemental
+  # sulfur disproportionation is *endergonic* at unit activity -- notebook 07
+  # draws the Frost diagram that says so -- and only pays once the sulfide is
+  # drawn down, which in a real sediment means iron is precipitating it.
+  - name: sulfur_disproportionation
+    label: Elemental sulfur disproportionation
+    group: disproportionation
+    donor: ["Sulfur(s)", "SO4--"]
+    acceptor: ["HS-", "Sulfur(s)"]
+    key_element: S
+    organisms: Desulfocapsa sulfoexigens, Desulfobulbus propionicus
+    note: >-
+      4 S + 4 H2O -> SO4-2 + 3 HS- + 5 H+. Endergonic at unit activity and
+      exergonic below about 1.7e-2, so it needs a sulfide sink -- normally
+      FeS precipitation. Inside the biological energy quantum until the
+      sulfide falls near 1e-5.
+
+  - name: sulfite_disproportionation
+    label: Sulfite disproportionation
+    group: disproportionation
+    donor: ["SO3--", "SO4--"]
+    acceptor: ["HS-", "SO3--"]
+    key_element: S
+    organisms: Desulfocapsa, Desulfovibrio sulfodismutans
+    note: >-
+      Much the easier of the two: sulfite sits well above the convex hull at
+      every pH, so this pays about 39 kJ/mol e- where elemental sulfur pays
+      nothing.
+
+  - name: thiosulfate_disproportionation
+    label: Thiosulfate disproportionation
+    group: disproportionation
+    donor: ["S2O3--", "SO4--"]
+    acceptor: ["HS-", "S2O3--"]
+    key_element: S
+    organisms: Desulfocapsa, Desulfobulbus
+    note: >-
+      Thiosulfate's two sulfur atoms are already at different oxidation
+      states, -I and +V, so this splits a molecule that is half way there.
+      Marginal at standard state, which is why it also depends on a sulfide
+      sink.
+
+  # --- more iron and manganese ---
+  - name: nitrate_dependent_iron_oxidation
+    label: Nitrate-dependent iron(II) oxidation
+    group: metal oxidation
+    donor: ["Fe++", "Goethite"]
+    acceptor: ["N2(aq)", "NO3-"]
+    organisms: Acidovorax, Pseudogulbenkiania
+    note: >-
+      Anaerobic iron oxidation, and the reason ferric oxides form in sediment
+      that never sees oxygen. Whether it is enzymatic or abiotic oxidation by
+      denitrification intermediates is still argued.
+
+  - name: manganese_reduction_hydrogen
+    label: Manganese(IV) reduction with hydrogen
+    group: metal reduction
+    donor: ["H2(g)", "H+"]
+    acceptor: ["Mn++", "Pyrolusite"]
+    organisms: Shewanella, Geobacter
+    note: >-
+      The strongest acceptor a sediment normally has after oxygen and
+      nitrate, which is why manganese reduction sits above iron reduction in
+      the redox zonation.
+
+  # --- more carbon and nitrogen ---
+  - name: n_damo
+    label: Nitrite-dependent anaerobic methane oxidation (n-damo)
+    group: methane oxidation
+    donor: [methane, "CO2(aq)"]
+    acceptor: ["N2(aq)", "NO2-"]
+    key_element: C
+    organisms: Candidatus Methylomirabilis oxyfera
+    note: >-
+      Methane oxidised against nitrite rather than sulfate. At pH 7 it pays
+      about -116 kJ/mol e- against AOM's -3.7 -- thirty times better, and the
+      difference between a comfortable living and life at the thermodynamic
+      edge. Methylomirabilis is thought to make its own oxygen by dismutating
+      NO, which would make it the only known intra-aerobic anaerobe.
+
+  - name: syntrophic_acetate_oxidation
+    label: Syntrophic acetate oxidation
+    group: syntrophy
+    donor: [acetate, "HCO3-"]
+    acceptor: ["H2(g)", "H+"]
+    key_element: C
+    organisms: Clostridium ultunense, Thermacetogenium phaeum
+    note: >-
+      Acetogenesis run backwards, and endergonic at standard state. It takes
+      over from acetoclastic methanogenesis when ammonia or temperature
+      inhibits the acetoclasts, with a hydrogenotrophic partner keeping the
+      hydrogen low.
+
+  # --- more metalloid reduction ---
+  - name: selenite_reduction_acetate
+    label: Selenite reduction with acetate
+    group: metalloid reduction
+    donor: [acetate, "CO2(aq)"]
+    acceptor: ["Se", "SeO3--"]
+    key_element: C
+    organisms: Bacillus selenitireducens, Thauera selenatis
+    note: >-
+      The step that makes the red elemental selenium bioreactors are built
+      to harvest. Arsenic has no equivalent, which is notebook 11's point.
+
+  - name: chromate_reduction_hydrogen
+    label: Chromate reduction with hydrogen
+    group: metalloid reduction
+    donor: ["H2(g)", "H+"]
+    acceptor: ["Cr+++", "CrO4--"]
+    organisms: Shewanella oneidensis, Desulfovibrio vulgaris
+    note: >-
+      Cr(VI) to Cr(III): soluble carcinogen to nearly insoluble hydroxide.
+      Strongly pH dependent -- worth over a volt in acid and about 0.36 V at
+      pH 7.
+
+  # --- more phototrophic carbon fixation ---
+  #
+  # The cost side of the ledger for two more anoxygenic phototrophs, written
+  # the same way as the arsenite entry: endergonic by design, with light
+  # paying the difference. See notebooks photoFe and photoNO2.
+  - name: iron_carbon_fixation
+    label: Carbon fixation driven by iron(II) oxidation (photoferrotrophy)
+    group: carbon fixation
+    donor: ["Fe++", "Fe(OH)3"]
+    acceptor: ["Biomass(aq)", "CO2(aq)"]
+    key_element: C
+    organisms: Rhodobacter ferrooxidans SW2, Chlorobium ferrooxidans
+    note: >-
+      Ferrihydrite rather than goethite is the product, which matters: against
+      goethite the reaction comes out very slightly exergonic, and against the
+      poorly-crystalline phase these organisms actually make it is about
+      +26 kJ/mol e-. Uses the unverified <CH2O> biomass placeholder.
+
+  - name: nitrite_carbon_fixation
+    label: Carbon fixation driven by nitrite oxidation
+    group: carbon fixation
+    donor: ["NO2-", "NO3-"]
+    acceptor: ["Biomass(aq)", "CO2(aq)"]
+    key_element: C
+    organisms: Thiocapsa, Rhodopseudomonas
+    note: >-
+      The most expensive of the three at about +78 kJ/mol e-, because nitrite
+      is the weakest donor of them. Uses the unverified <CH2O> biomass
+      placeholder.

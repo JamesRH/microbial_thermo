@@ -192,9 +192,57 @@ for name, why in series.skipped:
 
 # %%
 conditions = mt.Conditions(temperature_c=25.0, pH=7.0)
-iron = ["iron_oxidation_oxygen", "ferrihydrite_reduction_acetate", "goethite_reduction_hydrogen"]
+iron = [
+    "iron_oxidation_oxygen",
+    "nitrate_dependent_iron_oxidation",
+    "iron_carbon_fixation",
+    "ferrihydrite_reduction_acetate",
+    "goethite_reduction_hydrogen",
+]
 table = mt.energy_table(conditions).set_index("name")
 table.loc[iron][["label", "dG per e- (kJ/mol)", "reaction"]]
+
+# %% [markdown]
+# Three ways to oxidise ferrous iron, and they are a potted history of when
+# each was believed.
+#
+# **With oxygen** is the obvious one and pays best. It is also fast
+# abiotically at pH 7, which is why iron-oxidising bacteria are pushed to
+# microaerophilic interfaces — they are racing the chemistry, not exploiting
+# an untouched substrate.
+#
+# **With nitrate** works in sediment that never sees oxygen, and explains
+# ferric oxides in places where the textbook said they could not form.
+#
+# **With light** pays nothing at all — it is *endergonic*, at about
+# +26 kJ/mol e⁻ — because it is not a respiration. Photoferrotrophs use
+# ferrous iron as an electron donor for CO₂ fixation and pay the difference
+# with photons. That is the cost side of the ledger, and notebook `photoFe`
+# works out how many photons it takes.
+
+# %% [markdown]
+# The last row of the table is the one that should look wrong:
+
+# %%
+print(table.loc["goethite_reduction_hydrogen", ["dG per e- (kJ/mol)", "reaction"]].to_string())
+
+# %% [markdown]
+# **Positive.** Reducing goethite with hydrogen does not pay at pH 7 and
+# standard state — yet iron reduction is one of the major respirations in
+# freshwater sediment. Both things are true, and the resolution is in what
+# "standard state" fixes:
+#
+# * Goethite is the *crystalline* oxide. Iron reducers work on poorly
+#   ordered ferrihydrite, which is much less stable and therefore a much
+#   better oxidant — the `ferrihydrite_reduction_acetate` row above.
+# * Standard state puts Fe²⁺ at unit activity. Real porewater is micromolar,
+#   and every order of magnitude of Fe²⁺ removed makes the reduction more
+#   favourable.
+#
+# So "iron reduction" is not one reaction with one energy; it is a family
+# spanning tens of kJ/mol depending on which mineral and which porewater. The
+# `fixed=` and `activity=` arguments used throughout this notebook are how
+# that gets said precisely instead of hand-waved.
 
 # %% [markdown]
 # ## One thing worth taking away

@@ -749,7 +749,7 @@ check on the log K route — **except manganese**, which evaluates to
 
 ### The curated metabolism library
 
-Forty-two named metabolisms, so you need not remember which couples to pair.
+Fifty-three named metabolisms, so you need not remember which couples to pair.
 Nothing thermodynamic is stored — energies are computed at whatever conditions
 you ask for.
 
@@ -766,6 +766,13 @@ oxygen (−109 kJ/mol e⁻) > denitrification (−96) > Mn(IV) (−65) > Fe(III)
 > sulfate (−5) > methanogenesis (−1.4). Acetoclastic methanogenesis and AOM land
 at the famously marginal −1.4 and −3.7 kJ/mol e⁻. The zonation order is asserted
 in the test suite: if it broke, the thermodynamics would be wrong.
+
+The **disproportionation** group is the odd one: donor and acceptor are the
+same element, no external partner. Sulfur does it at three oxidation states,
+and elemental sulfur is the case worth knowing — *endergonic* at standard
+state (+6.7 kJ/mol e⁻), which is exactly what the Frost diagram says when it
+puts S⁰ on the convex hull, and exergonic only once the sulfide is drawn down.
+Notebook 07 shows the two routes agreeing.
 
 ### Multi-product couples and syntrophy
 

@@ -139,9 +139,42 @@ nitrogen = [
     "denitrification_hydrogen",
     "dnra",
     "anammox",
+    "n_damo",
+    "nitrate_dependent_iron_oxidation",
+    "sulfide_oxidation_nitrate",
+    "arsenite_oxidation_nitrate",
 ]
 table = mt.energy_table(conditions).set_index("name")
 table.loc[nitrogen][["label", "dG per e- (kJ/mol)", "reaction"]]
+
+# %% [markdown]
+# The last four rows are the ones worth dwelling on, because they are all the
+# same trick: **nitrate and nitrite are good enough oxidants to be worth using
+# on almost anything.** Methane, ferrous iron, sulfide and arsenite are all
+# oxidised against them by organisms that do nothing else, and each of those
+# couplings was discovered long after the nitrogen cycle was supposedly
+# understood.
+#
+# `n_damo` is the sharpest example. Methane oxidation against **sulfate**
+# pays about −3.7 kJ/mol e⁻ — inside the biological energy quantum, a
+# metabolism that barely exists. Against **nitrite** the same methane pays
+# −116:
+
+# %%
+pair = table.loc[["anaerobic_methane_oxidation", "n_damo"]]
+pair[["label", "dG per e- (kJ/mol)"]]
+
+# %% [markdown]
+# Thirty times the yield, from changing nothing but the acceptor. Both
+# organisms exist; the AOM consortia are slow, live in consortia, and double
+# on a timescale of months, while *Methylomirabilis* grows on its own. The
+# ladder explains both facts at once.
+#
+# *Methylomirabilis* has a further trick that the thermodynamics cannot see:
+# it is thought to dismutate NO into N₂ and **O₂**, then use the oxygen in an
+# ordinary methane monooxygenase — making its own oxidant inside an anoxic
+# cell. Worth remembering whenever a diagram says a reaction is impossible:
+# the diagram constrains the overall energy, never the route.
 
 # %% [markdown]
 # ## One thing worth taking away
