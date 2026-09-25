@@ -75,6 +75,75 @@ print("nothing disproportionates:", frost.disproportionation() == [])
 # element, at pH 7 **arsenite**, a dissolved species.
 
 # %% [markdown]
+# ### All four arsenates at once
+#
+# Arsenic is the crowded case: four As(V) forms and two As(III) forms, which
+# is six species sharing two oxidation states. `predominant_only=False` keeps
+# every one of them.
+
+# %%
+everything = frost_diagram("As", pH=7.0, activity=1e-6, predominant_only=False)
+everything.to_frame()[["species", "oxidation state", "volt equivalent (V)", "on hull"]]
+
+# %%
+plot_frost("As", pH=7.0, activity=1e-6, predominant_only=False, label="all")
+plt.show()
+
+# %% [markdown]
+# The labels are nudged apart and given leader lines back to their markers,
+# because H₂AsO₄⁻ and HAsO₄²⁻ differ by only a few millivolts at pH 7 and
+# would otherwise be printed on top of one another.
+#
+# The two options are independent — `show=` decides which points get a
+# marker, `label=` which get named — and both take `"all"` or
+# `"predominant"`. The default, `show="all", label="predominant"`, hides
+# nothing and names only the form that exists:
+
+# %%
+figure, axes = plt.subplots(1, 2, figsize=(13.5, 5.0))
+plot_frost("As", pH=7.0, activity=1e-6, predominant_only=False, ax=axes[0],
+           title="show='all' (default)")
+plot_frost("As", pH=7.0, activity=1e-6, predominant_only=False, show="predominant",
+           ax=axes[1], title="show='predominant'")
+plt.show()
+
+# %% [markdown]
+# **The open grey squares are the point of the figure.** They are the other
+# arsenates — real species, at the right energies, simply not the ones that
+# dominate at pH 7. Move the pH and they change places:
+
+# %%
+for ph in (0.0, 4.0, 7.0, 12.0):
+    diagram = frost_diagram("As", pH=ph, activity=1e-6, predominant_only=False)
+    winners = {p.oxidation_state: p.backend for p in diagram.predominant}
+    print(f"pH {ph:5.1f}   As(V): {winners[5.0]:12s}  As(III): {winners[3.0]}")
+
+# %% [markdown]
+# Note what the grey squares are **not**: they are not drawn in red, because
+# they are not disproportionating. A minority acid form is not falling apart,
+# it is being outcompeted at the same oxidation state by a sibling that holds
+# a different number of protons — and that is an acid–base question, not a
+# redox one.
+#
+# The library keeps the two apart. Nothing at the same oxidation state can
+# have a potential between it and its sibling, because no electrons move:
+
+# %%
+try:
+    everything.slope("H3AsO4(aq)", "HAsO4--")
+except ValueError as exc:
+    print("refused:", exc)
+
+# %% [markdown]
+# and no minority form is ever reported as disproportionating:
+
+# %%
+minority = {p.backend for p in everything.points} - {p.backend for p in everything.predominant}
+reported = {event.species for event in everything.disproportionation()}
+print("minority forms:", sorted(minority))
+print("reported as disproportionating:", sorted(reported) or "none")
+
+# %% [markdown]
 # ## Where each form lives
 
 # %%

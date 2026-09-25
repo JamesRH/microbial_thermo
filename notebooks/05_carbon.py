@@ -124,6 +124,79 @@ for event in frost.disproportionation():
 # sulfur — is a species sitting above the hull with no way down.
 
 # %% [markdown]
+# ### Showing every form, not just the one that predominates
+#
+# By default each oxidation state contributes one point — the form with the
+# lowest energy at the working pH, which is the one that actually exists.
+# `predominant_only=False` keeps them all, and then two species can sit at the
+# same x: graphite and acetate at C(0), and all three carbonate forms at
+# C(+IV).
+
+# %%
+everything = frost_diagram("C", pH=7.0, predominant_only=False)
+everything.to_frame()[["species", "oxidation state", "volt equivalent (V)", "on hull"]]
+
+# %%
+plot_frost("C", pH=7.0, predominant_only=False, label="all")
+plt.show()
+
+# %% [markdown]
+# Two options control what is drawn, and they are independent:
+#
+# * `show="all"` or `show="predominant"` — which points get a marker.
+# * `label="all"` or `label="predominant"` — which of them get named.
+#
+# The default is `show="all", label="predominant"`, which keeps the figure
+# readable while hiding nothing. Compare:
+
+# %%
+figure, axes = plt.subplots(1, 2, figsize=(13.5, 5.0))
+plot_frost("C", pH=7.0, predominant_only=False, label="all", ax=axes[0], title="label='all'")
+plot_frost("C", pH=7.0, predominant_only=False, ax=axes[1], title="label='predominant' (default)")
+plt.show()
+
+# %% [markdown]
+# **Predominant and stable are different words for different things**, and
+# the open grey markers are where the difference shows.
+#
+# *Predominant* is a comparison **within** one oxidation state — which of the
+# three carbonate forms, decided entirely by pH. *Stable* is a comparison
+# **across** states — whether that carbonate survives at all, decided by the
+# convex hull. An open grey square is a species that is neither: a real form
+# of its state that some other form of the same state outcompetes at this pH.
+# It is not falling apart, so it is not drawn in red.
+#
+# The distinction has teeth. Ask for the acetate/graphite pair directly:
+
+# %%
+by_name = {point.backend: point for point in everything.points}
+for name in ("Graphite", "Acetate"):
+    point = by_name[name]
+    print(f"{name:10s} volt equivalent {point.volt_equivalent:+.3f} V, "
+          f"ΔG {point.gibbs:+7.1f} kJ per mol C")
+
+difference = by_name["Acetate"].gibbs - by_name["Graphite"].gibbs
+print(f"\nacetate minus graphite: {difference:+.1f} kJ per mol C")
+
+# %% [markdown]
+# That difference is a real free energy and it is **not** a potential. Both
+# species are C(0), so converting one into the other transfers *no* electrons,
+# and `E = ΔG/nF` would divide by zero. The library refuses rather than
+# printing something:
+
+# %%
+try:
+    everything.slope("Acetate", "Graphite")
+except ValueError as exc:
+    print("refused:", exc)
+
+# %% [markdown]
+# So: distances **across** the diagram are potentials, distances **up and
+# down within one oxidation state** are free energies, and the two are not
+# interchangeable. That is worth saying out loud, because a Frost diagram
+# invites you to read every gap as a voltage.
+
+# %% [markdown]
 # ## Where each form lives
 
 # %%

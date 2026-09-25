@@ -134,14 +134,50 @@ class FrostDiagram:
 
         Everything else is above a line joining two of these and will, given
         a mechanism, disproportionate into them.
+
+        **Computed over the predominant forms, one per oxidation state, not
+        over every point.** Only one form of a state exists at a given pH, so
+        a hull across all of them mixes two questions and gives a wrong
+        answer to both: with every arsenate included it returned H3AsO4 as
+        "stable" at pH 7 and drew a vertical hull segment down its own
+        oxidation state, which is an acid dissociation drawn as a redox step.
+        On the usual diagram, where there is one form per state already, this
+        changes nothing.
         """
-        ordered = sorted(self.points, key=lambda p: (p.oxidation_state, p.volt_equivalent))
+        ordered = sorted(self.predominant, key=lambda p: (p.oxidation_state, p.volt_equivalent))
         hull: list = []
         for point in ordered:
             while len(hull) >= 2 and _turn(hull[-2], hull[-1], point) <= 0:
                 hull.pop()
             hull.append(point)
         return hull
+
+    @property
+    def predominant(self) -> list:
+        """One point per oxidation state: the form that actually exists.
+
+        The lowest free energy among the forms of that state at the working
+        pH, which is the same rule the Latimer ladder uses to choose a rung.
+        On a diagram built with ``predominant_only=True`` this is every point;
+        on one built with it False it is the subset worth drawing a chain
+        through.
+
+        Distinct from :attr:`stable`, and the two are easy to confuse.
+        *Predominant* is a comparison within one oxidation state -- which
+        arsenate, of the four -- and is decided by pH. *Stable* is a
+        comparison across states -- whether that arsenate survives at all --
+        and is decided by the convex hull.
+        """
+        best: dict[float, FrostPoint] = {}
+        for point in self.points:
+            state = round(point.oxidation_state, 6)
+            match = next(
+                (key for key in best if abs(key - state) < STATE_TOLERANCE),
+                state,
+            )
+            if match not in best or point.gibbs < best[match].gibbs:
+                best[match] = point
+        return sorted(best.values(), key=lambda p: p.oxidation_state)
 
     def slope(self, oxidized: str, reduced: str) -> float:
         """The couple potential between two points, which is the slope.
@@ -163,11 +199,17 @@ class FrostDiagram:
         neighbours: those are where the element actually ends up. The
         adjacent-pair test drawn on the Latimer diagram is the same test
         applied locally, so anything it flags appears here too.
+
+        Only the **predominant** form of each state is considered. A minority
+        acid form is not disproportionating -- it is simply not the form that
+        dominates at this pH, and reporting "H3AsO4 -> HAsO4(2-)" as a
+        disproportionation would be calling an acid dissociation a redox
+        reaction.
         """
         hull = self.stable
         on_hull = {id(point) for point in hull}
         found = []
-        for point in self.points:
+        for point in self.predominant:
             if id(point) in on_hull:
                 continue
             segment = _bracketing_segment(hull, point.oxidation_state)
@@ -201,6 +243,81 @@ class FrostDiagram:
                 "on hull": [any(p is q for q in self.stable) for p in self.points],
             }
         )
+
+
+def _selected(diagram: FrostDiagram, which: str) -> list:
+    """``diagram.points`` or ``diagram.predominant``, by name."""
+    if which in ("all", None):
+        return list(diagram.points)
+    if which in ("predominant", "prominent"):
+        return list(diagram.predominant)
+    raise ValueError(f"{which!r} is not a selection; use 'all' or 'predominant'")
+
+
+def _draw_labels(ax, shown, labelled, values) -> None:
+    """Name the points, nudging labels apart where forms pile up.
+
+    Species of one oxidation state sit at the same x and are separated only
+    by their energies, which for an acid and its conjugate base can be almost
+    nothing -- H2AsO4- and HAsO4(2-) differ by 7 mV at pH 7, and their labels
+    land squarely on top of each other. Within such a column the labels are
+    staggered vertically by :func:`~microbial_thermo.figures.tower._stagger`,
+    moved to the right so they clear the hull line, and given a leader back
+    to the marker.
+
+    A lone point at its oxidation state keeps the centred label above it, so
+    the ordinary one-form-per-state diagram looks exactly as it did.
+    """
+    from .tower import _stagger
+
+    span = float(values.max() - values.min()) or 1.0
+    columns: dict[float, list] = {}
+    for point in shown:
+        columns.setdefault(round(point.oxidation_state, 6), []).append(point)
+
+    spread = max(columns) - min(columns) if len(columns) > 1 else 1.0
+    pad = spread * 0.04
+
+    for state, members in columns.items():
+        members = sorted(members, key=lambda p: p.volt_equivalent)
+        if not any(id(point) in labelled for point in members):
+            continue
+
+        if len(members) == 1:
+            point = members[0]
+            ax.annotate(
+                pretty(point.backend),
+                xy=(state, point.volt_equivalent),
+                xytext=(0, 9),
+                textcoords="offset points",
+                ha="center",
+                fontsize=SIZES["annotation"],
+                color=PALETTE["annotation"],
+            )
+            continue
+
+        heights = _stagger([p.volt_equivalent for p in members], span * 0.08)
+        for point, height in zip(members, heights, strict=True):
+            if id(point) not in labelled:
+                continue
+            ax.annotate(
+                pretty(point.backend),
+                xy=(state, point.volt_equivalent),
+                xytext=(state + pad, height),
+                textcoords="data",
+                ha="left",
+                va="center",
+                fontsize=SIZES["annotation"],
+                color=PALETTE["annotation"],
+                arrowprops={
+                    "arrowstyle": "-",
+                    "color": PALETTE["muted"],
+                    "linewidth": 0.6,
+                    "shrinkA": 1.0,
+                    "shrinkB": 2.0,
+                },
+                zorder=6,
+            )
 
 
 def _turn(a, b, c) -> float:
@@ -300,10 +417,27 @@ def plot_frost(
     title: str | None = None,
     annotate_slopes: bool = False,
     label_offset: float = 0.12,
+    show: str = "all",
+    label: str = "predominant",
     ax=None,
     **kwargs,
 ):
-    """Draw the diagram. Returns ``(figure, diagram)``."""
+    """Draw the diagram. Returns ``(figure, diagram)``.
+
+    ``show`` and ``label`` each take ``"all"`` or ``"predominant"``, and
+    decide what is *drawn* from whatever the diagram holds. They matter only
+    for a diagram built with ``predominant_only=False``, which keeps every
+    form of every oxidation state -- all four arsenates, graphite and acetate
+    both at C(0) -- and can therefore stack several points at one x.
+
+    * ``show="predominant"`` draws only the form that exists at this pH. The
+      same picture as ``predominant_only=True``, without rebuilding.
+    * ``label="all"`` names every point drawn. Honest and crowded.
+    * ``label="predominant"`` names one per oxidation state and leaves the
+      rest as markers, which is the readable default.
+
+    ``"prominent"`` is accepted as a spelling of ``"predominant"``.
+    """
     import matplotlib.pyplot as plt
 
     if diagram is None:
@@ -314,35 +448,58 @@ def plot_frost(
     else:
         figure = ax.figure
 
-    states = np.array(diagram.states, dtype=float)
-    values = np.array(diagram.volt_equivalents, dtype=float)
+    shown = _selected(diagram, show)
+    labelled = {id(point) for point in _selected(diagram, label)} & {id(point) for point in shown}
 
-    hull = diagram.stable
-    hull_states = np.array([p.oxidation_state for p in hull], dtype=float)
-    hull_values = np.array([p.volt_equivalent for p in hull], dtype=float)
+    values = np.array([point.volt_equivalent for point in shown], dtype=float)
+
+    hull = [point for point in diagram.stable if id(point) in {id(s) for s in shown}]
     on_hull = {id(p) for p in hull}
 
-    # The chain through every point, then the hull over the top of it, so an
-    # unstable species reads as a detour above a shortcut.
+    # The dashed chain runs through the *predominant* forms only. Running it
+    # through every point instead makes it double back vertically wherever an
+    # element has several forms of one oxidation state, which reads as a
+    # redox step and is not one.
+    chain = [point for point in diagram.predominant if id(point) in {id(s) for s in shown}]
     ax.plot(
-        states,
-        values,
+        [point.oxidation_state for point in chain],
+        [point.volt_equivalent for point in chain],
         color=PALETTE["muted"],
         linewidth=1.0,
         linestyle="--",
         zorder=2,
     )
     ax.plot(
-        hull_states,
-        hull_values,
+        [point.oxidation_state for point in hull],
+        [point.volt_equivalent for point in hull],
         color=PALETTE["reduction"],
         linewidth=2.0,
         zorder=3,
         label="stable forms",
     )
 
-    for point in diagram.points:
+    # Three classes, and the middle one is the reason this needs saying: a
+    # minority form of an oxidation state is not unstable, it is just not the
+    # form that dominates at this pH. Drawing it as "off the hull" -- which an
+    # earlier version did -- says something false about it.
+    predominant = {id(point) for point in diagram.predominant}
+    seen_minor = seen_unstable = False
+    for point in shown:
+        if id(point) not in predominant:
+            seen_minor = True
+            ax.plot(
+                [point.oxidation_state],
+                [point.volt_equivalent],
+                marker="s",
+                markersize=5,
+                markerfacecolor="white",
+                markeredgecolor=PALETTE["muted"],
+                markeredgewidth=1.2,
+                zorder=4,
+            )
+            continue
         stable = id(point) in on_hull
+        seen_unstable = seen_unstable or not stable
         ax.plot(
             [point.oxidation_state],
             [point.volt_equivalent],
@@ -351,15 +508,34 @@ def plot_frost(
             color=PALETTE["reduction"] if stable else PALETTE["endergonic"],
             zorder=5,
         )
-        ax.annotate(
-            pretty(point.backend),
-            xy=(point.oxidation_state, point.volt_equivalent),
-            xytext=(0, 9 if stable else -16),
-            textcoords="offset points",
-            ha="center",
-            fontsize=SIZES["annotation"],
-            color=PALETTE["annotation"],
+    if seen_minor:
+        ax.plot(
+            [],
+            [],
+            marker="s",
+            linestyle="none",
+            markersize=5,
+            markerfacecolor="white",
+            markeredgecolor=PALETTE["muted"],
+            markeredgewidth=1.2,
+            label="other forms of the same state",
         )
+        if seen_unstable:
+            ax.plot(
+                [],
+                [],
+                marker="s",
+                linestyle="none",
+                markersize=6,
+                color=PALETTE["endergonic"],
+                label="disproportionates",
+            )
+        # Only drawn when there is something to explain, and only for the
+        # classes actually present. A diagram with one form per state needs no
+        # key and did not have one before.
+        ax.legend(fontsize=SIZES["annotation"] - 1, frameon=False, loc="best")
+
+    _draw_labels(ax, shown, labelled, values)
 
     if annotate_slopes:
         for low, high in zip(hull, hull[1:], strict=False):

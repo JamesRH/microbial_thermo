@@ -349,6 +349,22 @@ the real exported script in node and compares: volt equivalents and Latimer
 potentials to 1e-9, hulls identical, Eh-pH fields cell by cell. It skips where
 node is absent rather than pretending to pass.
 
+**Predominant is not stable, and a Frost hull must be built over the
+predominant forms only.** With `predominant_only=False` the first version ran
+the convex hull over every point, which put H3AsO4 on the hull at pH 7 and drew
+a vertical hull segment down the As(V) column -- an acid dissociation rendered
+as a redox step. Only one form of a state exists at a given pH, so the hull
+compares one per state; the rest are minority forms, drawn as open grey markers
+rather than red ones, and never reported as disproportionating. On the ordinary
+one-form-per-state diagram nothing changes, which is why the bug survived until
+someone asked to see every form at once.
+
+**Nothing at the same oxidation state can have a potential between it and its
+sibling.** No electrons move, so `E = dG/nF` divides by zero; `slope()` and
+`potential()` both refuse. The gap is a free energy in kJ/mol -- for an acid
+and its conjugate base, the protonation energy. Worth saying on a figure that
+invites every gap to be read as a voltage.
+
 **Check a claim about an ecosystem against the table before writing it.** The
 nitrogen notebook first said DNRA was "the deeper fall" on the Frost curve. It
 is not: at pH 7 N2 is the minimum, denitrification's slope is +0.729 V against

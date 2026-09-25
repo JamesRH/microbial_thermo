@@ -999,6 +999,38 @@ disproportionates, and the **lowest** point is where the element ends up. The
 stable forms are the lower convex hull, and everything off it is reported with
 the reaction it would run and the energy it would release.
 
+**Showing every form of a state.** By default each oxidation state
+contributes one point — the form with the lowest energy at the working pH,
+which is the one that exists. `predominant_only=False` keeps them all, and
+then several species share an x: graphite and acetate at C(0), all four
+arsenates at As(V).
+
+```python
+plot_frost("As", pH=7.0, predominant_only=False)              # show all, name the predominant
+plot_frost("As", pH=7.0, predominant_only=False, label="all") # name every form
+plot_frost("As", pH=7.0, predominant_only=False, show="predominant")
+```
+
+`show=` decides which points get a marker and `label=` which get named; both
+take `"all"` or `"predominant"`, independently. Labels in a crowded column are
+staggered with leader lines back to their markers, because H₂AsO₄⁻ and
+HAsO₄²⁻ differ by a few millivolts at pH 7 and print on top of each other
+otherwise.
+
+**Predominant is not the same as stable**, and the diagram distinguishes them.
+Predominant is a comparison *within* one oxidation state — which arsenate,
+decided by pH. Stable is a comparison *across* states — whether that arsenate
+survives at all, decided by the hull. A minority acid form is drawn as an open
+grey marker rather than a red one: it is not falling apart, it is simply
+outcompeted at its own oxidation state. It is never reported as
+disproportionating, and the hull is computed over the predominant forms only —
+without that, H₃AsO₄ came out "stable" at pH 7 and the hull ran vertically down
+the As(V) column, drawing an acid dissociation as a redox step.
+
+Distances *across* the diagram are potentials; distances *up and down within*
+one oxidation state are free energies. `slope()` refuses a same-state pair
+rather than dividing by n = 0.
+
 **The convention for negative oxidation states**, which is where this stalled,
 turns out not to be a convention at all. Write each species' formation from the
 element, `E + b H₂O + c H⁺ + (−z) e⁻ → S`, take that reaction's free energy per

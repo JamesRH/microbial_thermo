@@ -264,6 +264,182 @@ class TestConditions(unittest.TestCase):
         self.assertEqual(frost.most_stable.backend, "As(OH)3(aq)")
 
 
+class TestEveryFormOfEveryState(unittest.TestCase):
+    """``predominant_only=False`` stacks several species at one oxidation
+    state, which is where the difference between *predominant* and *stable*
+    stops being academic.
+
+    Predominant is a comparison within one state -- which of the four
+    arsenates, decided by pH. Stable is a comparison across states -- whether
+    that arsenate survives at all, decided by the convex hull. An earlier
+    version ran the hull over every point, which reported H3AsO4 as stable at
+    pH 7 and drew a vertical hull segment down the As(V) column: an acid
+    dissociation drawn as a redox step.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        warnings.simplefilter("ignore")
+        cls.full = frost_diagram("As", pH=7.0, activity=1e-6, predominant_only=False)
+        cls.reduced = frost_diagram("As", pH=7.0, activity=1e-6)
+
+    def test_one_predominant_form_per_state(self):
+        states = [p.oxidation_state for p in self.full.predominant]
+        self.assertEqual(len(states), len(set(states)))
+
+    def test_the_predominant_form_is_the_lowest_of_its_state(self):
+        for point in self.full.predominant:
+            siblings = [
+                other
+                for other in self.full.points
+                if abs(other.oxidation_state - point.oxidation_state) < 1e-9
+            ]
+            self.assertEqual(point.gibbs, min(s.gibbs for s in siblings))
+
+    def test_it_agrees_with_the_diagram_built_predominant_only(self):
+        self.assertEqual(
+            [p.backend for p in self.full.predominant],
+            [p.backend for p in self.reduced.points],
+        )
+
+    def test_the_hull_never_holds_two_forms_of_one_state(self):
+        states = [p.oxidation_state for p in self.full.stable]
+        self.assertEqual(len(states), len(set(states)))
+
+    def test_a_minority_acid_form_is_not_called_stable(self):
+        # H3AsO4 is the As(V) form at pH 0; at pH 7 it is a trace species that
+        # sits above HAsO4(2-) at the same oxidation state.
+        self.assertIn("H3AsO4(aq)", [p.backend for p in self.full.points])
+        self.assertNotIn("H3AsO4(aq)", [p.backend for p in self.full.stable])
+
+    def test_a_minority_acid_form_is_not_called_disproportionating(self):
+        """It is not falling apart; it is just not the dominant acid form."""
+        reported = {event.species for event in self.full.disproportionation()}
+        minority = {p.backend for p in self.full.points} - {
+            p.backend for p in self.full.predominant
+        }
+        self.assertTrue(minority)
+        self.assertEqual(reported & minority, set())
+
+    def test_the_verdicts_do_not_depend_on_how_the_diagram_was_built(self):
+        for element in ("As", "S", "C", "Mn"):
+            with self.subTest(element=element):
+                full = frost_diagram(element, pH=7.0, predominant_only=False)
+                reduced = frost_diagram(element, pH=7.0)
+                self.assertEqual(
+                    [p.backend for p in full.stable], [p.backend for p in reduced.stable]
+                )
+                self.assertEqual(
+                    [str(e) for e in full.disproportionation()],
+                    [str(e) for e in reduced.disproportionation()],
+                )
+
+
+class TestShowAndLabelOptions(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        warnings.simplefilter("ignore")
+        cls.diagram = frost_diagram("As", pH=7.0, activity=1e-6, predominant_only=False)
+
+    def texts(self, **kwargs):
+        import matplotlib.pyplot as plt
+
+        figure, _ = plot_frost("As", diagram=self.diagram, **kwargs)
+        try:
+            return {
+                text.get_text()
+                for text in figure.axes[0].texts
+                if text.get_text() and "most stable" not in text.get_text()
+            }
+        finally:
+            plt.close(figure)
+
+    def test_label_all_names_every_form(self):
+        labelled = self.texts(label="all")
+        self.assertIn("$H_3AsO_4$", labelled)
+        self.assertIn("$HAsO_4^{2-}$", labelled)
+
+    def test_label_predominant_names_one_per_state(self):
+        labelled = self.texts(label="predominant")
+        self.assertIn("$HAsO_4^{2-}$", labelled)
+        self.assertNotIn("$H_3AsO_4$", labelled)
+
+    def test_predominant_is_the_default(self):
+        self.assertEqual(self.texts(), self.texts(label="predominant"))
+
+    def test_prominent_is_accepted_as_a_spelling(self):
+        self.assertEqual(self.texts(label="prominent"), self.texts(label="predominant"))
+
+    def test_show_predominant_draws_fewer_markers(self):
+        import matplotlib.pyplot as plt
+
+        everything, _ = plot_frost("As", diagram=self.diagram, show="all")
+        fewer, _ = plot_frost("As", diagram=self.diagram, show="predominant")
+        try:
+            self.assertGreater(len(everything.axes[0].lines), len(fewer.axes[0].lines))
+        finally:
+            plt.close("all")
+
+    def test_show_predominant_matches_a_diagram_built_that_way(self):
+        """The cheap path: narrow at draw time rather than recomputing."""
+        import matplotlib.pyplot as plt
+
+        narrowed, _ = plot_frost("As", diagram=self.diagram, show="predominant")
+        built, _ = plot_frost("As", pH=7.0, activity=1e-6)
+        try:
+            self.assertEqual(
+                {t.get_text() for t in narrowed.axes[0].texts},
+                {t.get_text() for t in built.axes[0].texts},
+            )
+        finally:
+            plt.close("all")
+
+    def test_the_key_names_only_the_classes_present(self):
+        """Arsenic has minority forms and nothing disproportionating.
+
+        An earlier version always drew a red "disproportionates" swatch, so
+        the arsenic figure carried a key to a marker that was not on it.
+        """
+        import matplotlib.pyplot as plt
+
+        figure, _ = plot_frost("As", diagram=self.diagram, show="all")
+        try:
+            entries = [text.get_text() for text in figure.axes[0].get_legend().get_texts()]
+            self.assertIn("other forms of the same state", entries)
+            self.assertNotIn("disproportionates", entries)
+        finally:
+            plt.close(figure)
+
+    def test_the_key_names_disproportionation_where_it_happens(self):
+        import matplotlib.pyplot as plt
+
+        crowded = frost_diagram("S", pH=7.0, activity=1e-5, predominant_only=False)
+        figure, _ = plot_frost("S", diagram=crowded, show="all")
+        try:
+            entries = [text.get_text() for text in figure.axes[0].get_legend().get_texts()]
+            self.assertIn("disproportionates", entries)
+        finally:
+            plt.close(figure)
+
+    def test_an_unknown_selection_is_refused(self):
+        import matplotlib.pyplot as plt
+
+        with self.assertRaises(ValueError):
+            plot_frost("As", diagram=self.diagram, show="dominant-ish")
+        plt.close("all")
+
+    def test_a_key_appears_only_when_there_is_something_to_explain(self):
+        import matplotlib.pyplot as plt
+
+        crowded, _ = plot_frost("As", diagram=self.diagram, show="all")
+        plain, _ = plot_frost("As", pH=7.0, activity=1e-6)
+        try:
+            self.assertIsNotNone(crowded.axes[0].get_legend())
+            self.assertIsNone(plain.axes[0].get_legend())
+        finally:
+            plt.close("all")
+
+
 class TestFigure(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
