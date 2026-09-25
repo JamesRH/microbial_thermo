@@ -159,6 +159,45 @@ three differ in proton count. When checking a couple against a published
 number, check the *standard-state* form first -- that convention is
 unambiguous -- and only then argue about pH 7.
 
+**A predominance diagram must account for every element in a species.**
+The first Pourbaix implementation formed species from element + H2O + H+ + e-
+only. Siderite's carbon and pyrite's sulfur were unaccounted, their energies
+came out spuriously low, and the iron diagram was made entirely of those two.
+Auxiliary basis species at fixed activity fix it, and an unaccounted element is
+now refused. The corollary is worth knowing: a pyrite field on an iron diagram
+exists only because sulfide is present at some stated concentration, so that
+concentration is an input, not a detail.
+
+**Dilution shrinks the solid fields on a Pourbaix diagram, not grows them.**
+Lower dissolved activity means further from saturation, so the dissolved form
+wins over more of the space. "The solid is at unit activity so dilution favours
+it" is tempting and wrong; I asserted it backwards first.
+
+**The water stability lines want O2(g) and H2(g) at 1 bar.** Against O2(aq) at
+unit activity the upper line sits 43 mV above the published 1.229 V -- a
+different reference state, not an error, but the wrong one to draw.
+
+**A Pourbaix element reference cancels.** Every species picks up the same
+-G(reference)/atoms per mole of element, so the choice does not move any
+boundary. That is lucky, because monatomic N is in no database and neither
+uranium nor chromium metal is in ours.
+
+**`mean_oxidation_state` works only when every OTHER element is conventional.**
+Not "oxides are fine": carbon in calcite resolves, calcium in the same mineral
+does not, because carbon has no conventional state. Metal sulfides are refused
+outright -- sulfur is -2 in sulfide and +6 in sulfate. It refuses rather than
+guessing, which is correct; pymatgen is the cross-check for exactly these.
+
+**pymatgen's `oxi_state_guesses` returns ranked candidates, not an answer**,
+and rounds to four decimals. For pyrite its first guess is Fe(III)/S(-1.5) and
+the correct Fe(II)/S(-I) is second. Assert membership in the candidate list,
+never equality with the first, and compare with a 1e-3 tolerance or an exact
+Fraction(8, 3) will not match 2.6667.
+
+**Elemental Mn evaluates to -2.5 kJ/mol, not zero.** Every other elemental form
+lands within 0.004 of zero through the GWB route. It is a database problem, and
+any manganese Frost or Latimer diagram inherits the offset.
+
 **Measure matplotlib text extents with the Agg renderer**, even when exporting
 SVG; the SVG backend's metrics differ. And size equations by the *laid-out
 extent*, not the sum of token widths — the latter omits inter-token gaps and lets
@@ -252,3 +291,41 @@ Two of the remaining entries deserve reading before touching anything nearby:
   78 of 103 shared species -- and disagree badly on the rest, methionine by
   181 kJ/mol. Convention-matched does not mean number-matched. Imports are
   consulted LAST for exactly this reason; do not promote one.
+
+---
+
+## Where this was left (24 September 2026)
+
+Everything below is committed and pushed; `main` and `origin/main` agree.
+Full suite **569 tests, ~180 s, all passing**.
+
+**Done this run:** Tier 1 complete except hydroxylamine (#2, still blocked --
+it is in no pyGCC database and not in OBIGT, and the NBS tables are not
+machine-readable from here). Then #21 (minimal-integer balancing opt-in),
+#20 (speq23 base + supcrtbl supplement + OBIGT import), #22 (external data
+mechanism), #27 (oxidation-state cross-check), #14 (wider minerals), #13
+(Pourbaix).
+
+**Next, in this order**, as agreed with James:
+
+1. **#25, Frost-Ebsworth diagrams.** The feasibility is already checked --
+   arsenic volt-equivalents compute and recompute with pH and temperature --
+   but **the convention for negative oxidation states is NOT settled**. A
+   quick pass produced an AsH3 value I do not trust. Derive it properly
+   before writing the figure; do not pattern-match from the positive states.
+   Elemental forms are now in the registry, which was the other prerequisite.
+2. **#24, Latimer diagrams** -- implied by #26 and cheaper than Frost.
+3. **#26, interactive versions** of Latimer, Frost and Pourbaix, on the
+   pattern item #10 established: precompute the expensive axes, apply the
+   cheap ones in closed form, ipywidgets plus standalone HTML.
+4. **#28, per-element notebooks** -- James asked for one each for C, N, S, Fe
+   and the other major redox-active biologically interacting metals. Mn, As
+   and Se all have real stories now; Se is the best new one, because
+   Se(VI) -> Se(IV) -> Se(0) ends in an insoluble element and arsenic has no
+   equivalent step, which is exactly why arsenic is the harder remediation
+   problem.
+
+**Numbering is in `README.md` and is stable** -- but only because the tier
+lists are plain bullets with literal `#N` labels. They were an ordered list
+until this run, which meant Markdown renumbered them and the rendered README
+showed different numbers than the file. Do not turn them back.

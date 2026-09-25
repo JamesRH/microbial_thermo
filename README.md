@@ -1259,6 +1259,16 @@ measurements behind that decision and the survey of what else is out there.
     precomputed grid. **This is the point of building them rather than
     borrowing**: a diagram that recomputes at the working pH and temperature
     is something no textbook version can do.
+- **#28 · Per-element notebooks** — one each for the elements a
+  biogeochemistry course actually teaches: **C, N, S, Fe**, then the other
+  major redox-active biologically interacting metals and metalloids — **Mn,
+  As, Se**, with Cr and U as shorter cases. Each walks the same path: the
+  element's redox ladder, its Latimer and Frost diagrams, its Eh–pH diagram,
+  and the metabolisms that live on each step. Selenium is the best new story,
+  because Se(VI) → Se(IV) → Se(0) ends in an insoluble element and arsenic has
+  no equivalent step — which is exactly why arsenic is the harder remediation
+  problem. Waits on #24, #25 and #26.
+
 ---
 
 ## Examples
