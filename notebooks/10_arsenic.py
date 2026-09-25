@@ -196,6 +196,50 @@ for name in ("H3AsO4(aq)", "H2AsO4-", "HAsO4--", "As(OH)3(aq)", "H2AsO3-"):
 # the diagrams above.
 
 # %% [markdown]
+# ## Under sliders, with the controls
+#
+# Arsenic is the element the `show` and `label` controls were built for: six
+# species across two oxidation states, and which one is which depends entirely
+# on the pH you are standing at.
+#
+# `panels=` picks what to draw. Latimer and Frost together are the light pair,
+# since neither needs an expensive axis:
+
+# %%
+from microbial_thermo.figures import interactive_element
+
+interactive_element(
+    "As",
+    panels=("latimer", "frost"),
+    initial_ph=7.0,
+    initial_log_activity=-6.0,
+    label="all",
+)
+
+# %% [markdown]
+# Drag **pH** from 0 to 14 and watch the ladder relabel itself: H₃AsO₄ →
+# H₂AsO₄⁻ → HAsO₄²⁻ → AsO₄³⁻ on the top rung, and As(OH)₃ → H₂AsO₃⁻ below it.
+# The open grey markers are the forms that lost, and they swap places with the
+# filled ones as the acid–base equilibria shift.
+#
+# Set **label** to *predominant only* and the figure goes quiet again — same
+# points, same energies, four fewer names.
+
+# %% [markdown]
+# ### A standalone copy
+#
+# The exported page carries the decomposition, not the drawn figure, and
+# rebuilds all three diagrams in JavaScript — including the convex hull. It
+# needs no kernel and no thermodynamic data of its own, so it can be handed
+# to a student or put on a course page.
+
+# %%
+from microbial_thermo.figures import plot_interactive_element
+
+plot_interactive_element("As", save_html="arsenic_interactive")
+print("wrote arsenic_interactive.html")
+
+# %% [markdown]
 # ## Who lives on each step
 
 # %%

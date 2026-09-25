@@ -1071,9 +1071,22 @@ interactive_element("Mn")                              # ipywidgets, live kernel
 plot_interactive_element("As", save_html="figures_out/as")   # standalone page
 ```
 
+```python
+interactive_element("As", panels=("latimer", "frost"), label="all")
+```
+
 Latimer, Frost and Eh–pH on one canvas, with temperature, pH and dissolved
 activity on sliders. The pH slider is drawn on the Eh–pH panel as a vertical
 line, so the other two panels are visibly a slice through it.
+
+The Frost panel gets **two dropdowns of its own** — `show` and `label`, each
+`"all"` or `"predominant"` — so the minority forms of an oxidation state can
+be brought in and out while the sliders move. Arsenic is the case they were
+built for: six species across two oxidation states, swapping places as the pH
+changes. `panels=` selects which of `"latimer"`, `"frost"` and `"pourbaix"` to
+draw; the Latimer–Frost pair needs no expensive axis and is the lightest
+useful widget. Both controls are in the exported HTML too, as `<select>`
+elements wired into the same redraw.
 
 **Only temperature costs anything.** A pH change is already a coefficient on
 the decomposition and an activity change is $RT\ln(a_2/a_1)$ per mole of the

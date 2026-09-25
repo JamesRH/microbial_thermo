@@ -210,6 +210,38 @@ plt.show()
 # library's own couples.
 
 # %% [markdown]
+# ## All of it at once, under sliders
+#
+# The three diagrams are three views of one decomposition, so they can share a
+# canvas and a set of controls. Temperature, pH and dissolved activity are
+# sliders; the Frost panel gets two dropdowns of its own for **show** and
+# **label**, the options from the section above.
+#
+# The pH slider is drawn on the Eh–pH panel as a vertical line, which makes
+# the relationship explicit: the Latimer and Frost panels are a *slice* along
+# that line.
+#
+# Only temperature costs anything — it is the one axis that needs the backend.
+# pH and activity are closed form, so dragging them is arithmetic on numbers
+# already in memory.
+
+# %%
+from microbial_thermo.figures import interactive_element
+
+interactive_element("C", initial_ph=7.0, initial_log_activity=-3.0)
+
+# %% [markdown]
+# Things worth trying on it:
+#
+# - Drag **pH** from 0 to 14 and watch the C(+IV) rung change species —
+#   CO₂(aq), then bicarbonate, then carbonate — and the volt equivalents move
+#   with it.
+# - Set **show** to *all forms* and **label** to *all forms* to see acetate
+#   appear beside graphite at C(0).
+# - Drag **activity** down and watch which species leave the hull. Graphite is
+#   a solid and does not move; everything dissolved does.
+
+# %% [markdown]
 # ## Who lives on each step
 
 # %%

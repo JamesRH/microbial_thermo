@@ -254,7 +254,7 @@ def _selected(diagram: FrostDiagram, which: str) -> list:
     raise ValueError(f"{which!r} is not a selection; use 'all' or 'predominant'")
 
 
-def _draw_labels(ax, shown, labelled, values) -> None:
+def _draw_labels(ax, shown, labelled, values) -> list:
     """Name the points, nudging labels apart where forms pile up.
 
     Species of one oxidation state sit at the same x and are separated only
@@ -267,6 +267,9 @@ def _draw_labels(ax, shown, labelled, values) -> None:
 
     A lone point at its oxidation state keeps the centred label above it, so
     the ordinary one-form-per-state diagram looks exactly as it did.
+
+    Returns the oxidation states that needed staggering, so the caller can
+    widen the axis to fit labels that autoscale cannot see.
     """
     from .tower import _stagger
 
@@ -278,6 +281,7 @@ def _draw_labels(ax, shown, labelled, values) -> None:
     spread = max(columns) - min(columns) if len(columns) > 1 else 1.0
     pad = spread * 0.04
 
+    crowded = []
     for state, members in columns.items():
         members = sorted(members, key=lambda p: p.volt_equivalent)
         if not any(id(point) in labelled for point in members):
@@ -296,6 +300,7 @@ def _draw_labels(ax, shown, labelled, values) -> None:
             )
             continue
 
+        crowded.append(state)
         heights = _stagger([p.volt_equivalent for p in members], span * 0.08)
         for point, height in zip(members, heights, strict=True):
             if id(point) not in labelled:
@@ -318,6 +323,7 @@ def _draw_labels(ax, shown, labelled, values) -> None:
                 },
                 zorder=6,
             )
+    return crowded
 
 
 def _turn(a, b, c) -> float:
@@ -443,6 +449,11 @@ def plot_frost(
     if diagram is None:
         diagram = frost_diagram(element, **kwargs)
 
+    # Whether this call created the figure, which decides who owns the
+    # figure-level furniture -- the layout pass and the footnote. "Has one
+    # axis" was the old proxy for it and is wrong: a single-panel interactive
+    # figure has one axis and is not ours.
+    owns_figure = ax is None
     if ax is None:
         figure, ax = plt.subplots(figsize=figsize)
     else:
@@ -535,7 +546,7 @@ def plot_frost(
         # key and did not have one before.
         ax.legend(fontsize=SIZES["annotation"] - 1, frameon=False, loc="best")
 
-    _draw_labels(ax, shown, labelled, values)
+    crowded = _draw_labels(ax, shown, labelled, values)
 
     if annotate_slopes:
         for low, high in zip(hull, hull[1:], strict=False):
@@ -575,8 +586,16 @@ def plot_frost(
 
     ax.set_xlabel(f"oxidation state of {element}", fontsize=SIZES["potential"])
     ax.set_ylabel("volt equivalent  $N\\,E°$  (V)", fontsize=SIZES["potential"])
-    ax.set_xticks(sorted({round(s, 3) for s in diagram.states}))
-    ax.set_xticklabels([_state_label(s) for s in sorted({round(s, 3) for s in diagram.states})])
+    ticks = sorted({round(point.oxidation_state, 3) for point in shown})
+    ax.set_xticks(ticks)
+    ax.set_xticklabels([_state_label(s) for s in ticks])
+
+    # Labels in a crowded column sit to the right of their marker, in text
+    # that autoscale cannot see, so the axis has to make room for them by
+    # hand -- otherwise the rightmost formula runs off the figure.
+    spread = (max(ticks) - min(ticks)) or 1.0
+    right = 0.42 if crowded and max(crowded) >= max(ticks) - 1e-9 else 0.08
+    ax.set_xlim(min(ticks) - spread * 0.1, max(ticks) + spread * right)
 
     span = float(values.max() - values.min()) or 1.0
     ax.set_ylim(values.min() - label_offset * span - 0.25, values.max() + label_offset * span + 0.2)
@@ -592,7 +611,6 @@ def plot_frost(
         title = f"{element} — Frost-Ebsworth diagram\n{subtitle}"
     ax.set_title(title, fontsize=SIZES["title"], pad=10)
 
-    owns_figure = len(figure.axes) == 1
     if not diagram.reference_is_element and owns_figure:
         figure.text(
             0.5,

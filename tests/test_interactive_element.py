@@ -31,6 +31,7 @@ from microbial_thermo.figures.basis import element_grid, element_series
 from microbial_thermo.figures.frost import frost_diagram
 from microbial_thermo.figures.interactive_element import (
     ELEMENT_DIV_ID,
+    PANELS,
     _figure,
     _slider_script,
     plot_interactive_element,
@@ -209,6 +210,152 @@ class TestTheExportedPageAgrees(unittest.TestCase):
     def test_the_eh_ph_field_agrees(self):
         field = pourbaix_field("Mn", series=self.series, points=60, eh_range=(-1.0, 1.4))
         self.assertEqual(field.at(self.js["midPh"], self.js["midEh"]), self.js["mid"])
+
+
+class TestPanelSelection(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        warnings.simplefilter("ignore")
+        cls.grid = element_grid("As", temperatures=(25.0,))
+
+    def draw(self, **kwargs):
+        return _figure(self.grid, 25.0, 7.0, 1e-6, (11.0, 7.0), (-1.0, 1.4), 40, **kwargs)
+
+    def test_all_three_by_default(self):
+        import matplotlib.pyplot as plt
+
+        figure = self.draw()
+        try:
+            self.assertEqual(len(figure.axes), 3)
+        finally:
+            plt.close(figure)
+
+    def test_the_cheap_pair_can_be_asked_for_alone(self):
+        """Latimer and Frost need no expensive axis, so they are the light widget."""
+        import matplotlib.pyplot as plt
+
+        figure = self.draw(panels=("latimer", "frost"))
+        try:
+            self.assertEqual(len(figure.axes), 2)
+            titles = " ".join(ax.get_title() for ax in figure.axes)
+            self.assertIn("Latimer", titles)
+            self.assertIn("Frost", titles)
+            self.assertNotIn("predominance", titles)
+        finally:
+            plt.close(figure)
+
+    def test_one_panel_alone(self):
+        import matplotlib.pyplot as plt
+
+        for panel in PANELS:
+            with self.subTest(panel=panel):
+                figure = self.draw(panels=(panel,))
+                try:
+                    self.assertEqual(len(figure.axes), 1)
+                finally:
+                    plt.close(figure)
+
+    def test_the_order_is_fixed_whatever_order_is_asked_for(self):
+        import matplotlib.pyplot as plt
+
+        figure = self.draw(panels=("pourbaix", "latimer"))
+        try:
+            self.assertIn("Latimer", figure.axes[0].get_title())
+        finally:
+            plt.close(figure)
+
+    def test_an_unknown_panel_is_refused(self):
+        with self.assertRaises(ValueError) as caught:
+            self.draw(panels=("frost", "tower"))
+        self.assertIn("tower", str(caught.exception))
+
+    def test_no_panels_is_refused(self):
+        with self.assertRaises(ValueError):
+            self.draw(panels=())
+
+
+class TestTheFrostControls(unittest.TestCase):
+    """`show` and `label` reach the Frost panel of the interactive figure."""
+
+    @classmethod
+    def setUpClass(cls):
+        warnings.simplefilter("ignore")
+        cls.grid = element_grid("As", temperatures=(25.0,))
+
+    def names(self, **kwargs):
+        import matplotlib.pyplot as plt
+
+        figure = _figure(
+            self.grid, 25.0, 7.0, 1e-6, (11.0, 5.0), (-1.0, 1.4), 40, panels=("frost",), **kwargs
+        )
+        try:
+            return {
+                text.get_text()
+                for text in figure.axes[0].texts
+                if text.get_text() and "most stable" not in text.get_text()
+            }
+        finally:
+            plt.close(figure)
+
+    def test_the_panel_is_built_with_every_form(self):
+        """Otherwise there would be nothing for the control to show."""
+        self.assertIn("$H_3AsO_4$", self.names(label="all"))
+
+    def test_label_predominant_is_the_default(self):
+        self.assertEqual(self.names(), self.names(label="predominant"))
+        self.assertNotIn("$H_3AsO_4$", self.names())
+
+    def test_show_predominant_drops_the_minority_markers(self):
+        import matplotlib.pyplot as plt
+
+        everything = _figure(
+            self.grid, 25.0, 7.0, 1e-6, (11.0, 5.0), (-1.0, 1.4), 40, panels=("frost",)
+        )
+        fewer = _figure(
+            self.grid,
+            25.0,
+            7.0,
+            1e-6,
+            (11.0, 5.0),
+            (-1.0, 1.4),
+            40,
+            panels=("frost",),
+            show="predominant",
+        )
+        try:
+            self.assertGreater(len(everything.axes[0].lines), len(fewer.axes[0].lines))
+        finally:
+            plt.close("all")
+
+
+class TestTheExportedControls(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        warnings.simplefilter("ignore")
+        cls.grid = element_grid("As", temperatures=(25.0,))
+
+    def test_the_page_carries_both_dropdowns(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "as"
+            plot_interactive_element("As", grid=self.grid, save_html=path)
+            written = path.with_suffix(".html").read_text()
+        self.assertIn("createElement('select')", written)
+        self.assertIn("showControl", written)
+        self.assertIn("labelControl", written)
+        self.assertIn("predominant only", written)
+
+    def test_the_minority_trace_exists_to_be_toggled(self):
+        figure = plot_interactive_element("As", grid=self.grid)
+        self.assertEqual(figure.data[4].name, "other forms of the same state")
+        self.assertTrue(len(figure.data[4].x) > 0)
+
+    @unittest.skipIf(NODE is None, "node is not installed")
+    def test_the_page_agrees_on_which_forms_are_minority(self):
+        """The same split, computed twice in two languages."""
+        javascript = run_in_node(self.grid, 0, 7.0, -6.0)
+        series = self.grid.at(25.0, pH=7.0, activity=1e-6)
+        frost = frost_diagram("As", series=series, predominant_only=False)
+        self.assertEqual([p.backend for p in frost.predominant], javascript["species"])
 
 
 class TestFigures(unittest.TestCase):

@@ -206,6 +206,7 @@ def plot_pourbaix(
     labels = [field.species[i] for i in present]
 
     palette = plt.cm.tab20(np.linspace(0, 1, max(len(labels), 2)))
+    owns_figure = ax is None
     if ax is None:
         figure, ax = plt.subplots(figsize=figsize)
     else:
@@ -267,7 +268,7 @@ def plot_pourbaix(
         held = ", ".join(f"{_pretty(name)} {value:g}" for _, name, value in field.fixed)
         subtitle += f"\nheld fixed: {held}"
     ax.set_title(f"{element} predominance\n{subtitle}", fontsize=SIZES["title"], pad=10)
-    if len(figure.axes) == 1:
+    if owns_figure:
         figure.tight_layout()
 
     if save is not None:

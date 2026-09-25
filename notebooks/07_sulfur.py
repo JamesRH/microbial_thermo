@@ -160,6 +160,28 @@ plt.show()
 # curve in a different projection.
 
 # %% [markdown]
+# ## The same thing, as a slider
+#
+# Everything above is one figure with one control. Drag **activity** and watch
+# elemental sulfur leave the convex hull — the moment it does is the moment
+# disproportionation starts paying.
+
+# %%
+from microbial_thermo.figures import interactive_element
+
+interactive_element("S", initial_ph=7.0, initial_log_activity=-5.0)
+
+# %% [markdown]
+# Start at `log₁₀(activity) = 0` — the textbook diagram, sulfur on the hull —
+# and drag left. Somewhere below −1.8 the S⁰ marker turns red and the note at
+# the bottom of the figure names the reaction it would run.
+#
+# Then drag **pH** up: the disproportionation gets stronger, because the
+# products include protons and a rising pH pulls them away. That is the same
+# −59 mV per proton per electron that moves every other diagram in this
+# series, showing up as a metabolism becoming viable.
+
+# %% [markdown]
 # ## Who lives on each step
 
 # %%

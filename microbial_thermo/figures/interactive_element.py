@@ -58,32 +58,88 @@ SVG_CONFIG = {
 ELEMENT_DIV_ID = "element-plot"
 
 
-def _figure(grid, temperature_c, pH, activity, figsize, eh_range, points):
-    """Draw all three panels at one set of conditions."""
+#: The panels, in the order they are laid out. A subset may be asked for --
+#: ``("latimer", "frost")`` is the pair that needs no expensive axis at all.
+PANELS = ("latimer", "frost", "pourbaix")
+
+
+def _check_panels(panels):
+    unknown = [name for name in panels if name not in PANELS]
+    if unknown:
+        raise ValueError(f"unknown panel(s) {unknown}; choose from {list(PANELS)}")
+    if not panels:
+        raise ValueError("at least one panel is needed")
+    return tuple(name for name in PANELS if name in panels)
+
+
+def _figure(
+    grid,
+    temperature_c,
+    pH,
+    activity,
+    figsize,
+    eh_range,
+    points,
+    show="all",
+    label="predominant",
+    panels=PANELS,
+):
+    """Draw the requested panels at one set of conditions."""
     import matplotlib.pyplot as plt
 
+    panels = _check_panels(panels)
     series = grid.at(temperature_c, pH=pH, activity=activity)
     figure = plt.figure(figsize=figsize)
-    layout = figure.add_gridspec(2, 2, height_ratios=(1.0, 1.9), hspace=0.42, wspace=0.26)
 
-    ladder_ax = figure.add_subplot(layout[0, :])
-    frost_ax = figure.add_subplot(layout[1, 0])
-    field_ax = figure.add_subplot(layout[1, 1])
+    # The ladder is a wide strip and the other two are squares, so the layout
+    # depends on which were asked for.
+    lower = [name for name in panels if name != "latimer"]
+    if "latimer" in panels and lower:
+        layout = figure.add_gridspec(
+            2, len(lower), height_ratios=(1.0, 1.9), hspace=0.42, wspace=0.26
+        )
+        axes = {"latimer": figure.add_subplot(layout[0, :])}
+        for column, name in enumerate(lower):
+            axes[name] = figure.add_subplot(layout[1, column])
+    elif "latimer" in panels:
+        axes = {"latimer": figure.add_subplot(1, 1, 1)}
+    else:
+        layout = figure.add_gridspec(1, len(lower), wspace=0.26)
+        axes = {name: figure.add_subplot(layout[0, i]) for i, name in enumerate(lower)}
 
-    ladder = latimer_diagram(grid.element, series=series)
-    plot_latimer(grid.element, diagram=ladder, ax=ladder_ax)
+    frost = None
+    if "latimer" in axes:
+        ladder = latimer_diagram(grid.element, series=series)
+        plot_latimer(grid.element, diagram=ladder, ax=axes["latimer"])
 
-    frost = frost_diagram(grid.element, series=series)
-    plot_frost(grid.element, diagram=frost, ax=frost_ax, title=f"{grid.element} — Frost")
+    if "frost" in axes:
+        # Built with every form, then narrowed at draw time -- which is the
+        # whole point of `show` and `label` being separate from how the
+        # diagram was computed.
+        frost = frost_diagram(grid.element, series=series, predominant_only=False)
+        plot_frost(
+            grid.element,
+            diagram=frost,
+            ax=axes["frost"],
+            show=show,
+            label=label,
+            title=f"{grid.element} — Frost",
+        )
 
-    field = pourbaix_field(grid.element, series=series, points=points, eh_range=eh_range)
-    plot_pourbaix(grid.element, field=field, ax=field_ax)
-    field_ax.axvline(pH, color=PALETTE["annotation"], linewidth=1.4, linestyle="-", alpha=0.7)
-    field_ax.set_title(
-        f"{grid.element} predominance — the line is the pH above",
-        fontsize=SIZES["title"],
-        pad=10,
-    )
+    if "pourbaix" in axes:
+        field = pourbaix_field(grid.element, series=series, points=points, eh_range=eh_range)
+        plot_pourbaix(grid.element, field=field, ax=axes["pourbaix"])
+        axes["pourbaix"].axvline(
+            pH, color=PALETTE["annotation"], linewidth=1.4, linestyle="-", alpha=0.7
+        )
+        axes["pourbaix"].set_title(
+            f"{grid.element} predominance — the line is the pH above",
+            fontsize=SIZES["title"],
+            pad=10,
+        )
+
+    if frost is None:
+        frost = frost_diagram(grid.element, series=series, predominant_only=False)
 
     # The panel-level warnings that plot_frost would have drawn on a figure
     # it owned: on a shared canvas they belong at the bottom, once.
@@ -127,8 +183,21 @@ def interactive_element(
     points: int = 200,
     fixed=None,
     backend=None,
+    show: str = "all",
+    label: str = "predominant",
+    panels=PANELS,
 ):
-    """Three matplotlib panels under three ipywidgets sliders.
+    """The element's panels under ipywidgets controls.
+
+    Three sliders -- temperature, pH, dissolved activity -- and two dropdowns
+    for the Frost panel: which forms get a marker, and which get named. They
+    are separate because the useful setting is usually "draw everything, name
+    the one that exists", and being able to flip either one is how the
+    difference between *predominant* and *stable* becomes obvious.
+
+    ``panels`` selects which of ``"latimer"``, ``"frost"`` and ``"pourbaix"``
+    to draw. The Latimer and Frost pair costs nothing to redraw, so
+    ``panels=("latimer", "frost")`` gives the lightest useful widget.
 
     Returns the widget box; display it, or let a notebook cell return it.
     Builds the grid if one is not supplied, which costs a backend pass per
@@ -173,6 +242,21 @@ def interactive_element(
         readout_format=".1f",
         style={"description_width": "initial"},
     )
+    show_choice = widgets.Dropdown(
+        options=[("all forms", "all"), ("predominant only", "predominant")],
+        value="predominant" if show in ("predominant", "prominent") else "all",
+        description="show",
+        style={"description_width": "initial"},
+        layout=widgets.Layout(width="230px"),
+    )
+    label_choice = widgets.Dropdown(
+        options=[("all forms", "all"), ("predominant only", "predominant")],
+        value="all" if label == "all" else "predominant",
+        description="label",
+        style={"description_width": "initial"},
+        layout=widgets.Layout(width="230px"),
+    )
+    frost_controls = "frost" in _check_panels(panels)
 
     output = widgets.Output()
 
@@ -187,15 +271,25 @@ def interactive_element(
                 figsize,
                 eh_range,
                 points,
+                show=show_choice.value,
+                label=label_choice.value,
+                panels=panels,
             )
             display(figure)
             plt.close(figure)
 
-    for slider in (temperature_slider, ph_slider, activity_slider):
-        slider.observe(redraw, names="value")
+    controls = [temperature_slider, ph_slider, activity_slider]
+    if frost_controls:
+        controls += [show_choice, label_choice]
+    for control in controls:
+        control.observe(redraw, names="value")
     redraw()
 
-    return widgets.VBox([widgets.HBox([temperature_slider, ph_slider, activity_slider]), output])
+    rows = [widgets.HBox([temperature_slider, ph_slider, activity_slider])]
+    if frost_controls:
+        rows.append(widgets.HBox([show_choice, label_choice]))
+    rows.append(output)
+    return widgets.VBox(rows)
 
 
 # --------------------------------------------------------------------------
@@ -272,7 +366,7 @@ def plot_interactive_element(
     title = title or f"{element} — redox diagrams"
 
     series = grid.at(initial_temperature, pH=initial_ph, activity=10.0**initial_log_activity)
-    frost = frost_diagram(element, series=series)
+    frost = frost_diagram(element, series=series, predominant_only=False)
     field = pourbaix_field(element, series=series, points=points, eh_range=eh_range)
 
     figure = make_subplots(
@@ -282,18 +376,19 @@ def plot_interactive_element(
         horizontal_spacing=0.12,
     )
 
-    # Trace 0: every point. Trace 1: the hull. Trace 2: the field. Trace 3:
-    # the pH line. The JavaScript restyles them by index, so the order here
-    # is load-bearing.
+    # Trace 0: the predominant forms. Trace 1: the hull. Trace 2: the field.
+    # Trace 3: the pH line. Trace 4: the other forms of each state, which the
+    # "show" control turns on and off. The JavaScript restyles them by index,
+    # so the order here is load-bearing.
     figure.add_trace(
         go.Scatter(
-            x=frost.states,
-            y=frost.volt_equivalents,
+            x=[p.oxidation_state for p in frost.predominant],
+            y=[p.volt_equivalent for p in frost.predominant],
             mode="markers+text",
-            text=[pretty(p.backend) for p in frost.points],
+            text=[pretty(p.backend) for p in frost.predominant],
             textposition="top center",
             marker={"size": 9, "color": PALETTE["endergonic"]},
-            name="all forms",
+            name="predominant form",
             hovertemplate="%{text}<br>state %{x}<br>%{y:.3f} V<extra></extra>",
         ),
         row=1,
@@ -338,6 +433,26 @@ def plot_interactive_element(
         ),
         row=1,
         col=2,
+    )
+
+    others = [p for p in frost.points if p.backend not in {q.backend for q in frost.predominant}]
+    figure.add_trace(
+        go.Scatter(
+            x=[p.oxidation_state for p in others],
+            y=[p.volt_equivalent for p in others],
+            mode="markers",
+            marker={
+                "size": 7,
+                "symbol": "square-open",
+                "line": {"width": 1.5, "color": PALETTE["muted"]},
+                "color": PALETTE["muted"],
+            },
+            name="other forms of the same state",
+            hovertemplate="%{text}<br>state %{x}<br>%{y:.3f} V<extra></extra>",
+            text=[pretty(p.backend) for p in others],
+        ),
+        row=1,
+        col=1,
     )
 
     figure.update_xaxes(title_text=f"oxidation state of {element}", row=1, col=1)
@@ -425,6 +540,28 @@ function control(labelText, min, max, step, value, format) {{
   return {{ wrap: wrap, input: input }};
 }}
 
+function choice(labelText, options, initial) {{
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;align-items:center;gap:10px;margin:6px 0;'
+    + 'font:13px system-ui,sans-serif;';
+  var name = document.createElement('label');
+  name.textContent = labelText;
+  name.style.cssText = 'width:140px;text-align:right;color:#333;';
+  var select = document.createElement('select');
+  select.style.cssText = 'font:13px system-ui,sans-serif;padding:2px 4px;';
+  options.forEach(function (pair) {{
+    var option = document.createElement('option');
+    option.value = pair[0];
+    option.textContent = pair[1];
+    if (pair[0] === initial) option.selected = true;
+    select.appendChild(option);
+  }});
+  select.value = initial;
+  select.addEventListener('change', redraw);
+  wrap.appendChild(name); wrap.appendChild(select);
+  return {{ wrap: wrap, input: select }};
+}}
+
 function nearest(values, target) {{
   var best = 0;
   for (var i = 1; i < values.length; i++) {{
@@ -455,9 +592,15 @@ var phControl = control('pH', 0, 14, 0.1, {initial_ph},
 var activityControl = control('log\\u2081\\u2080(activity)', LOG_LO, LOG_HI, 0.5,
   {initial_log_activity}, function (v) {{ return v.toFixed(1); }});
 
+var SELECTIONS = [['all', 'all forms'], ['predominant', 'predominant only']];
+var showControl = choice('show', SELECTIONS, 'all');
+var labelControl = choice('label', SELECTIONS, 'predominant');
+
 panel.appendChild(tempControl.wrap);
 panel.appendChild(phControl.wrap);
 panel.appendChild(activityControl.wrap);
+panel.appendChild(showControl.wrap);
+panel.appendChild(labelControl.wrap);
 
 // Free energy per mole of the element, at a temperature index, pH and Eh.
 function energies(ti, pH, logActivity, eh) {{
@@ -526,19 +669,36 @@ function redraw() {{
   var ti = parseInt(tempControl.input.value, 10);
   var pH = parseFloat(phControl.input.value);
   var logActivity = parseFloat(activityControl.input.value);
+  var showAll = showControl.input.value === 'all';
+  var labelAll = labelControl.input.value === 'all';
 
   var g = energies(ti, pH, logActivity);
   var volts = g.map(function (v) {{ return v / GRID.faraday; }});
   var picked = rungs(g);
   var stable = hull(picked, volts);
 
+  // Everything that has a statable oxidation state but is not the form that
+  // predominates at this pH: present, at the right energy, outcompeted.
+  var others = [];
+  for (var i = 0; i < GRID.species.length; i++) {{
+    if (GRID.statable[i] && picked.indexOf(i) < 0) others.push(i);
+  }}
+
   var cell = field(ti, logActivity);
 
   Plotly.restyle(plot, {{
     x: [picked.map(function (i) {{ return GRID.states[i]; }})],
     y: [picked.map(function (i) {{ return volts[i]; }})],
-    text: [picked.map(function (i) {{ return GRID.labels[i]; }})]
+    text: [picked.map(function (i) {{ return GRID.labels[i]; }})],
+    mode: ['markers+text']
   }}, [0]);
+  Plotly.restyle(plot, {{
+    x: [showAll ? others.map(function (i) {{ return GRID.states[i]; }}) : []],
+    y: [showAll ? others.map(function (i) {{ return volts[i]; }}) : []],
+    text: [showAll ? others.map(function (i) {{ return GRID.labels[i]; }}) : []],
+    mode: [labelAll ? 'markers+text' : 'markers'],
+    textposition: ['bottom center']
+  }}, [4]);
   Plotly.restyle(plot, {{
     x: [stable.map(function (i) {{ return GRID.states[i]; }})],
     y: [stable.map(function (i) {{ return volts[i]; }})]

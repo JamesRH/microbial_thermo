@@ -315,6 +315,7 @@ def plot_latimer(
         diagram = latimer_diagram(element, **kwargs)
 
     n = len(diagram.rungs)
+    owns_figure = ax is None
     if ax is not None:
         figure = ax.figure
         figsize = None
@@ -451,7 +452,7 @@ def plot_latimer(
             subtitle += f"\nheld fixed: {held}"
         title = f"{element} — Latimer diagram\n{subtitle}"
     ax.set_title(title, fontsize=SIZES["title"], pad=8)
-    if len(figure.axes) == 1:
+    if owns_figure:
         figure.tight_layout()
 
     if save is not None:
