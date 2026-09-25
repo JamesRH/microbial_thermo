@@ -2,7 +2,7 @@
 
 <!-- badges: start -->
 ![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)
-![Python 3.11](https://img.shields.io/badge/python-3.6-blue.svg)
+![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)
 [![Made with Jupyter](https://img.shields.io/badge/Made%20with-Jupyter-orange?logo=Jupyter&logoColor=white)](https://github.com/JamesRH/microbial_thermo/tree/main/notebooks)
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://microbialthermo.streamlit.app)
 <!-- badges: end -->

@@ -7,7 +7,7 @@ name = "microbial-thermo"
 version = "0.1.0"
 description = "Thermodynamic calculations and figures for microbial physiology and biogeochemistry"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<4.0"
 authors = [{ name = "James R. Henriksen" }]
 dependencies = [
     "numpy>=1.21",
