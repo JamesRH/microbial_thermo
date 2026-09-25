@@ -3,6 +3,8 @@
 <!-- badges: start -->
 ![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)
 ![Python 3.11](https://img.shields.io/badge/python-3.6-blue.svg)
+[![Made with Jupyter](https://img.shields.io/badge/Made%20with-Jupyter-orange?logo=Jupyter&logoColor=white)](https://github.com/JamesRH/microbial_thermo/tree/main/notebooks)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://microbialthermo.streamlit.app)
 <!-- badges: end -->
 
 Thermodynamic calculations and figures for microbial physiology and
@@ -17,6 +19,21 @@ Built as a teaching aid. Every result can be asked to show its work.
 
 **Backend:** [pyGCC](https://bitbucket.org/Tutolo-RTG/pygcc/) only.
 **Range:** 0.01–100 °C, near-surface pressure.
+
+---
+
+## Web interface
+
+For full capabilities, local use in jupyter lab notebooks and as a library,
+see below. For quick reaction calculations,
+[click here](https://microbialthermo.streamlit.app).
+
+The web app exposes three of the library's teaching tools in a browser, no
+install required: compound formation-energy ($\Delta G_f^\circ$) lookup with
+name suggestions, half-reaction $E^\circ$/$E^{\circ\prime}$/$E$ potentials, and
+a free-text reaction balancer with a $\Delta G^{\circ\prime}$ reveal. A shared
+sidebar sets temperature, pH, concentrations and the activity model, so
+results can move off the standard state without leaving the browser.
 
 ---
 
@@ -175,7 +192,22 @@ plot_interactive_element("Fe", save_html="iron_interactive")
 
 `webfrontend.md` §7.1 records the naming convention for a full per-element set
 and why serving static pages is likely cheaper than rebuilding these controls
-inside the planned Streamlit app.
+inside the Streamlit app.
+
+---
+
+## Running the web app locally
+
+```bash
+mamba install -c conda-forge streamlit   # or: pip install -e ".[web]"
+streamlit run app.py
+```
+
+Opens `http://localhost:8501` in a browser. This is the same `app.py` behind
+[microbialthermo.streamlit.app](https://microbialthermo.streamlit.app);
+running it locally is useful for testing changes before they reach the
+hosted app, or for offline, no-network-exposure use. See `webfrontend.md` §4
+for the hosted-deployment story and §5 for the app's architecture.
 
 ---
 

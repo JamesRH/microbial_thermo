@@ -23,6 +23,8 @@ dependencies:
   - pulp>=2.7
   - coin-or-cbc
   - pyyaml>=6.0
+  # Web frontend (the `web` extra); optional, not a core dependency.
+  - streamlit>=1.38
   - ipykernel
   - ipywidgets
   # nbclient executes the teaching notebooks in the test suite.
