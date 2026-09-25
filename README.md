@@ -79,6 +79,14 @@ edit the `.py` and run `jupytext --sync <notebook>.ipynb`.
 | `02_redox_tower_and_energy` | the tower and its scale bar, the interactive tower, hydrogen and temperature sweeps, the syntrophy window, the interactive explorer |
 | `03_environmental_affinity` | pH speciation, the curated library, and the affinity ladder for a real porewater |
 | `04_when_the_library_refuses_to_guess` | the three places the library asks instead of guessing: contested names, underdetermined equations, and averaged oxidation states |
+| `05_carbon` | the template for the element series: the ladder, the Frost curve, the Eh–pH field, and why formate is thermodynamically doomed and completely ordinary |
+| `06_nitrogen` | the widest ladder in biology, the honest gap where NO and N₂O should be, why nitrite falls apart, and why DNRA survives despite paying less |
+| `07_sulfur` | elemental sulfur disproportionation: on the hull at unit activity, off it at 10 µM, and a living organism in the gap |
+| `08_iron` | mixed-valence rungs, why pyrite is refused one, and the three diagrams answering three different questions |
+| `09_manganese` | Mn(III) disproportionating in acid and surviving at pH 7, plus two documented flaws in the manganese data |
+| `10_arsenic` | why reducing an aquifer mobilises arsenic: no insoluble sink, and a neutral arsenite that will not sorb |
+| `11_selenium` | the counter-example — measuring how much of the water window each element spends as a solid |
+| `12_chromium_and_uranium` | a Frost diagram with no honest zero, and a couple that ignores pH entirely |
 | `photoAs`, `photoFe`, `photoNO2` | phototrophy: an uphill CO₂-fixation reaction per donor, then the photons that pay for it |
 | `Scratchbook` | a worked problem end to end, starting from nothing but an equation string |
 
@@ -1259,7 +1267,9 @@ the digits written, so a file saying 24, 25, 26, 27 rendered as 18, 19, 20, 21
 and nobody reading GitHub saw the numbers this repo cites. They are plain
 bullets with literal `#N` labels now, which render the same everywhere.
 
-**Next up:** item **28**, the per-element notebooks.
+**Next up:** nothing is queued. The open items below are independent of each
+other; **9** (two-dimensional contours) and **15** (uncertainty propagation)
+are the two that would add most to the figures that now exist.
 
 ### Completed
 
@@ -1285,6 +1295,7 @@ bullets with literal `#N` labels now, which render the same everywhere.
 | 24 | Latimer diagrams | `figures/latimer.py`, `tests/test_latimer.py` |
 | 25 | Frost–Ebsworth diagrams | `figures/frost.py`, `tests/test_frost.py` |
 | 26 | Interactive Latimer, Frost and Eh–pH | `figures/interactive_element.py`, `tests/test_interactive_element.py` |
+| 28 | Per-element notebooks | `notebooks/05`–`12`, executed by `tests/test_notebooks.py` |
 
 ### Tier 1 — small, and builds directly on what exists
 
@@ -1352,15 +1363,6 @@ bullets with literal `#N` labels now, which render the same everywhere.
     move from hand calculation to full speciation modelling.
 - **#17 · Pressure beyond near-surface**, opening up the hydrothermal and deep
     subsurface range pyGCC is actually built for.
-- **#28 · Per-element notebooks** — one each for the elements a
-  biogeochemistry course actually teaches: **C, N, S, Fe**, then the other
-  major redox-active biologically interacting metals and metalloids — **Mn,
-  As, Se**, with Cr and U as shorter cases. Each walks the same path: the
-  element's redox ladder, its Latimer and Frost diagrams, its Eh–pH diagram,
-  and the metabolisms that live on each step. Selenium is the best new story,
-  because Se(VI) → Se(IV) → Se(0) ends in an insoluble element and arsenic has
-  no equivalent step — which is exactly why arsenic is the harder remediation
-  problem. Waits on #24, #25 and #26.
 
 ---
 

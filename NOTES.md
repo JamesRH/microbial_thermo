@@ -292,40 +292,103 @@ Two of the remaining entries deserve reading before touching anything nearby:
   181 kJ/mol. Convention-matched does not mean number-matched. Imports are
   consulted LAST for exactly this reason; do not promote one.
 
+**The volt-equivalent convention for negative oxidation states is not a
+convention.** This was written down as the blocker on Frost diagrams and it
+dissolved on contact. Write each species' formation from the element,
+`E + b H2O + c H+ + (-z) e- -> S`, take that reaction's free energy per mole
+of the element with electrons at the SHE zero, and divide by the Faraday. A
+hydride has a *positive* electron count in that reaction and comes out
+negative on its own. Ammonium lands at -0.823 V against a textbook -0.82 and
+sulfide at -0.289 against -0.288. No sign rule anywhere. The AsH3 number that
+"looked wrong" was a data question: arsine is in none of our databases.
+
+**The element reference cancels on Eh-pH and does not on Frost.** Every
+species picks up the same -G(ref)/atoms per mole of element, so a predominance
+boundary cannot move; a Frost diagram plots that value, so the reference *is*
+the y-axis zero. `ELEMENT_REFERENCE` therefore uses standard states -- N2(g),
+not N2(aq). Using dissolved N2 put every nitrogen point 0.094 V low, which is
+how this was found. `reference_is_element` is False where no elemental form
+exists (chromium and uranium metal are in none of our databases) and the
+figure then says the heights are meaningless and the slopes are not.
+
+**The basis electron count is an oxidation state only when no auxiliary
+element is involved.** Pyrite's count against a sulfate basis is -12 per iron,
+a real number about a real reaction and not iron's oxidation state -- it ran
+`Fe(0) --+0.462 V--> pyrite` on the first iron ladder. `ladder_entries` now
+refuses any species carrying an auxiliary. Siderite goes with it although its
+carbonate carbon really is C(+IV) in both, because telling the two apart needs
+an independent oxidation-state assignment and ours refuses metal sulfides,
+which is the case in question. Nothing is lost: siderite is Fe(II) and Fe(2+)
+holds that rung; the Eh-pH diagram keeps both.
+
+**`resolve("Graphite")` raised, so `pourbaix_field("C")` had never worked.**
+The comment in `species.yaml` asserting that "Sulfur(s) and Graphite already
+cover" the elemental forms was half false -- graphite was in the backend and
+never registered. Both graphite and diamond are registered now, graphite
+canonical for a bare "C". Diamond comes out at +3.0 kJ/mol against a published
++2.9, which is a free check on the route.
+
+**A species has to be available at every temperature or at none, on a grid.**
+Manganite carries a single log K at 25 C, so `element_grid("Mn")` could not
+build at all. A phase that appears and vanishes as a slider moves is a
+different diagram each time, not the same diagram at new conditions, so it is
+dropped from the whole grid and named on the figure. `element_series` grew
+`skip_out_of_range` for this and it is OFF by default: losing a phase silently
+is worse than the backend's error, which names the species and says what to do.
+
+**A prepared series must set the conditions of any diagram built on it.**
+Caught by a Latimer panel captioned "dissolved activity 1" while drawn at
+1e-6. Temperature and activity are baked into the numbers and cannot be
+restated by an argument; pH is the exception, being a coefficient applied on
+lookup.
+
+**Two implementations of the same equations will drift, so test them against
+each other.** The exported interactive page rebuilds all three diagrams in
+JavaScript from the decomposition. `tests/test_interactive_element.py` runs
+the real exported script in node and compares: volt equivalents and Latimer
+potentials to 1e-9, hulls identical, Eh-pH fields cell by cell. It skips where
+node is absent rather than pretending to pass.
+
+**Check a claim about an ecosystem against the table before writing it.** The
+nitrogen notebook first said DNRA was "the deeper fall" on the Frost curve. It
+is not: at pH 7 N2 is the minimum, denitrification's slope is +0.729 V against
+DNRA's +0.363, and denitrification pays -110 kJ/mol e- against -75. DNRA wins
+in carbon-rich sediment because it consumes eight electrons per nitrate rather
+than five -- a competition over what is limiting, not over yield. The ladder
+ranks yield; organisms compete over the scarce thing.
+
 ---
 
-## Where this was left (24 September 2026)
+## Where this was left (24 September 2026, second run)
 
 Everything below is committed and pushed; `main` and `origin/main` agree.
-Full suite **569 tests, ~180 s, all passing**.
+Full suite **650 tests, ~230 s, all passing**.
 
-**Done this run:** Tier 1 complete except hydroxylamine (#2, still blocked --
-it is in no pyGCC database and not in OBIGT, and the NBS tables are not
-machine-readable from here). Then #21 (minimal-integer balancing opt-in),
-#20 (speq23 base + supcrtbl supplement + OBIGT import), #22 (external data
-mechanism), #27 (oxidation-state cross-check), #14 (wider minerals), #13
-(Pourbaix).
+**Done this run:** #24 (Latimer), #25 (Frost-Ebsworth), #26 (all three under
+sliders, ipywidgets and exported HTML) and #28 (per-element notebooks 05-12,
+for C, N, S, Fe, Mn, As, Se and a joint Cr/U). All four were the diagram
+sequence James asked for, in order.
 
-**Next, in this order**, as agreed with James:
+The three element diagrams now share `figures/basis.py`, which holds the
+decomposition they all needed. `figures/pourbaix.py` uses it and re-exports the
+old names, so `_basis_coefficients` and `FIXED_DEFAULTS` still import from
+where the tests expect them.
 
-1. **#25, Frost-Ebsworth diagrams.** The feasibility is already checked --
-   arsenic volt-equivalents compute and recompute with pH and temperature --
-   but **the convention for negative oxidation states is NOT settled**. A
-   quick pass produced an AsH3 value I do not trust. Derive it properly
-   before writing the figure; do not pattern-match from the positive states.
-   Elemental forms are now in the registry, which was the other prerequisite.
-2. **#24, Latimer diagrams** -- implied by #26 and cheaper than Frost.
-3. **#26, interactive versions** of Latimer, Frost and Pourbaix, on the
-   pattern item #10 established: precompute the expensive axes, apply the
-   cheap ones in closed form, ipywidgets plus standalone HTML.
-4. **#28, per-element notebooks** -- James asked for one each for C, N, S, Fe
-   and the other major redox-active biologically interacting metals. Mn, As
-   and Se all have real stories now; Se is the best new one, because
-   Se(VI) -> Se(IV) -> Se(0) ends in an insoluble element and arsenic has no
-   equivalent step, which is exactly why arsenic is the harder remediation
-   problem.
+**Nothing is queued.** The open items in `README.md` -- #2, #8, #9, #12, #15,
+#16, #17 -- are independent of each other. If asked to pick: **#9**
+(two-dimensional contours) and **#15** (uncertainty propagation) are the two
+that would add most to the figures that now exist, and #2 is still blocked on
+hydroxylamine being in no machine-readable source we can reach.
 
 **Numbering is in `README.md` and is stable** -- but only because the tier
 lists are plain bullets with literal `#N` labels. They were an ordered list
-until this run, which meant Markdown renumbered them and the rendered README
-showed different numbers than the file. Do not turn them back.
+until the previous run, which meant Markdown renumbered them and the rendered
+README showed different numbers than the file. Do not turn them back.
+
+**The best single demonstration in the new notebooks** is `07_sulfur`:
+elemental sulfur is on the convex hull at unit activity, which is what every
+published Frost diagram shows, and leaves it below about 1.7e-2 activity. At
+10 uM disproportionation pays 18 kJ/mol S. That is the quantitative version of
+"sulfur disproportionators need a sulfide sink", computed from our own data,
+and it is the clearest argument in the project for computing these diagrams
+rather than reproducing them.
