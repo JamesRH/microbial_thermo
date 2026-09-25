@@ -33,7 +33,10 @@ class TestPhaseAmbiguity(unittest.TestCase):
             sorted(self.registry.ambiguities()),
             # caco3 and fes joined when the mineral set was widened: calcite
             # and aragonite share a formula, as do troilite and pyrrhotite.
-            ["caco3", "ch4", "co2", "fes", "h2", "n2", "o2"],
+            # "c" joined with graphite and diamond, registered together for
+            # the carbon diagrams; graphite is the declared winner, being the
+            # stable form and the one a bare "C" is meant to mean.
+            ["c", "caco3", "ch4", "co2", "fes", "h2", "n2", "o2"],
         )
 
     def test_a_bare_name_means_the_dissolved_form(self):

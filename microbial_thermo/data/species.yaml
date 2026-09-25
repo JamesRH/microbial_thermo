@@ -235,8 +235,13 @@ species:
   # Manganese is the exception and the reason this block is worth reading:
   # elemental Mn evaluates to -2.5 kJ/mol, not zero. That is a database
   # problem, not a rounding one, so a manganese Frost diagram drawn against
-  # this species inherits a 2.5 kJ/mol offset. Sulfur and carbon are omitted
-  # because Sulfur(s) and Graphite already cover them.
+  # this species inherits a 2.5 kJ/mol offset.
+  #
+  # Sulfur was already here as Sulfur(s). Graphite was assumed to be and was
+  # not: it is in the backend but was never registered, so resolve("Graphite")
+  # raised and took the whole carbon Eh-pH diagram with it.
+  - {backend: "Graphite", formula: "C", display: "C(graphite)", phase: s, canonical: true, aliases: [graphite, "C(s)", "elemental carbon"]}
+  - {backend: "Diamond",  formula: "C", display: "C(diamond)",  phase: s, aliases: [diamond]}
   - {backend: "As",  formula: "As", display: "As(s)",  phase: s, aliases: ["As(s)", "arsenic metal", "elemental arsenic"]}
   - {backend: "Se",  formula: "Se", display: "Se(s)",  phase: s, aliases: ["Se(s)", "selenium", "elemental selenium"]}
   - {backend: "Fe",  formula: "Fe", display: "Fe(s)",  phase: s, aliases: ["Fe(s)", "iron metal", "zero-valent iron", ZVI]}

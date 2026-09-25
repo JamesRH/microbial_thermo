@@ -935,6 +935,86 @@ computed from formation energies by a completely different route gives 2.26,
 6.76 and 11.60. Sulfur's boundaries land on 2 and 7, matching bisulfate and
 H₂S. That agreement is asserted in the tests.
 
+### Latimer diagrams
+
+An element's redox ladder, as a chain of couple potentials.
+
+```python
+from microbial_thermo.figures import plot_latimer, latimer_diagram
+
+plot_latimer("As", pH=7.0)                     # the ladder a cell sees
+plot_latimer("Cu", pH=0.0, show_half_reactions=True)
+
+ladder = latimer_diagram("Mn", pH=8.0, temperature_c=4.0)
+ladder.to_frame()
+ladder.potential("Pyrolusite", "Mn++")         # any pair, not just adjacent
+```
+
+Each species is decomposed onto the same basis the Eh–pH diagram uses, giving
+its free energy per mole of the element and its oxidation state; for two forms
+A and B the couple `A + n e⁻ → B` has `n = z_A − z_B` and `E = (g_A − g_B)/nF`.
+No table of standard potentials is consulted anywhere, so agreement with
+published values is a real check: Cu²⁺/Cu⁺ comes out +0.162 V against a
+tabulated +0.153, Cu⁺/Cu +0.518 against +0.521, S/H₂S +0.145 against +0.144,
+NO₃⁻/NO₂⁻ +0.821 against +0.835.
+
+**The point of computing rather than copying** is that every published Latimer
+diagram is drawn at pH 0 or pH 14 and 25 °C. This one is drawn wherever you
+ask, and **which species sits on each rung changes with it** — arsenic(V) is
+H₃AsO₄ at pH 0, H₂AsO₄⁻ at pH 4 and HAsO₄²⁻ at pH 7. The rung is whichever form
+has the lowest energy at the working pH; the others are kept in
+`.alternatives`.
+
+**Skip-step potentials are electron-weighted**, which is the classic exercise
+and the classic mistake — `ladder.potential()` does it properly rather than
+averaging the arrows.
+
+### Frost–Ebsworth diagrams
+
+The same information, plotted so the eye does the work.
+
+```python
+from microbial_thermo.figures import plot_frost, frost_diagram
+
+plot_frost("N", pH=0.0, annotate_slopes=True)
+plot_frost("Mn", pH=7.0)
+
+diagram = frost_diagram("Cu", pH=0.0)
+diagram.most_stable.backend                     # 'Cu'
+[str(d) for d in diagram.disproportionation()]
+# ['Cu+ -> 0.5 Cu++ + 0.5 Cu  (-17.2 kJ/mol Cu+)']
+```
+
+Volt equivalent against oxidation state: the **slope** between two points is
+that couple's potential, a point **above** the line joining two others
+disproportionates, and the **lowest** point is where the element ends up. The
+stable forms are the lower convex hull, and everything off it is reported with
+the reaction it would run and the energy it would release.
+
+**The convention for negative oxidation states**, which is where this stalled,
+turns out not to be a convention at all. Write each species' formation from the
+element, `E + b H₂O + c H⁺ + (−z) e⁻ → S`, take that reaction's free energy per
+mole of the element with electrons at the SHE zero, and divide by the Faraday.
+A hydride simply has a *positive* electron count and comes out negative on its
+own. Ammonium lands at −0.823 V against the textbook −0.82 and sulfide at
+−0.289 against −0.288, with no sign rule applied anywhere.
+
+**What does need care is the reference.** On an Eh–pH diagram the element
+reference cancels; here it *is* the zero of the y axis. Drawing nitrogen
+against dissolved N₂ instead of N₂ gas puts every point 0.094 V low — which is
+how this was caught. Where no elemental form exists at all (chromium and
+uranium metal are in none of our databases) the figure says so: the slopes
+remain valid, the heights do not.
+
+**Two rules keep the ladders honest.** A species only earns a rung if its
+electron count really is an oxidation state, which means no auxiliary
+elements — this is what keeps **pyrite off the iron ladder**, where its count
+against a sulfate basis is −12 for an iron that is plainly Fe(II). Siderite is
+refused with it, although its carbonate carbon would have been fine; a
+mechanical rule that is never wrong beats a clever one that is sometimes wrong
+and silent about it. Nothing is lost, because siderite is Fe(II) and the Eh–pH
+diagram is where a siderite field belongs.
+
 ### Sweeps without plotting
 
 ```python
@@ -1143,9 +1223,8 @@ the digits written, so a file saying 24, 25, 26, 27 rendered as 18, 19, 20, 21
 and nobody reading GitHub saw the numbers this repo cites. They are plain
 bullets with literal `#N` labels now, which render the same everywhere.
 
-**Next up:** item **20, compatible datasets** — high priority, direction
-decided, and every other dataset item waits on it. `RESEARCH.md` carries the
-measurements behind that decision and the survey of what else is out there.
+**Next up:** item **26, the interactive versions** of the three diagrams, then
+**28**, the per-element notebooks that use them.
 
 ### Completed
 
@@ -1168,6 +1247,8 @@ measurements behind that decision and the survey of what else is out there.
 | 27 | Oxidation states cross-checked independently | `tests/test_oxidation_crosscheck.py` (pymatgen, test-only) |
 | 14 | Wider mineral and trace-metal support | `data/species.yaml`, `tests/test_minerals.py` |
 | 13 | Eh–pH (Pourbaix) diagrams | `figures/pourbaix.py`, `tests/test_pourbaix.py` |
+| 24 | Latimer diagrams | `figures/latimer.py`, `tests/test_latimer.py` |
+| 25 | Frost–Ebsworth diagrams | `figures/frost.py`, `tests/test_frost.py` |
 
 ### Tier 1 — small, and builds directly on what exists
 
@@ -1235,22 +1316,6 @@ measurements behind that decision and the survey of what else is out there.
     move from hand calculation to full speciation modelling.
 - **#17 · Pressure beyond near-surface**, opening up the hydrothermal and deep
     subsurface range pyGCC is actually built for.
-- **#24 · Latimer diagrams** for every element with more than two redox forms in
-    the registry — the condensed chain of couples with E°′ on each arrow.
-    **Nothing in Python draws these.** Cheap: it is the couples we already
-    compute, laid out in oxidation-state order. Two prerequisites, both found
-    by checking rather than assumed: elemental forms (`As`, `S`, `Fe`…) are in
-    the backend but **not in the registry**, so `Couple.make("As", …)` fails
-    today; and the diagram must use the species that actually dominates at the
-    working pH, which the speciation layer can already decide.
-- **#25 · Frost–Ebsworth diagrams** — volt-equivalent *N*·*E*° against oxidation
-    state, where the slope between two points is the couple potential and
-    convexity shows disproportionation. Also absent from Python. Feasibility
-    is **confirmed**: computed for arsenic from our own data it gives +2.427 V
-    for HAsO₄²⁻ at pH 0 against −0.472 V at pH 7, and recomputes cleanly at
-    2 °C and 60 °C. One caution: the volt-equivalent convention for **negative**
-    oxidation states needs deriving properly — a quick pass produced an AsH₃
-    number that does not look right.
 - **#26 · Interactive Latimer, Frost and Pourbaix** on the pattern item 10
     established: precompute the expensive axes on a grid, apply the cheap ones
     in closed form, ship ipywidgets for notebooks and standalone HTML with
