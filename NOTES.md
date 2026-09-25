@@ -349,6 +349,23 @@ the real exported script in node and compares: volt equivalents and Latimer
 potentials to 1e-9, hulls identical, Eh-pH fields cell by cell. It skips where
 node is absent rather than pretending to pass.
 
+**A zero activity means absent, and is handled by name rather than by
+infinity.** `fixed={"S": ("SO4-2", 0)}` used to reach `rt * log(0)`, putting
+every sulfide phase at `+inf`. The picture was right -- they lose everywhere --
+but an infinity sitting in an energy array is a bug waiting for the first
+caller who averages or interpolates one. Species needing an absent element are
+now dropped with a reason, and the figure stops claiming to hold that element
+fixed.
+
+**Check which field actually replaces a removed one.** Taking the sulfide out
+of the iron diagram, I wrote that "siderite has taken pyrite's place". Measured:
+pyrite held 33% of the panel, and of that, 49% reverts to dissolved Fe(2+),
+39% to iron metal below the water line, 10% to magnetite and **2% to siderite**.
+The real result is better than the guess -- sulfide is a far stronger sink for
+ferrous iron than carbonate is, which is why pyrite holds iron in marine
+sediment and siderite is a freshwater mineral -- but only because it was
+measured instead of asserted.
+
 **Predominant is not stable, and a Frost hull must be built over the
 predominant forms only.** With `predominant_only=False` the first version ran
 the convex hull over every point, which put H3AsO4 on the hull at pH 7 and drew

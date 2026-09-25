@@ -349,6 +349,15 @@ def element_series(
     extra elements are not covered is recorded in ``skipped`` with the reason
     rather than silently mis-weighted.
 
+    **An auxiliary activity of exactly zero means the element is absent**, and
+    every species needing it is dropped. Arithmetically ``log(0)`` gives an
+    energy of ``+inf`` and the same species lose everywhere, so the picture
+    was already right; but an infinity in the array is a bug waiting for the
+    first caller who averages or interpolates one, and "there is no sulfide
+    here" is a statement the code should make in words. A negative activity is
+    refused outright, and the element being drawn may not be set to zero at
+    all -- that would mean there is none of it to draw.
+
     ``reference`` overrides the element's zero point. It changes nothing on
     an Eh-pH diagram and everything on a Frost one, which is the whole reason
     it is exposed.
@@ -379,6 +388,22 @@ def element_series(
         el: (DEFAULT_ACTIVITY if isinstance(spec, str) else spec[1]) for el, spec in fixed.items()
     }
 
+    if activity <= 0:
+        raise ValueError(
+            f"activity must be positive, not {activity!r}; it is the dissolved "
+            f"activity of {element} itself, and zero would mean there is none to draw"
+        )
+    for name, value in aux_activity.items():
+        if value < 0:
+            raise ValueError(
+                f"the fixed activity for {name} is negative ({value!r}); use 0 to "
+                "mean the element is absent"
+            )
+
+    #: Auxiliary elements declared absent. A species that needs one cannot
+    #: form, so it is dropped rather than evaluated at log(0).
+    absent = {name for name, value in aux_activity.items() if value == 0}
+
     kelvin = celsius_to_kelvin(temperature_c)
     rt = as_magnitude((R * (kelvin * ureg.kelvin)).to(KJ_PER_MOL_STR), KJ_PER_MOL_STR)
 
@@ -394,6 +419,15 @@ def element_series(
             n_e, b, c, d, extras = basis_coefficients(entry, element, auxiliaries)
         except ValueError as exc:
             skipped.append((entry.backend, str(exc)))
+            continue
+        missing = sorted({el for el, _, _ in extras} & absent)
+        if missing:
+            skipped.append(
+                (
+                    entry.backend,
+                    f"needs {', '.join(missing)}, which is fixed at zero activity and so is absent",
+                )
+            )
             continue
         try:
             entry_gibbs = gibbs(entry.backend)

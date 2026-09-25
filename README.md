@@ -932,6 +932,13 @@ field exists because there is sulfide about. Those are declared through
 `fixed=` and printed on the figure. A species whose extra elements are not
 covered is **refused**, not silently mis-weighted.
 
+An auxiliary activity of exactly **zero means the element is absent**: every
+species needing it is dropped by name, with the reason in `series.skipped`,
+and the figure stops listing it as held fixed. (`log(0)` would put those
+species at `+inf` and give the same picture, but an infinity in the array is
+a bug waiting for the first caller to average one.) A negative activity is
+refused, and the element being drawn may not be zeroed at all.
+
 The water stability lines are computed from the library's own couples using
 O₂(g) and H₂(g) at 1 bar, which reproduces the published 1.229 V exactly.
 (Against O₂(aq) at unit activity it comes out 43 mV higher — a different

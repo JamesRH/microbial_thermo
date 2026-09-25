@@ -21,6 +21,9 @@ import matplotlib
 
 matplotlib.use("Agg")
 
+import numpy as np
+
+from microbial_thermo.figures.basis import element_series
 from microbial_thermo.figures.pourbaix import (
     DEFAULT_ACTIVITY,
     FIXED_DEFAULTS,
@@ -221,6 +224,70 @@ class TestOtherElements(unittest.TestCase):
         with self.assertRaises(ValueError) as caught:
             pourbaix_field("Zr", points=20)
         self.assertIn("species=", str(caught.exception))
+
+
+class TestAnAbsentElement(unittest.TestCase):
+    """Zero activity means the element is not there.
+
+    Arithmetically ``log(0)`` puts the species at ``+inf`` and it loses
+    everywhere, so the picture was already right. An infinity in the array is
+    a bug waiting for the first caller who averages or interpolates one,
+    though, and "there is no sulfide here" is a statement worth making in
+    words rather than leaning on IEEE.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        warnings.simplefilter("ignore")
+        cls.series = element_series("Fe", fixed={"S": ("SO4-2", 0), "C": ("HCO3-", 2e-3)})
+
+    def test_the_species_that_needed_it_is_dropped_with_a_reason(self):
+        self.assertNotIn("Pyrite", [entry.backend for entry in self.series])
+        reason = dict(self.series.skipped)["Pyrite"]
+        self.assertIn("S", reason)
+        self.assertIn("absent", reason)
+
+    def test_species_needing_a_different_element_survive(self):
+        # Siderite needs carbonate, which is present.
+        self.assertIn("Siderite", [entry.backend for entry in self.series])
+
+    def test_no_infinity_reaches_the_energies(self):
+        for entry in self.series:
+            with self.subTest(species=entry.backend):
+                self.assertTrue(np.isfinite(entry.base))
+
+    def test_the_diagram_is_the_one_the_notebook_claims(self):
+        """Take the sulfide away and pyrite's field becomes siderite's."""
+        with_sulfide = pourbaix_field(
+            "Fe", fixed={"S": ("SO4-2", 1e-6), "C": ("HCO3-", 2e-3)}, points=80
+        )
+        without = pourbaix_field("Fe", fixed={"S": ("SO4-2", 0), "C": ("HCO3-", 2e-3)}, points=80)
+        self.assertIn("Pyrite", with_sulfide.present)
+        self.assertNotIn("Pyrite", without.present)
+        self.assertNotIn("Siderite", with_sulfide.present)
+        self.assertIn("Siderite", without.present)
+
+    def test_the_figure_stops_claiming_to_hold_it_fixed(self):
+        """Nothing drawn contains sulfur, so the subtitle must not mention it."""
+        field = pourbaix_field("Fe", fixed={"S": ("SO4-2", 0), "C": ("HCO3-", 2e-3)}, points=80)
+        self.assertEqual([element for element, _, _ in field.fixed], ["C"])
+
+    def test_no_numeric_warning_is_raised(self):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            element_series("Fe", fixed={"S": ("SO4-2", 0), "C": ("HCO3-", 2e-3)})
+        messages = [str(w.message) for w in caught]
+        self.assertFalse([m for m in messages if "divide by zero" in m or "invalid value" in m])
+
+    def test_a_negative_activity_is_refused(self):
+        with self.assertRaises(ValueError) as caught:
+            element_series("Fe", fixed={"S": ("SO4-2", -1e-3)})
+        self.assertIn("use 0", str(caught.exception))
+
+    def test_the_element_being_drawn_may_not_be_zeroed(self):
+        with self.assertRaises(ValueError) as caught:
+            element_series("Fe", activity=0.0)
+        self.assertIn("none to draw", str(caught.exception))
 
 
 class TestFigure(unittest.TestCase):

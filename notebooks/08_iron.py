@@ -38,6 +38,8 @@ from microbial_thermo.figures import (
     plot_latimer,
     plot_pourbaix,
 )
+from microbial_thermo.figures.basis import element_series
+from microbial_thermo.figures.pourbaix import pourbaix_field
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -143,8 +145,47 @@ plt.show()
 # input, not a property of iron:
 
 # %%
-plot_pourbaix("Fe", fixed={"S": ("SO4-2", 1e-6), "C": ("HCO3-", 2e-3)}, figsize=(8.5, 6.5))
+plot_pourbaix("Fe", fixed={"S": ("SO4-2", 0), "C": ("HCO3-", 2e-3)}, figsize=(8.5, 6.5))
 plt.show()
+
+# %% [markdown]
+# Pyrite is gone, and the subtitle no longer claims sulfate is held fixed —
+# nothing on the figure contains sulfur, so there is nothing to hold.
+#
+# What moved into the space it held is worth measuring rather than guessing:
+
+# %%
+import collections
+
+with_sulfide = pourbaix_field("Fe", fixed={"S": ("SO4-2", 1e-6), "C": ("HCO3-", 2e-3)})
+without = pourbaix_field("Fe", fixed={"S": ("SO4-2", 0), "C": ("HCO3-", 2e-3)})
+
+was_pyrite = with_sulfide.winner == with_sulfide.species.index("Pyrite")
+print(f"pyrite held {was_pyrite.mean():.1%} of the panel; without sulfide that area is now")
+counts = collections.Counter(without.species[int(i)] for i in without.winner[was_pyrite])
+for name, count in counts.most_common():
+    print(f"   {name:12s} {count / was_pyrite.sum():5.1%}")
+
+# %% [markdown]
+# **Siderite appears, and takes almost none of it.** Nearly half goes back to
+# dissolved Fe²⁺ and most of the rest to iron metal below the water line;
+# carbonate picks up about two percent.
+#
+# That is the useful result, and it is the opposite of what "remove the
+# sulfide and the carbonate takes over" would predict. Sulfide is a far
+# stronger sink for ferrous iron than carbonate is — which is why pyrite, not
+# siderite, is the mineral that ends up holding iron in anoxic marine
+# sediment, and why siderite is a freshwater mineral, where there is
+# carbonate about and very little sulfate to reduce.
+
+# %% [markdown]
+# An activity of exactly zero means *the element is absent*, and every species
+# needing it is dropped by name rather than evaluated at `log(0)`:
+
+# %%
+series = element_series("Fe", fixed={"S": ("SO4-2", 0), "C": ("HCO3-", 2e-3)})
+for name, why in series.skipped:
+    print(f"{name}: {why}")
 
 # %% [markdown]
 # ## Who lives on each step
