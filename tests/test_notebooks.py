@@ -147,6 +147,62 @@ class TestNotebooksArePaired(unittest.TestCase):
         self.assertNotIn("tmp.py", names)
 
 
+class TestNotebooksAreInSync(unittest.TestCase):
+    """The ``.py`` and the ``.ipynb`` must hold the same cells.
+
+    Nothing else here would catch drift. The execution tests deliberately run
+    from the ``.py`` -- it is the source of truth, and reading it keeps the
+    suite independent of committed outputs -- so a ``.ipynb`` that has fallen
+    behind its script executes nothing, breaks nothing, and is silently wrong
+    for every reader who opens the notebook instead of the script.
+
+    That matters more than it used to now that the notebooks are linked from
+    the README and rendered by GitHub: what a student reads is the ``.ipynb``.
+
+    Compares cell *sources* only. Outputs, execution counters and metadata
+    differ freely -- re-running two cells in JupyterLab is not drift.
+    """
+
+    #: Every pair, not just the numbered teaching set: the photo* notebooks
+    #: are read by students too, and Scratchbook is paired like the rest.
+    @staticmethod
+    def pairs():
+        return sorted(
+            (path, path.with_suffix(".ipynb"))
+            for path in NOTEBOOK_DIR.glob("*.py")
+            if path.with_suffix(".ipynb").exists()
+        )
+
+    def test_there_are_pairs_to_check(self):
+        self.assertGreaterEqual(len(self.pairs()), 10)
+
+    def test_no_notebook_has_drifted_from_its_script(self):
+        import jupytext
+
+        for script, notebook in self.pairs():
+            with self.subTest(notebook=script.name):
+                from_script = [c.source.strip() for c in jupytext.read(script).cells]
+                from_notebook = [c.source.strip() for c in jupytext.read(notebook).cells]
+                self.assertEqual(
+                    from_script,
+                    from_notebook,
+                    f"{script.name} and {notebook.name} differ in cell source -- "
+                    "edit the .py, then run "
+                    f"`jupytext --to ipynb notebooks/{script.name} "
+                    f"-o notebooks/{notebook.name}` and re-execute it",
+                )
+
+    def test_every_notebook_has_a_script_beside_it(self):
+        """The other direction: a .ipynb with no .py is unpaired and will not
+        be executed by this suite at all."""
+        orphans = [
+            path.name
+            for path in NOTEBOOK_DIR.glob("*.ipynb")
+            if not path.with_suffix(".py").exists()
+        ]
+        self.assertEqual(orphans, [], f"unpaired notebooks: {orphans}")
+
+
 @unittest.skipIf(SKIP, "MT_SKIP_NOTEBOOKS=1")
 class TestNotebooksExecute(unittest.TestCase):
     """One test method per notebook, generated below.

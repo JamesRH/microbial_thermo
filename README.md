@@ -78,22 +78,26 @@ Pick **microbial-thermo** as the notebook kernel. Notebooks in
 `notebooks/` are paired to `.py` scripts with jupytext in `percent` format;
 edit the `.py` and run `jupytext --sync <notebook>.ipynb`.
 
+**Every notebook name below links to GitHub's rendered view**, outputs and
+figures included — no clone, no kernel, no install. Browse them all at
+[`notebooks/`](https://github.com/JamesRH/microbial_thermo/tree/main/notebooks).
+
 | notebook | covers |
 |---|---|
-| `01_half_reactions` | couples, balancing, oxidation states, show-your-work, the half-reaction figure |
-| `02_redox_tower_and_energy` | the tower and its scale bar, the interactive tower, hydrogen and temperature sweeps, the syntrophy window, the interactive explorer |
-| `03_environmental_affinity` | pH speciation, the curated library, and the affinity ladder for a real porewater |
-| `04_when_the_library_refuses_to_guess` | the three places the library asks instead of guessing: contested names, underdetermined equations, and averaged oxidation states |
-| `05_carbon` | the template for the element series: the ladder, the Frost curve, the Eh–pH field, and why formate is thermodynamically doomed and completely ordinary |
-| `06_nitrogen` | the widest ladder in biology, the honest gap where NO and N₂O should be, why nitrite falls apart, and why DNRA survives despite paying less |
-| `07_sulfur` | elemental sulfur disproportionation: on the hull at unit activity, off it at 10 µM, and a living organism in the gap |
-| `08_iron` | mixed-valence rungs, why pyrite is refused one, and the three diagrams answering three different questions |
-| `09_manganese` | Mn(III) disproportionating in acid and surviving at pH 7, plus two documented flaws in the manganese data |
-| `10_arsenic` | why reducing an aquifer mobilises arsenic: no insoluble sink, and a neutral arsenite that will not sorb |
-| `11_selenium` | the counter-example — measuring how much of the water window each element spends as a solid |
-| `12_chromium_and_uranium` | a Frost diagram with no honest zero, and a couple that ignores pH entirely |
-| `photoAs`, `photoFe`, `photoNO2` | phototrophy: an uphill CO₂-fixation reaction per donor, then the photons that pay for it |
-| `Scratchbook` | a worked problem end to end, starting from nothing but an equation string |
+| [`01_half_reactions`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/01_half_reactions.ipynb) | couples, balancing, oxidation states, show-your-work, the half-reaction figure |
+| [`02_redox_tower_and_energy`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/02_redox_tower_and_energy.ipynb) | the tower and its scale bar, the interactive tower, hydrogen and temperature sweeps, the syntrophy window, the interactive explorer |
+| [`03_environmental_affinity`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/03_environmental_affinity.ipynb) | pH speciation, the curated library, and the affinity ladder for a real porewater |
+| [`04_when_the_library_refuses_to_guess`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/04_when_the_library_refuses_to_guess.ipynb) | the three places the library asks instead of guessing: contested names, underdetermined equations, and averaged oxidation states |
+| [`05_carbon`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/05_carbon.ipynb) | the template for the element series: the ladder, the Frost curve, the Eh–pH field, and why formate is thermodynamically doomed and completely ordinary |
+| [`06_nitrogen`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/06_nitrogen.ipynb) | the widest ladder in biology, the honest gap where NO and N₂O should be, why nitrite falls apart, and why DNRA survives despite paying less |
+| [`07_sulfur`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/07_sulfur.ipynb) | elemental sulfur disproportionation: on the hull at unit activity, off it at 10 µM, and a living organism in the gap |
+| [`08_iron`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/08_iron.ipynb) | mixed-valence rungs, why pyrite is refused one, and the three diagrams answering three different questions |
+| [`09_manganese`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/09_manganese.ipynb) | Mn(III) disproportionating in acid and surviving at pH 7, plus two documented flaws in the manganese data |
+| [`10_arsenic`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/10_arsenic.ipynb) | why reducing an aquifer mobilises arsenic: no insoluble sink, and a neutral arsenite that will not sorb |
+| [`11_selenium`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/11_selenium.ipynb) | the counter-example — measuring how much of the water window each element spends as a solid |
+| [`12_chromium_and_uranium`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/12_chromium_and_uranium.ipynb) | a Frost diagram with no honest zero, and a couple that ignores pH entirely |
+| [`photoAs`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/photoAs.ipynb), [`photoFe`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/photoFe.ipynb), [`photoNO2`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/photoNO2.ipynb) | phototrophy: an uphill CO₂-fixation reaction per donor, then the photons that pay for it |
+| [`Scratchbook`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/Scratchbook.ipynb) | a worked problem end to end, starting from nothing but an equation string |
 
 The numbered notebooks are committed with their outputs and are **executed by
 the test suite** (`tests/test_notebooks.py`), so a library change that breaks
@@ -107,11 +111,71 @@ To regenerate the committed outputs after changing a notebook:
 jupytext --sync --execute notebooks/02_redox_tower_and_energy.py
 ```
 
-One caveat on notebook 02: the interactive tower is an ipywidgets view, which
-needs a live kernel. Its widget state is embedded, so JupyterLab and nbviewer
-render it, but **GitHub's notebook viewer shows that cell blank**. The
-`plot_interactive_tower(..., save_html=...)` export in the same section is the
-route that works with no kernel behind it.
+The `.py` and `.ipynb` of every pair are asserted to hold the same cells
+(`TestNotebooksAreInSync`). Nothing else would catch drift — the execution
+tests run from the `.py` on purpose, so a stale `.ipynb` breaks nothing and is
+silently wrong for everyone reading it on GitHub. Outputs and execution
+counters are free to differ; re-running two cells in JupyterLab is not drift.
+
+**One caveat on the ipywidgets cells.** Notebook 02's interactive tower and
+the `interactive_element` widgets in notebooks 05, 07 and 10 need a live
+kernel. Their widget state is embedded, so JupyterLab and nbviewer render
+them, but **GitHub's notebook viewer shows those cells blank**. Everything
+around them — the static figures, the tables, the prose — renders normally.
+The `save_html=` exports are the route that works with nothing behind them,
+and they are the subject of the next section.
+
+### The interactive pages
+
+Three self-contained HTML files are committed. Each bundles Plotly, needs no
+server, no Python and no network, and works by opening it in a browser:
+
+| file | what it is |
+|---|---|
+| `notebooks/tower_interactive.html` | the redox tower, with pH, temperature and activity-ratio sliders |
+| `notebooks/explorer_methanogenesis.html` | the free-energy explorer for hydrogenotrophic methanogenesis |
+| `notebooks/arsenic_interactive.html` | arsenic's Latimer, Frost and Eh–pH diagrams, with the `show`/`label` dropdowns |
+
+**They cannot be linked straight from this repository.** GitHub serves raw
+files as `content-type: text/plain` with `nosniff`, so a `raw.githubusercontent.com`
+link shows the HTML source rather than running it. That is a deliberate
+GitHub policy, not a quirk to work around — `htmlpreview`-style proxies exist
+but are third-party, and these files are 4.3 MB each.
+
+The clean fix is **GitHub Pages**, which is a single repository setting and no
+build step, since the files are already committed. With Pages serving `main`
+at `/`, they are at:
+
+```
+https://jamesrh.github.io/microbial_thermo/notebooks/tower_interactive.html
+https://jamesrh.github.io/microbial_thermo/notebooks/explorer_methanogenesis.html
+https://jamesrh.github.io/microbial_thermo/notebooks/arsenic_interactive.html
+```
+
+Pages is **not enabled on this repository yet**, so those three URLs are the
+addresses they *would* have, not live links. Enabling it is
+*Settings → Pages → Source: deploy from a branch → `main` / `/ (root)`*, or:
+
+```bash
+gh api -X POST repos/JamesRH/microbial_thermo/pages \
+  -f 'source[branch]=main' -f 'source[path]=/'
+```
+
+The repository is already public, so this publishes nothing that is not
+public already. A `.nojekyll` file is committed at the root so Pages serves
+the tree verbatim instead of running it through Jekyll.
+
+Until then, the honest way to read them is to clone and open the file, or to
+regenerate one:
+
+```python
+from microbial_thermo.figures import plot_interactive_element
+plot_interactive_element("Fe", save_html="iron_interactive")
+```
+
+`webfrontend.md` §7.1 records the naming convention for a full per-element set
+and why serving static pages is likely cheaper than rebuilding these controls
+inside the planned Streamlit app.
 
 ---
 
