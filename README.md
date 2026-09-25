@@ -1015,6 +1015,42 @@ mechanical rule that is never wrong beats a clever one that is sometimes wrong
 and silent about it. Nothing is lost, because siderite is Fe(II) and the Eh–pH
 diagram is where a siderite field belongs.
 
+### All three, under sliders
+
+```python
+from microbial_thermo.figures import interactive_element, plot_interactive_element
+
+interactive_element("Mn")                              # ipywidgets, live kernel
+plot_interactive_element("As", save_html="figures_out/as")   # standalone page
+```
+
+Latimer, Frost and Eh–pH on one canvas, with temperature, pH and dissolved
+activity on sliders. The pH slider is drawn on the Eh–pH panel as a vertical
+line, so the other two panels are visibly a slice through it.
+
+**Only temperature costs anything.** A pH change is already a coefficient on
+the decomposition and an activity change is $RT\ln(a_2/a_1)$ per mole of the
+element on the aqueous species, so the grid is built once over temperature and
+every slider move afterwards is arithmetic on floats already in memory — the
+Eh–pH panel included, since it is an argmin over a stack of planes. The tests
+assert that a series taken from the grid at a new pH and activity equals one
+built from scratch, exactly rather than approximately.
+
+**A species has to be available at every temperature or at none.** Manganite
+carries a single log K at 25 °C, so it is on the static 25 °C diagram and
+cannot be on an interactive one: a phase that appears and vanishes as a slider
+moves is a different diagram each time, not the same one at new conditions. It
+is dropped from the whole grid and named on the figure.
+
+The exported HTML carries the *decomposition* — base energy, proton and
+electron coefficients per species per temperature — and rebuilds all three
+diagrams in JavaScript, convex hull included. That means two implementations
+of the same equations, so the test suite runs the real exported script in
+node and checks it against the library: volt equivalents and Latimer
+potentials agree to 1e-9, the hulls match, and the Eh–pH fields agree cell by
+cell. The check skips where node is not installed rather than pretending to
+pass.
+
 ### Sweeps without plotting
 
 ```python
@@ -1223,8 +1259,7 @@ the digits written, so a file saying 24, 25, 26, 27 rendered as 18, 19, 20, 21
 and nobody reading GitHub saw the numbers this repo cites. They are plain
 bullets with literal `#N` labels now, which render the same everywhere.
 
-**Next up:** item **26, the interactive versions** of the three diagrams, then
-**28**, the per-element notebooks that use them.
+**Next up:** item **28**, the per-element notebooks.
 
 ### Completed
 
@@ -1249,6 +1284,7 @@ bullets with literal `#N` labels now, which render the same everywhere.
 | 13 | Eh–pH (Pourbaix) diagrams | `figures/pourbaix.py`, `tests/test_pourbaix.py` |
 | 24 | Latimer diagrams | `figures/latimer.py`, `tests/test_latimer.py` |
 | 25 | Frost–Ebsworth diagrams | `figures/frost.py`, `tests/test_frost.py` |
+| 26 | Interactive Latimer, Frost and Eh–pH | `figures/interactive_element.py`, `tests/test_interactive_element.py` |
 
 ### Tier 1 — small, and builds directly on what exists
 
@@ -1316,14 +1352,6 @@ bullets with literal `#N` labels now, which render the same everywhere.
     move from hand calculation to full speciation modelling.
 - **#17 · Pressure beyond near-surface**, opening up the hydrothermal and deep
     subsurface range pyGCC is actually built for.
-- **#26 · Interactive Latimer, Frost and Pourbaix** on the pattern item 10
-    established: precompute the expensive axes on a grid, apply the cheap ones
-    in closed form, ship ipywidgets for notebooks and standalone HTML with
-    hand-built sliders for everyone else. Latimer and Frost are *cheaper* than
-    the tower; Pourbaix is the expensive one and the best candidate for a
-    precomputed grid. **This is the point of building them rather than
-    borrowing**: a diagram that recomputes at the working pH and temperature
-    is something no textbook version can do.
 - **#28 · Per-element notebooks** — one each for the elements a
   biogeochemistry course actually teaches: **C, N, S, Fe**, then the other
   major redox-active biologically interacting metals and metalloids — **Mn,

@@ -220,7 +220,7 @@ def _bracketing_segment(hull, state):
 def frost_diagram(
     element: str,
     species=None,
-    pH: float = 7.0,
+    pH: float | None = None,
     temperature_c: float = 25.0,
     activity: float = 1.0,
     fixed=None,
@@ -237,6 +237,7 @@ def frost_diagram(
     dissociation as a vertical spread of points at one state.
     """
     if series is None:
+        pH = 7.0 if pH is None else pH
         series = element_series(
             element,
             species=species,
@@ -247,6 +248,13 @@ def frost_diagram(
             backend=backend,
             reference=reference,
         )
+    else:
+        # A prepared series carries the conditions its numbers were built at.
+        # Taking temperature and activity from the arguments instead would let
+        # a figure state conditions it was not drawn at, which is worse than
+        # an error. pH is the exception: it is a coefficient, applied here.
+        pH = series.pH if pH is None else pH
+        temperature_c, activity = series.temperature_c, series.activity
 
     usable, excluded = ladder_entries(series)
     if not usable:
@@ -408,7 +416,8 @@ def plot_frost(
         title = f"{element} — Frost-Ebsworth diagram\n{subtitle}"
     ax.set_title(title, fontsize=SIZES["title"], pad=10)
 
-    if not diagram.reference_is_element:
+    owns_figure = len(figure.axes) == 1
+    if not diagram.reference_is_element and owns_figure:
         figure.text(
             0.5,
             0.005,
@@ -422,7 +431,8 @@ def plot_frost(
             wrap=True,
         )
 
-    figure.tight_layout()
+    if owns_figure:
+        figure.tight_layout()
     if save is not None:
         base = Path(save)
         if base.parent != Path(""):

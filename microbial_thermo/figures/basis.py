@@ -46,6 +46,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from ..exceptions import OutOfRangeError
 from ..units import FARADAY, KJ_PER_MOL_STR, R, as_magnitude, celsius_to_kelvin, ureg
 
 #: Faraday constant in kJ/(mol V), so a potential times electrons is an energy.
@@ -335,6 +336,7 @@ def element_series(
     fixed=None,
     backend=None,
     reference=None,
+    skip_out_of_range: bool = False,
 ) -> ElementSeries:
     """Decompose every listed form of ``element`` onto the common basis.
 
@@ -350,6 +352,13 @@ def element_series(
     ``reference`` overrides the element's zero point. It changes nothing on
     an Eh-pH diagram and everything on a Frost one, which is the whole reason
     it is exposed.
+
+    ``skip_out_of_range`` turns a species the backend cannot evaluate at this
+    temperature into a ``skipped`` entry instead of an error. It is off by
+    default, because losing a phase silently changes the diagram and the
+    backend's own message names the species and says what to do. It is on
+    for :func:`element_grid`, which spans temperatures and has to decide
+    something.
     """
     from .. import get_backend
     from ..species import resolve
@@ -386,7 +395,14 @@ def element_series(
         except ValueError as exc:
             skipped.append((entry.backend, str(exc)))
             continue
-        base = gibbs(entry.backend) - (n_e / reference_atoms) * reference_g - b * water
+        try:
+            entry_gibbs = gibbs(entry.backend)
+        except OutOfRangeError as exc:
+            if not skip_out_of_range:
+                raise
+            skipped.append((entry.backend, str(exc)))
+            continue
+        base = entry_gibbs - (n_e / reference_atoms) * reference_g - b * water
         for aux_element, aux, k in extras:
             base -= k * (
                 gibbs(aux.backend)
@@ -491,6 +507,7 @@ class ElementGrid:
     temperatures: tuple
     series: tuple
     activity: float
+    dropped: tuple = ()  # (backend, why) -- not available at every temperature
 
     def at(self, temperature_c: float, pH: float = 7.0, activity=None) -> ElementSeries:
         index = min(
@@ -515,33 +532,58 @@ def element_grid(
 ) -> ElementGrid:
     """Build an :class:`ElementGrid`, one series per temperature.
 
-    Costs one pass over the backend per temperature. Every species list must
-    come out the same length at every temperature or the grid could not be
-    indexed; a species that fails at one temperature and not another would
-    break that, so the first series sets the list and the rest are checked
-    against it.
+    Costs one pass over the backend per temperature.
+
+    **A species has to be available at every temperature or at none**, because
+    a slider that changes which species exist cannot be indexed and would
+    silently redraw a different diagram. Manganese is the case that forced
+    this: manganite carries a single log K at 25 C, so it is in the static
+    25 C diagram and cannot be in an interactive one. Such species are
+    dropped from the whole grid and listed in ``dropped``, which the figures
+    print, rather than appearing and disappearing as the slider moves.
     """
     built = []
     for temperature in temperatures:
-        series = element_series(
-            element,
-            species=species,
-            temperature_c=temperature,
-            activity=activity,
-            fixed=fixed,
-            backend=backend,
-            reference=reference,
-        )
-        if built and [e.backend for e in series] != [e.backend for e in built[0]]:
-            raise ValueError(
-                f"{element} resolves to a different species list at {temperature} °C "
-                f"than at {temperatures[0]} °C, so the grid cannot be indexed: "
-                f"{[e.backend for e in built[0]]} vs {[e.backend for e in series]}"
+        built.append(
+            element_series(
+                element,
+                species=species,
+                temperature_c=temperature,
+                activity=activity,
+                fixed=fixed,
+                backend=backend,
+                reference=reference,
+                skip_out_of_range=True,
             )
-        built.append(series)
+        )
+
+    common = set.intersection(*({entry.backend for entry in series} for series in built))
+    reasons = {}
+    for series in built:
+        for name, why in series.skipped:
+            reasons.setdefault(name, why)
+    dropped = tuple(
+        (name, reasons.get(name, "not available at every temperature"))
+        for name in sorted({e.backend for s in built for e in s} - common)
+    )
+    if not common:
+        raise ValueError(
+            f"no species of {element} is available across {list(temperatures)} °C: "
+            + "; ".join(f"{name}: {why}" for name, why in dropped)
+        )
+
+    import dataclasses
+
+    built = [
+        dataclasses.replace(
+            series, entries=tuple(e for e in series if e.backend in common), skipped=dropped
+        )
+        for series in built
+    ]
     return ElementGrid(
         element=element,
         temperatures=tuple(float(t) for t in temperatures),
         series=tuple(built),
         activity=activity,
+        dropped=dropped,
     )

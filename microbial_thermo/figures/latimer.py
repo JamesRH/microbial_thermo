@@ -190,7 +190,7 @@ class LatimerDiagram:
 def latimer_diagram(
     element: str,
     species=None,
-    pH: float = 7.0,
+    pH: float | None = None,
     temperature_c: float = 25.0,
     activity: float = 1.0,
     fixed=None,
@@ -205,6 +205,7 @@ def latimer_diagram(
     legitimate and shifts every step involving a change in dissolved count.
     """
     if series is None:
+        pH = 7.0 if pH is None else pH
         series = element_series(
             element,
             species=species,
@@ -215,6 +216,13 @@ def latimer_diagram(
             backend=backend,
             reference=reference,
         )
+    else:
+        # A prepared series carries the conditions its numbers were built at.
+        # Taking temperature and activity from the arguments instead would let
+        # a figure state conditions it was not drawn at, which is worse than
+        # an error. pH is the exception: it is a coefficient, applied here.
+        pH = series.pH if pH is None else pH
+        temperature_c, activity = series.temperature_c, series.activity
 
     usable, excluded = ladder_entries(series)
     if not usable:
@@ -297,6 +305,7 @@ def plot_latimer(
     dpi: int = 200,
     title: str | None = None,
     show_half_reactions: bool = False,
+    ax=None,
     **kwargs,
 ):
     """Draw the ladder as a labelled chain. Returns ``(figure, diagram)``."""
@@ -306,12 +315,16 @@ def plot_latimer(
         diagram = latimer_diagram(element, **kwargs)
 
     n = len(diagram.rungs)
-    if figsize is None:
+    if ax is not None:
+        figure = ax.figure
+        figsize = None
+    elif figsize is None:
         figsize = (
             max(7.0, 2.6 * n),
             3.4 + (0.32 * len(diagram.steps) if show_half_reactions else 0),
         )
-    figure, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        figure, ax = plt.subplots(figsize=figsize)
     ax.set_xlim(-0.65, n - 0.35)
     ax.set_ylim(-1.0, 1.0)
     ax.axis("off")
@@ -438,7 +451,8 @@ def plot_latimer(
             subtitle += f"\nheld fixed: {held}"
         title = f"{element} — Latimer diagram\n{subtitle}"
     ax.set_title(title, fontsize=SIZES["title"], pad=8)
-    figure.tight_layout()
+    if len(figure.axes) == 1:
+        figure.tight_layout()
 
     if save is not None:
         base = Path(save)

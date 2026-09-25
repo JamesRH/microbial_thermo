@@ -106,6 +106,7 @@ def pourbaix_field(
     points: int = 240,
     fixed=None,
     backend=None,
+    series=None,
 ) -> PourbaixField:
     """Work out the predominant species of ``element`` across (Eh, pH).
 
@@ -116,14 +117,19 @@ def pourbaix_field(
     detail -- and a species whose extra elements are not covered is dropped
     rather than silently mis-weighted.
     """
-    series = element_series(
-        element,
-        species=species,
-        temperature_c=temperature_c,
-        activity=activity,
-        fixed=fixed,
-        backend=backend,
-    )
+    if series is None:
+        series = element_series(
+            element,
+            species=species,
+            temperature_c=temperature_c,
+            activity=activity,
+            fixed=fixed,
+            backend=backend,
+        )
+    else:
+        # A prepared series carries its own conditions; taking them from it
+        # rather than from the arguments is what keeps a slider honest.
+        temperature_c, activity = series.temperature_c, series.activity
 
     ph = np.linspace(*ph_range, points)
     eh = np.linspace(*eh_range, points)
@@ -184,6 +190,7 @@ def plot_pourbaix(
     save: str | Path | None = None,
     formats=("svg", "png"),
     dpi: int = 200,
+    ax=None,
     **kwargs,
 ):
     """Draw the predominance diagram. Returns ``(figure, field)``."""
@@ -199,7 +206,10 @@ def plot_pourbaix(
     labels = [field.species[i] for i in present]
 
     palette = plt.cm.tab20(np.linspace(0, 1, max(len(labels), 2)))
-    figure, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        figure, ax = plt.subplots(figsize=figsize)
+    else:
+        figure = ax.figure
     ax.pcolormesh(
         field.ph,
         field.eh,
@@ -257,7 +267,8 @@ def plot_pourbaix(
         held = ", ".join(f"{_pretty(name)} {value:g}" for _, name, value in field.fixed)
         subtitle += f"\nheld fixed: {held}"
     ax.set_title(f"{element} predominance\n{subtitle}", fontsize=SIZES["title"], pad=10)
-    figure.tight_layout()
+    if len(figure.axes) == 1:
+        figure.tight_layout()
 
     if save is not None:
         base = Path(save)

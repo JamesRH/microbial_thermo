@@ -8,6 +8,7 @@ dependencies out of the calculation path.
 from .explorer import plot_energy_explorer
 from .frost import frost_diagram, plot_frost
 from .halfreaction import plot_half_reactions
+from .interactive_element import interactive_element, plot_interactive_element
 from .interactive_tower import interactive_tower, plot_interactive_tower
 from .ladder import plot_affinity_ladder
 from .latimer import latimer_diagram, plot_latimer
@@ -19,6 +20,7 @@ from .tower import plot_redox_tower
 __all__ = [
     "SyntrophyWindow",
     "frost_diagram",
+    "interactive_element",
     "interactive_tower",
     "latimer_diagram",
     "light_budget",
@@ -27,6 +29,7 @@ __all__ = [
     "plot_energy_explorer",
     "plot_frost",
     "plot_half_reactions",
+    "plot_interactive_element",
     "plot_interactive_tower",
     "plot_latimer",
     "plot_pourbaix",
