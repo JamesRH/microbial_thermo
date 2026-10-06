@@ -135,3 +135,54 @@ def add_unverified_footnote(figure, reaction, y: float = 0.005) -> None:
         va="bottom",
         wrap=True,
     )
+
+
+def omitted_footnote(excluded, alternatives=(), state_label=str, width: int = 110) -> str | None:
+    """Name every species a diagram was asked for and did not draw.
+
+    ``excluded`` is ``(backend, why)`` pairs -- species the basis could not
+    decompose, or whose electron count is not an oxidation state.
+    ``alternatives`` is ``(state, backend)`` pairs -- real forms that lost to
+    another form of the same state at this pH. A species the caller named
+    that silently vanished from a figure is exactly the kind of omission a
+    reader cannot detect, so each one is named with its reason.
+    """
+    import textwrap
+
+    parts = []
+    for name, why in excluded:
+        # Backend messages repeat the name and append advice; keep the reason.
+        reason = why[len(name) :].strip() if why.startswith(name) else why
+        reason = reason.split(". ")[0].rstrip(".")
+        parts.append(f"{name} ({reason})")
+    lines = []
+    if parts:
+        lines.append("Not drawn: " + "; ".join(parts) + ".")
+    if alternatives:
+        lost = ", ".join(f"{name} [{state_label(state)}]" for state, name in alternatives)
+        lines.append(f"Outcompeted by another form of the same state at this pH: {lost}.")
+    if not lines:
+        return None
+    return "\n".join(textwrap.fill(line, width=width) for line in lines)
+
+
+def add_omitted_footnote(ax, text: str | None, below_points: float) -> None:
+    """Draw :func:`omitted_footnote` under an axis, where layout can see it.
+
+    An annotation belongs to the axis, so ``tight_layout`` makes room for it;
+    a ``figure.text`` would be ignored by the layout and overlap the labels.
+    """
+    if text is None:
+        return
+    ax.annotate(
+        text,
+        xy=(0.0, 0.0),
+        xycoords="axes fraction",
+        xytext=(0.0, -below_points),
+        textcoords="offset points",
+        ha="left",
+        va="top",
+        fontsize=SIZES["annotation"] - 1,
+        color=PALETTE["muted"],
+        annotation_clip=False,
+    )

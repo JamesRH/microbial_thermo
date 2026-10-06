@@ -47,7 +47,7 @@ import numpy as np
 
 from .basis import FARADAY_KJ, element_series, ladder_entries, pretty
 from .latimer import STATE_TOLERANCE, _state_label
-from .style import PALETTE, SIZES
+from .style import PALETTE, SIZES, add_omitted_footnote, omitted_footnote
 
 
 @dataclass(frozen=True)
@@ -380,6 +380,10 @@ def frost_diagram(
         temperature_c, activity = series.temperature_c, series.activity
 
     usable, excluded = ladder_entries(series)
+    # Species the basis could not decompose at all go in the same list. They
+    # were named by the caller, so dropping them without a word is worse than
+    # dropping a species for having no oxidation state.
+    excluded = [*series.skipped, *excluded]
     if not usable:
         raise ValueError(
             f"no species of {element} has an oxidation state the basis can state; "
@@ -426,6 +430,7 @@ def plot_frost(
     show: str = "all",
     label: str = "predominant",
     ax=None,
+    show_omitted: bool = True,
     **kwargs,
 ):
     """Draw the diagram. Returns ``(figure, diagram)``.
@@ -443,6 +448,10 @@ def plot_frost(
       rest as markers, which is the readable default.
 
     ``"prominent"`` is accepted as a spelling of ``"predominant"``.
+
+    ``show_omitted`` notes under the axis every species that was asked for
+    and could not be placed, with the reason. Only on a figure this call
+    creates; a panel drawn into someone else's axis leaves that to them.
     """
     import matplotlib.pyplot as plt
 
@@ -626,6 +635,10 @@ def plot_frost(
         )
 
     if owns_figure:
+        # Below the x-axis label. Only on a figure this call owns: a panel in
+        # someone else's figure leaves its footnotes to that figure.
+        if show_omitted:
+            add_omitted_footnote(ax, omitted_footnote(diagram.excluded), below_points=36)
         figure.tight_layout()
     if save is not None:
         base = Path(save)

@@ -441,6 +441,18 @@ zero of the y axis and makes the hull the CH4-HCO3- line, which is the one a
 methanogen lives on. Notebook 13 does this, and checks the height of acetate
 above that line against the balanced reaction (-14.8 vs -14.9 kJ/mol).
 
+**A species the basis cannot decompose used to vanish from Frost and Latimer
+diagrams.** `element_series` recorded it in `series.skipped`, but the
+diagrams only reported `ladder_entries` exclusions, so methylamine without a
+nitrogen basis simply was not there. Both now merge `series.skipped` into
+`.excluded`, and both plots print every omission -- excluded species and,
+on a Latimer diagram, the forms that lost their rung at this pH -- under the
+axis with the reason. The note is an axis annotation rather than a
+`figure.text` so `tight_layout` makes room for it; the Latimer half-reaction
+block was moved the same way, since as a `figure.text` it ran into the
+"overall" arc. When every species is skipped, `element_series` now says why
+instead of "no usable species".
+
 ---
 
 ## Where this was left (24 September 2026, second run)

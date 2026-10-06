@@ -479,5 +479,75 @@ class TestFigure(unittest.TestCase):
             plt.close(figure)
 
 
+def _notes(figure):
+    """Every annotation on every axis, as text."""
+    return [child.get_text() for ax in figure.axes for child in ax.texts]
+
+
+class TestSkippedSpeciesAreSurfaced(unittest.TestCase):
+    """A named species the basis cannot decompose must not vanish silently.
+
+    Methylamine contains nitrogen, which the default basis does not cover. It
+    used to drop out of ``series.skipped`` and nowhere else.
+    """
+
+    SPECIES = ["HCO3-", "Methane(aq)", "Methanamine(aq)"]
+
+    def _diagram(self, **kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return frost_diagram("C", species=self.SPECIES, pH=7.0, **kwargs)
+
+    def test_it_is_in_excluded_with_its_reason(self):
+        excluded = dict(self._diagram().excluded)
+        self.assertIn("Methanamine(aq)", excluded)
+        self.assertIn("contains N", excluded["Methanamine(aq)"])
+
+    def test_with_a_nitrogen_basis_it_is_drawn_instead(self):
+        diagram = self._diagram(fixed={"N": ("NH4+", 1.0)})
+        self.assertNotIn("Methanamine(aq)", dict(diagram.excluded))
+        states = {point.backend: point.oxidation_state for point in diagram.points}
+        self.assertAlmostEqual(states["Methanamine(aq)"], -2.0, places=9)
+
+    def test_nothing_usable_names_the_skipped_species_in_the_error(self):
+        with self.assertRaises(ValueError) as caught, warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            frost_diagram("C", species=["Methanamine(aq)"], pH=7.0)
+        self.assertIn("Methanamine(aq)", str(caught.exception))
+
+    def test_the_figure_names_it(self):
+        figure, _ = plot_frost("C", diagram=self._diagram())
+        try:
+            notes = [text for text in _notes(figure) if text.startswith("Not drawn")]
+            self.assertEqual(len(notes), 1)
+            self.assertIn("Methanamine(aq) (contains N", notes[0])
+            # The backend's advice is for the console, not the figure.
+            self.assertNotIn("fixed=", notes[0])
+        finally:
+            matplotlib.pyplot.close(figure)
+
+    def test_the_note_can_be_turned_off(self):
+        figure, _ = plot_frost("C", diagram=self._diagram(), show_omitted=False)
+        try:
+            self.assertFalse([t for t in _notes(figure) if t.startswith("Not drawn")])
+        finally:
+            matplotlib.pyplot.close(figure)
+
+    def test_no_note_when_nothing_was_left_out(self):
+        figure, _ = plot_frost("C", diagram=self._diagram(fixed={"N": ("NH4+", 1.0)}))
+        try:
+            self.assertFalse([t for t in _notes(figure) if t.startswith("Not drawn")])
+        finally:
+            matplotlib.pyplot.close(figure)
+
+    def test_a_panel_in_someone_elses_axis_gets_no_note(self):
+        figure, ax = matplotlib.pyplot.subplots()
+        try:
+            plot_frost("C", diagram=self._diagram(), ax=ax)
+            self.assertFalse([t for t in _notes(figure) if t.startswith("Not drawn")])
+        finally:
+            matplotlib.pyplot.close(figure)
+
+
 if __name__ == "__main__":
     unittest.main()

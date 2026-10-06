@@ -494,7 +494,12 @@ def element_series(
         )
 
     if not built:
-        raise ValueError(f"no usable species for {element!r}")
+        # Say why: every species was skipped, and the reasons are the only
+        # thing that tells the caller what to change.
+        reasons = "; ".join(f"{name}: {why}" for name, why in skipped)
+        raise ValueError(
+            f"no usable species for {element!r}" + (f" -- {reasons}" if reasons else "")
+        )
 
     return ElementSeries(
         element=element,

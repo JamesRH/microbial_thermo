@@ -1182,6 +1182,21 @@ frost_diagram("C", species=["HCO3-", "dimethyl sulfide", "Methane(aq)"],
 
 Minerals carry no SMILES, so pyrite and siderite are refused exactly as before.
 
+**Nothing asked for disappears without a word.** A species can miss a ladder
+three ways: the basis cannot decompose it at all (methylamine with no nitrogen
+basis), its electron count is not an oxidation state (pyrite), or another form
+of the same state wins at this pH (CO₂(aq) against bicarbonate at pH 7). The
+first two are in `.excluded` as `(species, reason)` pairs and the third in a
+Latimer diagram's `.alternatives`, and both figures print a note under the axis
+naming each one with its reason. `show_omitted=False` turns the note off; a
+panel drawn into an axis you supplied never gets one.
+
+```python
+diagram = latimer_diagram("C", species=["HCO3-", "CO2(aq)", "Methanamine(aq)", "Methane(aq)"])
+diagram.excluded       # (('Methanamine(aq)', 'Methanamine(aq) contains N, ...'),)
+diagram.alternatives   # ((4.0, 'CO2(aq)'),)
+```
+
 ### All three, under sliders
 
 ```python

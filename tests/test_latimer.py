@@ -243,5 +243,77 @@ class TestFigure(unittest.TestCase):
             plt.close(figure)
 
 
+def _notes(figure):
+    """Every annotation on every axis, as text."""
+    return [child.get_text() for ax in figure.axes for child in ax.texts]
+
+
+class TestNothingIsDroppedSilently(unittest.TestCase):
+    """Three ways a named species can miss the ladder, and each is reported.
+
+    Methylamine has no nitrogen basis (skipped), DMS has an electron count
+    against sulfate that is not carbon's state (excluded), and CO2(aq) loses
+    the C(IV) rung to bicarbonate at pH 7 (an alternative).
+    """
+
+    SPECIES = ["HCO3-", "CO2(aq)", "Acetate", "Methanamine(aq)", "dimethyl sulfide", "Methane(aq)"]
+
+    @classmethod
+    def setUpClass(cls):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            cls.diagram = latimer_diagram("C", species=cls.SPECIES, pH=7.0)
+
+    def test_the_skipped_species_is_in_excluded(self):
+        excluded = dict(self.diagram.excluded)
+        self.assertIn("Methanamine(aq)", excluded)
+        self.assertIn("contains N", excluded["Methanamine(aq)"])
+
+    def test_the_ladder_exclusion_is_still_there(self):
+        self.assertIn("dimethyl sulfide", dict(self.diagram.excluded))
+
+    def test_every_named_species_is_accounted_for(self):
+        drawn = set(self.diagram.species)
+        excluded = {name for name, _ in self.diagram.excluded}
+        alternative = {name for _, name in self.diagram.alternatives}
+        self.assertEqual(drawn | excluded | alternative, set(self.SPECIES))
+
+    def test_nothing_usable_names_the_skipped_species_in_the_error(self):
+        with self.assertRaises(ValueError) as caught, warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            latimer_diagram("C", species=["Methanamine(aq)"], pH=7.0)
+        self.assertIn("Methanamine(aq)", str(caught.exception))
+
+    def test_the_figure_names_all_three(self):
+        figure, _ = plot_latimer("C", diagram=self.diagram)
+        try:
+            text = "\n".join(_notes(figure))
+            for name in ("Methanamine(aq)", "dimethyl sulfide", "CO2(aq) [IV]"):
+                self.assertIn(name, text)
+        finally:
+            matplotlib.pyplot.close(figure)
+
+    def test_with_half_reactions_the_note_sits_below_them(self):
+        figure, _ = plot_latimer("C", diagram=self.diagram, show_half_reactions=True)
+        try:
+            figure.canvas.draw()
+            renderer = figure.canvas.get_renderer()
+            texts = figure.axes[0].texts
+            note = next(t for t in texts if t.get_text().startswith("Not drawn"))
+            block = next(t for t in texts if "E = " in t.get_text())
+            self.assertLess(
+                note.get_window_extent(renderer).y1, block.get_window_extent(renderer).y0
+            )
+        finally:
+            matplotlib.pyplot.close(figure)
+
+    def test_the_note_can_be_turned_off(self):
+        figure, _ = plot_latimer("C", diagram=self.diagram, show_omitted=False)
+        try:
+            self.assertFalse([t for t in _notes(figure) if "Not drawn" in t])
+        finally:
+            matplotlib.pyplot.close(figure)
+
+
 if __name__ == "__main__":
     unittest.main()

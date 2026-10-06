@@ -40,7 +40,7 @@ from fractions import Fraction
 from pathlib import Path
 
 from .basis import FARADAY_KJ, element_series, ladder_entries, pretty
-from .style import PALETTE, SIZES
+from .style import PALETTE, SIZES, add_omitted_footnote, omitted_footnote
 
 #: Oxidation states within this of each other count as the same rung. Magnetite
 #: is +8/3 and nothing else is near it, so the tolerance only ever collapses
@@ -122,7 +122,7 @@ class LatimerDiagram:
     activity: float
     series: object
     alternatives: tuple = ()  # (state, backend) not chosen at this pH
-    excluded: tuple = ()  # (backend, why) -- no statable oxidation state
+    excluded: tuple = ()  # (backend, why) -- not decomposable, or no statable state
     fixed: tuple = ()
 
     @property
@@ -225,6 +225,8 @@ def latimer_diagram(
         temperature_c, activity = series.temperature_c, series.activity
 
     usable, excluded = ladder_entries(series)
+    # See frost_diagram: undecomposable species are reported, not dropped.
+    excluded = [*series.skipped, *excluded]
     if not usable:
         raise ValueError(
             f"no species of {element} has an oxidation state the basis can state; "
@@ -306,9 +308,15 @@ def plot_latimer(
     title: str | None = None,
     show_half_reactions: bool = False,
     ax=None,
+    show_omitted: bool = True,
     **kwargs,
 ):
-    """Draw the ladder as a labelled chain. Returns ``(figure, diagram)``."""
+    """Draw the ladder as a labelled chain. Returns ``(figure, diagram)``.
+
+    ``show_omitted`` notes under the ladder every species that was asked for
+    and not drawn -- undecomposable, without a statable oxidation state, or
+    outcompeted by another form of its state at this pH -- with the reason.
+    """
     import matplotlib.pyplot as plt
 
     if diagram is None:
@@ -429,17 +437,31 @@ def plot_latimer(
             color=PALETTE["endergonic"],
         )
 
+    # Everything asked for and not drawn: undecomposable species, species
+    # with no statable state, and forms that lost their rung at this pH.
+    omitted = (
+        omitted_footnote(diagram.excluded, diagram.alternatives, _state_label)
+        if show_omitted
+        else None
+    )
+
     if show_half_reactions:
         lines = "\n".join(f"{s.half_reaction()}    E = {s.potential:+.3f} V" for s in diagram.steps)
-        figure.text(
-            0.5,
-            0.02,
+        # Under the axis as an annotation, so the layout makes room for it.
+        # It was a figure.text, which the layout ignores, and it ran into the
+        # "overall" arc.
+        ax.annotate(
             lines,
+            xy=(0.5, 0.0),
+            xycoords="axes fraction",
+            xytext=(0.0, -4.0),
+            textcoords="offset points",
             ha="center",
-            va="bottom",
+            va="top",
             fontsize=SIZES["annotation"] - 1,
             color=PALETTE["muted"],
             family="monospace",
+            annotation_clip=False,
         )
 
     if title is None:
@@ -453,6 +475,8 @@ def plot_latimer(
         title = f"{element} — Latimer diagram\n{subtitle}"
     ax.set_title(title, fontsize=SIZES["title"], pad=8)
     if owns_figure:
+        below = 4 + (12 * len(diagram.steps) + 8 if show_half_reactions else 0)
+        add_omitted_footnote(ax, omitted, below_points=below)
         figure.tight_layout()
 
     if save is not None:
