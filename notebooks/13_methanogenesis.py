@@ -79,6 +79,8 @@ from microbial_thermo.figures import (
 )
 from microbial_thermo.figures.basis import FARADAY_KJ
 from microbial_thermo.figures.explorer import SVG_CONFIG
+from microbial_thermo.figures.style import PALETTE
+from microbial_thermo.figures.syntrophy import SYNTROPHY_DIV_ID
 from microbial_thermo.library import reaction
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -357,7 +359,7 @@ for label, built in (("CH3OH/CH4 couple", direct), ("through CO2", through_co2))
 
 
 # %%
-def pathway(donor, acceptor, gas):
+def pathway(donor, acceptor, gas, conditions=standard):
     """One methanogenic reaction per mole of CH4, in either convention.
 
     ``donor`` and ``acceptor`` are (reduced, oxidized) couples written with
@@ -377,7 +379,7 @@ def pathway(donor, acceptor, gas):
         return Couple.make(reduced, oxidized, key_element="C" if has_carbon else None)
 
     return mt.Reaction.from_couples(
-        donor=couple(donor), acceptor=couple(acceptor), conditions=standard, normalize_to=ch4
+        donor=couple(donor), acceptor=couple(acceptor), conditions=conditions, normalize_to=ch4
     )
 
 
@@ -426,7 +428,73 @@ delta_g_table
 #   for DMS; compare the second column.
 # * **Methyl reduction beats disproportionation for every methyl substrate**,
 #   because H₂ is a better donor than a methyl group being oxidised to CO₂.
+
+# %% [markdown]
+# ### The same table at very low H₂
 #
+# Standard state puts H₂ at 1 bar, which no methanogen ever sees. Below, every
+# species stays at unit activity except H₂, which is dropped to 10⁻⁷ bar —
+# typical of sediments where sulfate reducers or methyl reducers are holding it
+# down (section 5). Only the reactions that consume H₂ can change.
+
+# %%
+LOW_H2 = 1e-7  # bar
+low_h2 = mt.Conditions(temperature_c=25.0, pH=7.0, partial_pressures={"H2(g)": LOW_H2})
+
+rows = []
+for (group, substrate), (donor, acceptor) in pathways.items():
+    dissolved = pathway(donor, acceptor, gas=False, conditions=low_h2)
+    gaseous = pathway(donor, acceptor, gas=True, conditions=low_h2)
+    rows.append(
+        {
+            "type": group,
+            "substrate": substrate,
+            "ΔG' solutes 1 M (kJ/mol CH4)": round(dissolved.delta_G.magnitude, 1),
+            "ΔG' gases 1 bar (kJ/mol CH4)": round(gaseous.delta_G.magnitude, 1),
+            "change from ΔG°' (kJ/mol CH4)": round(
+                dissolved.delta_G.magnitude - dissolved.delta_G_standard_prime.magnitude, 1
+            ),
+        }
+    )
+low_h2_table = pd.DataFrame(rows).set_index(["type", "substrate"])
+low_h2_table
+
+# %% [markdown]
+# The table has turned over.
+#
+# * **Type I is now endergonic.** CO₂ reduction consumes four H₂ per CH₄, so it
+#   pays four times $RT\ln(10^{7})$ ≈ 160 kJ/mol CH₄ for the low H₂, and goes
+#   from about −123 to +37 kJ/mol CH₄. Formate is unchanged here because it
+#   is a separate donor — but in nature formate and H₂ are interconverted
+#   by formate hydrogenlyase, so formate falls with H₂.
+# * **Methyl reduction loses only a quarter as much.** One H₂ per CH₄, so the
+#   penalty is a single $RT\ln(10^{7})$ ≈ 40 kJ/mol. It is still strongly
+#   exergonic.
+# * **Everything without H₂ in it does not move**: formate, acetate and the
+#   methyl disproportionations keep their full standard-state value.
+# * **Methanol disproportionation now beats methyl reduction per CH₄**
+#   (−86.6 against −55.7 kJ/mol CH₄ in the solute column). Methyl reduction
+#   only wins when there is plenty of H₂ — the next cell finds where.
+#
+# So where H₂ is scarce, the methanogens still paid well are the ones that do
+# not need it: Type II on acetate and methyl compounds. (Methyl reducers do
+# need H₂, but each H₂ is worth so much to them that they can still use it at
+# pressures where hydrogenotrophs cannot; section 5 is about exactly that.)
+
+# %%
+# Methyl reduction loses RT ln(1/pH2) per CH4; disproportionation loses nothing.
+R_KJ = 8.314462618e-3  # kJ/(mol K)
+reduction = delta_g_table.loc[
+    ("Type II: methyl reduction", "methanol + H2"), "ΔG°' solutes 1 M (kJ/mol CH4)"
+]
+disproportionation = delta_g_table.loc[
+    ("Type II: disproportionation", "methanol"), "ΔG°' solutes 1 M (kJ/mol CH4)"
+]
+standard_rt = R_KJ * 298.15
+crossover = np.exp((reduction - disproportionation) / standard_rt)
+print(f"methyl reduction beats methanol disproportionation above {crossover:.2g} bar H2")
+
+# %% [markdown]
 # **Methylamine needs a correction.** The database has only neutral CH₃NH₂.
 # At pH 7 methylamine is almost entirely methylammonium, CH₃NH₃⁺
 # (p*K*a ≈ 10.6). Starting from 1 M methylammonium instead of 1 M neutral
@@ -434,7 +502,6 @@ delta_g_table
 # each methylamine consumed:
 
 # %%
-R_KJ = 8.314462618e-3  # kJ/(mol K)
 T = 298.15
 pka_methylammonium = 10.6
 deprotonation = np.log(10) * R_KJ * T * (pka_methylammonium - 7.0)
@@ -524,18 +591,104 @@ explorer_consumer.show(config=SVG_CONFIG)
 # %% [markdown]
 # ### Both together
 #
-# Put both reactions on one H₂ axis and the lines cross. The shaded band is
+# Put both reactions on one H₂ axis and the lines cross. The green band is
 # the range of H₂ partial pressures where **both** are exergonic at the same
 # time. Only there can the partnership run. The methanogen keeps H₂ low
 # enough for the S organism, and the S organism keeps H₂ high enough for the
 # methanogen.
+#
+# **Being exergonic is not enough.** A cell conserves energy by pumping ions
+# (H⁺ or Na⁺) out across its membrane, and the smallest step it can take is
+# one ion. Schink (1997, *Microbiol. Mol. Biol. Rev.*) put the cost of one ion
+# at about **−20 kJ/mol**: ATP synthesis costs −60 to −70 kJ/mol in a living
+# cell and uses three to four ions. So each organism needs at least −20 kJ/mol
+# **per turnover of its own substrate**, if it pumps one ion each time.
+#
+# Both partners are plotted per 2 e⁻, which is not a turnover of either. The
+# S organism oxidises one ethanol per 4 e⁻, so one ion per ethanol is −10 kJ
+# per 2 e⁻. The methanogen makes one CH₄ per 8 e⁻, so one ion per CH₄ is
+# −5 kJ per 2 e⁻. The dashed lines below are those two floors, each in its
+# organism's colour. They are minimums: the methanogen's methyltransferase
+# alone pumps two Na⁺ per CH₄.
 
 # %%
+ION_KJ = -20.0  # kJ/mol to pump one H+ or Na+ (Schink 1997)
+
+
+def turnovers(built, substrate):
+    """Moles of ``substrate`` the reaction moves as written (per 2 e- here)."""
+    coefficients = {species.backend: value for species, value in built.coefficients.items()}
+    return abs(float(coefficients[substrate]))
+
+
+def floors_for(partners):
+    """(value, colour, note) for each (reaction, substrate, name, organism, colour).
+
+    One ion per turnover of the substrate, put on the reaction's own per-2 e-
+    axis: ION_KJ times the moles of substrate the reaction moves.
+    """
+    out = []
+    for built, substrate, name, organism, colour in partners:
+        value = ION_KJ * turnovers(built, substrate)
+        note = f"{organism}: 1 ion per {name} = {ION_KJ:g} kJ/mol {name} ({value:g} per 2 e⁻)"
+        out.append((value, colour, note))
+    return out
+
+
+def draw_floors(ax, floors):
+    """Dashed per-organism floors on a matplotlib axis, labelled along the line."""
+    for index, (value, colour, note) in enumerate(floors):
+        ax.axhline(
+            value,
+            color=colour,
+            linestyle=(0, (5, 3)) if index == 0 else (0, (2, 2)),
+            linewidth=1.4,
+            zorder=3,
+        )
+        ax.text(
+            0.01 if index == 0 else 0.99,
+            value,
+            note,
+            transform=ax.get_yaxis_transform(),
+            ha="left" if index == 0 else "right",
+            va="top" if index == 0 else "bottom",
+            fontsize=8.5,
+            color=colour,
+            zorder=7,
+            # A white backing so the note stays readable where it crosses a curve.
+            bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.85, "pad": 1.5},
+        )
+
+
+def draw_floors_plotly(figure, floors):
+    """The same floors on a Plotly figure."""
+    for index, (value, colour, note) in enumerate(floors):
+        figure.add_hline(
+            y=value,
+            line={"color": colour, "width": 1.4, "dash": "dash" if index == 0 else "dot"},
+            annotation_text=note,
+            annotation_position="bottom left" if index == 0 else "top right",
+            annotation={
+                "font": {"size": 10, "color": colour},
+                "bgcolor": "rgba(255,255,255,0.85)",
+            },
+        )
+
+
 labels = {
     "producer_label": "ethanol oxidation (S organism)",
     "consumer_label": "hydrogenotrophic methanogenesis",
 }
-figure, window = plot_syntrophy_window(producer, consumer, low=1e-10, high=1.0, **labels)
+floors = floors_for(
+    [
+        (producer, "Ethanol(aq)", "ethanol", "S organism", PALETTE["oxidation"]),
+        (consumer, "Methane(aq)", "CH₄", "methanogen", PALETTE["reduction"]),
+    ]
+)
+figure, window = plot_syntrophy_window(
+    producer, consumer, low=1e-10, high=1.0, show_quantum_band=False, **labels
+)
+draw_floors(figure.axes[0], floors)
 plt.show()
 
 # %%
@@ -543,16 +696,42 @@ together, _ = plot_syntrophy_interactive(
     producer,
     consumer,
     window=window,
-    save_html="syntrophy_together",
+    show_quantum_band=False,
     title="Ethanol oxidation + hydrogenotrophic methanogenesis",
     **labels,
+)
+draw_floors_plotly(together, floors)
+together.write_html(
+    "syntrophy_together.html", include_plotlyjs=True, config=SVG_CONFIG, div_id=SYNTROPHY_DIV_ID
 )
 together.show(config=SVG_CONFIG)
 
 # %%
 pressure, shared = window.best_shared
 print(f"window: {window.low:.1e} to {window.high:.1e} bar H2 ({window.decades:.1f} decades)")
-print(f"best shared: {shared:.1f} kJ/mol per 2 e- each, at {pressure:.1e} bar")
+print(f"best shared: {shared:.1f} kJ/mol per 2 e- each, at {pressure:.1e} bar\n")
+
+at_best = digester.replace(partial_pressures={"H2(g)": pressure})
+for name, substrate, organism in (
+    ("syntrophic_ethanol_oxidation", "Ethanol(aq)", "S organism"),
+    ("hydrogenotrophic_methanogenesis", "Methane(aq)", "methanogen"),
+):
+    built = reaction(name, at_best)
+    per_turnover = built.delta_G.magnitude / turnovers(built, substrate)
+    print(
+        f"{organism:11s} {per_turnover:6.1f} kJ/mol {substrate:12s}"
+        f" -> enough for {per_turnover / ION_KJ:.1f} ions per turnover"
+    )
+
+# %% [markdown]
+# At the crossing each partner has about enough for one to three ions per
+# turnover: the S organism a little over one per ethanol, the methanogen a
+# little under three per CH₄. That is tight but workable, which is what
+# syntrophs are. Measured in sediments, methanogens and syntrophs have been
+# found running at energies below one 20-kJ ion per turnover (Hoehler *et
+# al.* 2001; Jackson & McInerney 2002), which suggests the real cost of an ion
+# can be lower than 20 kJ — for example in organisms whose ATP synthase uses
+# more ions per ATP.
 
 # %% [markdown]
 # The three pages are written next to this notebook as
@@ -999,7 +1178,15 @@ figure, reverse_window = plot_syntrophy_window(
     low=1e-14,
     high=1e-2,
     points=121,
+    show_quantum_band=False,
 )
+reverse_floors = floors_for(
+    [
+        (reverse, "Methane(aq)", "CH₄", "ANME", PALETTE["oxidation"]),
+        (sulfate_reducer, "SO4--", "SO₄²⁻", "sulfate reducer", PALETTE["reduction"]),
+    ]
+)
+draw_floors(figure.axes[0], reverse_floors)
 plt.show()
 print(
     f"window: {reverse_window.low:.1e} to {reverse_window.high:.1e} bar ({reverse_window.decades:.2f} decades)"
@@ -1009,8 +1196,10 @@ print(f"best shared: {shared:+.1f} kJ/mol per 2 e- each, at {pressure:.1e} bar")
 
 # %% [markdown]
 # Compare this with the ethanol window in section 4. There is a window, but
-# at its best neither partner gets more than a few kJ/mol per H₂ — far inside
-# the band this library marks as too little to conserve energy. And H₂ must
+# at its best each partner gets about −5 kJ per 2 e⁻, which is about −20 kJ
+# per CH₄ for the archaeon and per sulfate for its partner: one ion each, and
+# only at that one pressure. Both floors happen to fall on the same line,
+# because both partners move 8 e⁻ per turnover. And H₂ must
 # stay inside a narrow range of extremely low pressures, while being passed
 # between two cells. At such low concentrations, diffusion can move only a
 # tiny flux of H₂ between cells, so the archaeon would have to sit

@@ -187,13 +187,21 @@ class TestCrossDatabaseAgreement(unittest.TestCase):
     #: deterministic rather than dependent on dict ordering.
     BULK_SAMPLE = 220
 
-    def _comparable(self, limit=None):
-        """Species with both a tabulated log K and HKF parameters."""
+    def _comparable(self, limit=None, only=None):
+        """Species with both a tabulated log K and HKF parameters.
+
+        ``only`` restricts the scan to those names *before* anything is
+        computed. The prediction costs several backend calls per species, and
+        filtering afterwards spent four minutes predicting 900-odd species to
+        keep the few dozen this library ships.
+        """
         seen = 0
         for name in sorted(self.minerals):
             entry = self.minerals[name]
             if limit is not None and seen >= limit:
                 return
+            if only is not None and name not in only:
+                continue
             if name not in self.aqueous:
                 continue
             if not np.isfinite(entry.log_k).any():
@@ -212,9 +220,7 @@ class TestCrossDatabaseAgreement(unittest.TestCase):
         """Every species this library actually exposes."""
         registry_names = {s.backend for s in default_registry().all_species()}
         checked = 0
-        for name, tabulated, predicted in self._comparable():
-            if name not in registry_names:
-                continue
+        for name, tabulated, predicted in self._comparable(only=registry_names):
             checked += 1
             tolerance = KNOWN_DISAGREEMENTS.get(name, AGREEMENT_TOLERANCE_LOGK)
             with self.subTest(species=name):

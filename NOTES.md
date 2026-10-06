@@ -453,6 +453,26 @@ block was moved the same way, since as a `figure.text` it ran into the
 "overall" arc. When every species is skipped, `element_series` now says why
 instead of "no usable species".
 
+**A slow suite may be the laptop, not the code.** On battery the CPU governor
+drops to `powersave` and all cores sit near 0.8 GHz against a 5.2 GHz maximum;
+the suite went from ~300 s to 713 s with no code change. Check
+`grep MHz /proc/cpuinfo` and `/sys/class/power_supply/*/status` before
+profiling anything. Profiling an otherwise idle, plugged-in machine found two
+things worth all the rest: `test_shipped_species_agree_across_databases`
+predicted all 900-odd GWB species and then kept the 76 shipped ones (now
+filtered first, 259 s -> ~20 s), and notebook execution, of which 13 and 02
+are the bulk.
+
+**The energy quantum is per ion, and the library draws it per reaction as
+written.** -20 kJ/mol is Schink's cost of pumping one H+ or Na+, so the floor
+for an organism is one ion per turnover of *its own substrate*: -10 per 2 e-
+for an ethanol oxidiser, -5 per 2 e- for a methanogen (one CH4 per 8 e-).
+The shared band at -20 per 2 e- matches neither. Notebook 13 draws
+per-organism floors and turns the band off (`show_quantum_band=False`).
+Notebooks 02 and 07 still use the band, and both make claims ("neither
+partner is guaranteed one quantum"; "inside the quantum until 5e-6") that
+change under the per-ion reading.
+
 ---
 
 ## Where this was left (24 September 2026, second run)

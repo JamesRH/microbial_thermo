@@ -218,11 +218,17 @@ def plot_syntrophy_window(
     title: str | None = None,
     annotate_best: bool = True,
     window: SyntrophyWindow | None = None,
+    show_quantum_band: bool = True,
 ):
     """Draw both partners against carrier pressure, shading where both pay.
 
     Returns ``(figure, window)`` so the numbers behind the picture are
     available without recomputing the sweep.
+
+    ``show_quantum_band=False`` leaves off the energy-quantum band. The band
+    sits at one quantum per reaction *as written*, which is per electron pair
+    here and is not what either organism turns over; a caller drawing each
+    partner's own floor wants it gone.
     """
     import matplotlib.pyplot as plt
 
@@ -260,8 +266,12 @@ def plot_syntrophy_window(
     )
 
     # Zero line plus the band where a reaction is exergonic but too weakly so
-    # to be worth anything to a cell.
-    add_energy_quantum_band(ax, energy_quantum or DEFAULT_BIOLOGICAL_ENERGY_QUANTUM)
+    # to be worth anything to a cell. The band is per reaction as written, so
+    # a caller drawing per-organism floors instead can leave it off.
+    if show_quantum_band:
+        add_energy_quantum_band(ax, energy_quantum or DEFAULT_BIOLOGICAL_ENERGY_QUANTUM)
+    else:
+        ax.axhline(0.0, color=PALETTE["annotation"], linewidth=1.0, zorder=2)
 
     if window.exists:
         for edge in (window.low, window.high):
@@ -283,7 +293,7 @@ def plot_syntrophy_window(
             color=PALETTE["annotation"],
             zorder=6,
         )
-        inside_quantum = " — inside the quantum" if shared > quantum else ""
+        inside_quantum = " — inside the quantum" if show_quantum_band and shared > quantum else ""
         ax.annotate(
             f"best either partner can be guaranteed:\n"
             f"{shared:.1f} kJ/mol at {pressure:.1e} bar{inside_quantum}",
@@ -375,6 +385,7 @@ def plot_syntrophy_interactive(
     points: int = 61,
     energy_quantum=None,
     window: SyntrophyWindow | None = None,
+    show_quantum_band: bool = True,
     save_html: str | Path | None = None,
     title: str | None = None,
 ):
@@ -383,6 +394,7 @@ def plot_syntrophy_interactive(
     The same curves, shading and best-shared point as
     :func:`plot_syntrophy_window`, as a self-contained page with hover. Labels
     are plain text: Plotly prints matplotlib mathtext literally.
+    ``show_quantum_band`` is as for :func:`plot_syntrophy_window`.
     """
     import plotly.graph_objects as go
 
@@ -411,16 +423,17 @@ def plot_syntrophy_interactive(
         )
 
     figure.add_hline(y=0.0, line={"color": PALETTE["annotation"], "width": 1})
-    figure.add_hrect(
-        y0=min(0.0, quantum),
-        y1=max(0.0, quantum),
-        fillcolor=PALETTE["quantum_band"],
-        opacity=0.18,
-        line_width=0,
-        annotation_text="below the biological energy quantum",
-        annotation_position="bottom left",
-        annotation={"font": {"size": 10, "color": PALETTE["muted"]}},
-    )
+    if show_quantum_band:
+        figure.add_hrect(
+            y0=min(0.0, quantum),
+            y1=max(0.0, quantum),
+            fillcolor=PALETTE["quantum_band"],
+            opacity=0.18,
+            line_width=0,
+            annotation_text="below the biological energy quantum",
+            annotation_position="bottom left",
+            annotation={"font": {"size": 10, "color": PALETTE["muted"]}},
+        )
 
     if window.exists:
         figure.add_vrect(
