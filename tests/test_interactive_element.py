@@ -171,6 +171,17 @@ class TestSpeciesAvailableAtEveryTemperature(unittest.TestCase):
         with self.assertRaises(OutOfRangeError):
             element_series("Mn", species=["Manganite", "Mn++"], temperature_c=2.0)
 
+    def test_the_exported_page_names_what_it_dropped(self):
+        """The widget prints dropped species; the standalone page must too.
+
+        It did not, so the methanogenesis page lost biomass without a word.
+        """
+        from microbial_thermo.figures.interactive_element import _grid_payload
+
+        grid = element_grid("Mn", temperatures=(10.0, 25.0, 40.0))
+        payload = _grid_payload(grid, (-1.0, 1.4), 20)
+        self.assertIn("Manganite", payload["dropped"])
+
 
 @unittest.skipIf(NODE is None, "node is not installed")
 class TestTheExportedPageAgrees(unittest.TestCase):

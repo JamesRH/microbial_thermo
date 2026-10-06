@@ -328,6 +328,9 @@ def _grid_payload(grid, eh_range, points: int) -> dict:
         "ehRange": list(eh_range),
         "points": int(points),
         "fixed": [[el, name, value] for el, name, value in first.fixed],
+        # Species dropped because some temperature lacks them. The widget
+        # names them; the page must too, or they vanish without a word.
+        "dropped": [name for name, _ in getattr(grid, "dropped", ())],
     }
 
 
@@ -736,6 +739,10 @@ function redraw() {{
     notes.push('held fixed: ' + GRID.fixed.map(function (f) {{
       return f[1] + ' ' + f[2];
     }}).join(', '));
+  }}
+  if (GRID.dropped && GRID.dropped.length) {{
+    notes.push('not on this diagram, being unavailable at some temperature: '
+      + GRID.dropped.join(', '));
   }}
   noteBox.innerHTML = notes.join(' &nbsp;\\u00B7&nbsp; ');
 
