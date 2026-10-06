@@ -127,3 +127,7 @@ for name in ("acetotrophic_sulfate_reduction", "hydrogenotrophic_methanogenesis"
     at_standard = build(name, standard).delta_G_per_electron.magnitude
     in_situ = build(name, anoxic).delta_G_per_electron.magnitude
     print(f"{name:38s} standard {at_standard:+7.1f}   in situ {in_situ:+7.1f} kJ/mol e-")
+
+# %%
+
+# %%

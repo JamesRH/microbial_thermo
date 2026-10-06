@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>microbial_thermo</title>
+<meta name="description" content="Thermodynamic calculations and figures for microbial physiology and biogeochemistry.">
+<link rel="icon" href="static/logo.png">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b1b1b;
+    --muted: #5d5d5d;
+    --rule: #e3e3e3;
+    --card: #fafafa;
+    --accent: #1F6FB4;
+    --accent-ink: #ffffff;
+    --warn: #A63A50;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c;
+      --fg: #e8e8e8;
+      --muted: #a3a3a3;
+      --rule: #2d3038;
+      --card: #1e2128;
+      --accent: #4e9bdd;
+      --accent-ink: #0d0f12;
+      --warn: #e2808f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0 16px 64px;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; padding: 44px 0 8px; }
+  header img { width: 112px; height: auto; flex: none; }
+  h1 { font-size: 2.1rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+  .tagline { color: var(--muted); margin: 0; font-size: 1.02rem; }
+  h2 { font-size: 1.22rem; margin: 40px 0 6px; }
+  p { margin: 0 0 14px; }
+  a { color: var(--accent); }
+  .lede { font-size: 1.06rem; }
+  .cta {
+    display: inline-flex; align-items: center; gap: 9px;
+    background: var(--accent); color: var(--accent-ink);
+    text-decoration: none; font-weight: 600;
+    padding: 12px 20px; border-radius: 8px; margin: 10px 10px 6px 0;
+  }
+  .cta.secondary { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+  .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 14px; }
+  .card {
+    display: block; text-decoration: none; color: inherit;
+    background: var(--card); border: 1px solid var(--rule); border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card strong { display: block; color: var(--accent); margin-bottom: 5px; font-size: 1.02rem; }
+  .card span { color: var(--muted); font-size: 0.92rem; line-height: 1.5; display: block; }
+  ul { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 5px; }
+  .note { color: var(--muted); font-size: 0.93rem; }
+  .warn { color: var(--warn); font-weight: 600; }
+  footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.9rem; }
+  code { background: var(--card); border: 1px solid var(--rule); border-radius: 4px; padding: 1px 5px; font-size: 0.9em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <img src="static/logo.png" alt="Boltzmann bacteria, the project mascot">
+    <div>
+      <h1>microbial_thermo</h1>
+      <p class="tagline">Thermodynamics for microbial physiology and biogeochemistry.</p>
+    </div>
+  </header>
+
+  <p class="lede">
+    Given a redox couple or a whole reaction, it balances the chemistry, computes
+    <em>E</em>°, <em>E</em>°′ and Δ<em>G</em> from a real thermodynamic database, and draws
+    the figures a course needs — stacked half reactions, a redox tower, Eh–pH,
+    Latimer and Frost–Ebsworth diagrams, and an interactive free-energy explorer.
+  </p>
+  <p>
+    Built as a teaching aid for a Colorado State course. Every result can be asked
+    to show its work.
+  </p>
+
+  <p>
+    <a class="cta" href="https://github.com/JamesRH/microbial_thermo">Source and documentation on GitHub →</a>
+    <a class="cta secondary" href="https://microbialthermo.streamlit.app">Try the web app</a>
+  </p>
+
+  <h2>Interactive diagrams</h2>
+  <p class="note">
+    Self-contained pages — no install, no kernel, nothing running behind them.
+    Move the sliders and every curve recomputes in the browser.
+  </p>
+  <div class="cards">
+    <a class="card" href="notebooks/tower_interactive.html">
+      <strong>Redox tower</strong>
+      <span>Every couple on one potential axis, with pH, temperature and the
+      oxidised:reduced ratio on sliders. Watch couples cross.</span>
+    </a>
+    <a class="card" href="notebooks/arsenic_interactive.html">
+      <strong>Arsenic redox diagrams</strong>
+      <span>Latimer, Frost–Ebsworth and Eh–pH together, sharing one decomposition.
+      The pH slider is drawn on the Eh–pH panel, so the others are a slice through it.</span>
+    </a>
+    <a class="card" href="notebooks/explorer_methanogenesis.html">
+      <strong>Free-energy explorer</strong>
+      <span>Hydrogenotrophic methanogenesis across its conditions — the metabolism
+      that lives closest to the thermodynamic limit.</span>
+    </a>
+  </div>
+
+  <h2>The syntrophic window, in three views</h2>
+  <p class="note">
+    One partnership, one hydrogen axis. Neither organism can run alone: the
+    ethanol oxidiser poisons itself with its own product, and the methanogen
+    starves without it. Choose <code>H2(g)</code> from the dropdown on the first
+    two, then see where the two curves overlap on the third.
+  </p>
+  <div class="cards">
+    <a class="card" href="notebooks/syntrophy_ethanol_oxidizer.html">
+      <strong>The producer alone</strong>
+      <span>Ethanol oxidation by the S organism. As H₂ builds up it stops paying.</span>
+    </a>
+    <a class="card" href="notebooks/syntrophy_methanogen.html">
+      <strong>The consumer alone</strong>
+      <span>Hydrogenotrophic methanogenesis. Below a few times 10⁻⁶ bar it is no
+      longer exergonic at all.</span>
+    </a>
+    <a class="card" href="notebooks/syntrophy_together.html">
+      <strong>Both at once</strong>
+      <span>The lines cross, and the shaded band is the only range of H₂ where
+      both partners pay. That band is the partnership.</span>
+    </a>
+  </div>
+
+  <h2>Teaching notebooks</h2>
+  <p>
+    Thirteen notebooks, committed with their outputs and executed by the test suite,
+    so a library change that breaks one is caught rather than discovered in class.
+    They render directly on GitHub:
+  </p>
+  <ul>
+    <li><a href="https://github.com/JamesRH/microbial_thermo/tree/main/notebooks">All notebooks</a> — the full list</li>
+    <li><a href="https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/01_half_reactions.ipynb">1. Half reactions</a> — couples, balancing, oxidation states, showing the work</li>
+    <li><a href="https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/02_redox_tower_and_energy.ipynb">2. The redox tower</a> — the tower, sweeps, and the syntrophic window</li>
+    <li><a href="https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/03_environmental_affinity.ipynb">3. Environmental affinity</a> — speciation and what pays in a real porewater</li>
+    <li>Elements <a href="https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/05_carbon.ipynb">C</a>,
+      <a href="https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/06_nitrogen.ipynb">N</a>,
+      <a href="https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/07_sulfur.ipynb">S</a>,
+      <a href="https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/08_iron.ipynb">Fe</a>,
+      <a href="https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/09_manganese.ipynb">Mn</a>,
+      <a href="https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/10_arsenic.ipynb">As</a>,
+      <a href="https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/11_selenium.ipynb">Se</a>,
+      <a href="https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/12_chromium_and_uranium.ipynb">Cr and U</a>
+      — one each, the same path through every one</li>
+    <li><a href="https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/13_methanogenesis.ipynb">13. Methanogenesis</a> — Type I and Type II, syntrophy, hydrogen floors, AOM</li>
+  </ul>
+  <p class="note">
+    The ipywidgets cells in notebooks 02, 05, 07 and 10 need a live kernel, so
+    GitHub shows those few cells blank. The pages above are the versions that run
+    with nothing behind them.
+  </p>
+
+  <h2>Using it yourself</h2>
+  <p>
+    It is a Python library first. <code>mamba</code> handles the environment and the
+    README has the exact commands, the CLI, and the API:
+  </p>
+  <p>
+    <a class="cta secondary" href="https://github.com/JamesRH/microbial_thermo#readme">Read the README →</a>
+  </p>
+
+  <footer>
+    <p class="warn">Code not reviewed. Not production-ready scientific software.</p>
+    <p>
+      Backend: <a href="https://bitbucket.org/Tutolo-RTG/pygcc/">pyGCC</a> only.
+      Range 0.01–100 °C, near-surface pressure. Licensed AGPL v3.
+    </p>
+  </footer>
+
+</div>
+</body>
+</html>

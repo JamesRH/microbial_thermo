@@ -325,3 +325,5 @@ for name in ("Methane(aq)", "Acetate", "Formate(aq)", "HCO3-"):
 # That is the x axis of the Frost diagram. A substrate's position on it tells
 # you how many electrons it has to give, and the Frost curve tells you what
 # they are worth.
+
+# %%

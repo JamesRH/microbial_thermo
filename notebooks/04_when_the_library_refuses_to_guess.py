@@ -246,3 +246,7 @@ plt.show()
 # Each of those would produce output that looks correct. The cost of asking is
 # one extra argument; the cost of guessing is a plausible wrong number that
 # nothing downstream can detect.
+
+# %%
+
+# %%

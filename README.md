@@ -26,7 +26,10 @@ Built as a teaching aid. Every result can be asked to show its work.
 
 For full capabilities, local use in jupyter lab notebooks and as a library,
 see below. For quick reaction calculations,
-[click here](https://microbialthermo.streamlit.app).
+[click here](https://microbialthermo.streamlit.app). For the interactive
+diagrams — redox tower, Eh–pH, Frost, the syntrophic window — see
+[jamesrh.github.io/microbial_thermo](https://jamesrh.github.io/microbial_thermo/),
+which needs nothing running at all.
 
 The web app exposes three of the library's teaching tools in a browser, no
 install required: compound formation-energy ($\Delta G_f^\circ$) lookup with
@@ -144,6 +147,9 @@ The `save_html=` exports are the route that works with nothing behind them,
 and they are the subject of the next section.
 
 ### The interactive pages
+
+**[jamesrh.github.io/microbial_thermo](https://jamesrh.github.io/microbial_thermo/)**
+is the landing page: a short summary, every page below, and the notebooks.
 
 Six self-contained pages are published on **GitHub Pages**. Each bundles
 Plotly, needs no server, no Python and no kernel — click and they run:
