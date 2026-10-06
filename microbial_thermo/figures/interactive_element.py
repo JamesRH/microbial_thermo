@@ -38,7 +38,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .basis import DEFAULT_TEMPERATURES, FARADAY_KJ, element_grid, pretty
+from .basis import DEFAULT_TEMPERATURES, FARADAY_KJ, element_grid, plotly_label
 from .frost import frost_diagram, plot_frost
 from .latimer import latimer_diagram, plot_latimer
 from .pourbaix import plot_pourbaix, pourbaix_field
@@ -314,7 +314,8 @@ def _grid_payload(grid, eh_range, points: int) -> dict:
         "reference": first.reference,
         "referenceIsElement": bool(first.reference_is_element),
         "species": [entry.backend for entry in first],
-        "labels": [pretty(entry.backend) for entry in first],
+        # Plotly HTML, not matplotlib mathtext: the page renders these.
+        "labels": [plotly_label(entry.backend) for entry in first],
         "aqueous": [bool(entry.species.is_aqueous) for entry in first],
         "nElement": [int(entry.n_element) for entry in first],
         "states": [float(entry.oxidation_state) for entry in first],
@@ -385,7 +386,7 @@ def plot_interactive_element(
             x=[p.oxidation_state for p in frost.predominant],
             y=[p.volt_equivalent for p in frost.predominant],
             mode="markers+text",
-            text=[pretty(p.backend) for p in frost.predominant],
+            text=[plotly_label(p.backend) for p in frost.predominant],
             textposition="top center",
             marker={"size": 9, "color": PALETTE["endergonic"]},
             name="predominant form",
@@ -448,8 +449,9 @@ def plot_interactive_element(
                 "color": PALETTE["muted"],
             },
             name="other forms of the same state",
+            textposition="middle right",
             hovertemplate="%{text}<br>state %{x}<br>%{y:.3f} V<extra></extra>",
-            text=[pretty(p.backend) for p in others],
+            text=[plotly_label(p.backend) for p in others],
         ),
         row=1,
         col=1,
@@ -697,7 +699,7 @@ function redraw() {{
     y: [showAll ? others.map(function (i) {{ return volts[i]; }}) : []],
     text: [showAll ? others.map(function (i) {{ return GRID.labels[i]; }}) : []],
     mode: [labelAll ? 'markers+text' : 'markers'],
-    textposition: ['bottom center']
+    textposition: ['middle right']
   }}, [4]);
   Plotly.restyle(plot, {{
     x: [stable.map(function (i) {{ return GRID.states[i]; }})],

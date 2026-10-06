@@ -42,6 +42,7 @@ is what makes the volt equivalent of a hydride come out right.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 import numpy as np
@@ -482,7 +483,12 @@ def element_series(
 
 
 def pretty(name: str) -> str:
-    """Backend names are legacy SUPCRT; make them readable on a figure."""
+    """Backend names are legacy SUPCRT; make them readable on a figure.
+
+    Returns matplotlib mathtext, ``$HAsO_4^{2-}$``. Plotly does not render
+    that -- it is matplotlib's syntax, not a universal one -- so a Plotly
+    figure wants :func:`plotly_label` instead.
+    """
     from ..species import resolve
 
     try:
@@ -490,6 +496,35 @@ def pretty(name: str) -> str:
     except Exception:
         display = ""
     return f"${display}$" if display else name
+
+
+#: ``_2``, ``_{12}``, ``^-``, ``^{2-}`` -- the whole of the markup the display
+#: strings in species.yaml actually use.
+_SUB_SUPER = re.compile(r"([_^])(?:\{([^}]*)\}|(\S))")
+
+
+def plotly_label(name: str) -> str:
+    """The same label as Plotly-flavoured HTML, ``HAsO<sub>4</sub><sup>2-</sup>``.
+
+    Plotly renders a small subset of HTML in text and ignores LaTeX unless
+    MathJax is loaded, so handing it :func:`pretty`'s output prints a literal
+    ``$HAsO_4^{2-}$`` on the chart. That is what the first published page did.
+    """
+    from ..species import resolve
+
+    try:
+        display = resolve(name).display
+    except Exception:
+        display = ""
+    if not display:
+        return name
+
+    def swap(match: re.Match) -> str:
+        kind, braced, single = match.groups()
+        body = braced if braced is not None else single
+        return f"<{'sub' if kind == '_' else 'sup'}>{body}</{'sub' if kind == '_' else 'sup'}>"
+
+    return _SUB_SUPER.sub(swap, display.replace("\\cdot", "·").replace("\\,", " "))
 
 
 def ladder_entries(series):

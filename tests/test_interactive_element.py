@@ -27,7 +27,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 
-from microbial_thermo.figures.basis import element_grid, element_series
+from microbial_thermo.figures.basis import element_grid, element_series, plotly_label, pretty
 from microbial_thermo.figures.frost import frost_diagram
 from microbial_thermo.figures.interactive_element import (
     ELEMENT_DIV_ID,
@@ -356,6 +356,65 @@ class TestTheExportedControls(unittest.TestCase):
         series = self.grid.at(25.0, pH=7.0, activity=1e-6)
         frost = frost_diagram("As", series=series, predominant_only=False)
         self.assertEqual([p.backend for p in frost.predominant], javascript["species"])
+
+
+class TestPlotlyLabels(unittest.TestCase):
+    """Plotly renders a little HTML and no LaTeX.
+
+    `pretty` returns matplotlib mathtext, `$HAsO_4^{2-}$`, which matplotlib
+    draws properly and Plotly prints literally -- dollar signs, underscores
+    and braces, on the chart. The first page published to GitHub Pages had
+    exactly that on it, which is how this was found.
+    """
+
+    def test_subscripts_and_superscripts_become_html(self):
+        self.assertEqual(plotly_label("HAsO4--"), "HAsO<sub>4</sub><sup>2-</sup>")
+        self.assertEqual(plotly_label("H2AsO3-"), "H<sub>2</sub>AsO<sub>3</sub><sup>-</sup>")
+        self.assertEqual(plotly_label("Fe+++"), "Fe<sup>3+</sup>")
+        self.assertEqual(plotly_label("Hausmannite"), "Mn<sub>3</sub>O<sub>4</sub>")
+
+    def test_a_label_with_no_markup_is_left_alone(self):
+        self.assertEqual(plotly_label("As"), "As(s)")
+        self.assertEqual(plotly_label("Graphite"), "C(graphite)")
+
+    def test_nothing_latex_survives(self):
+        for name in ("HAsO4--", "H2AsO3-", "SeO4--", "Methane(aq)", "Magnetite"):
+            with self.subTest(species=name):
+                label = plotly_label(name)
+                self.assertNotIn("$", label)
+                self.assertNotIn("_", label)
+                self.assertNotIn("^", label)
+                self.assertNotIn("{", label)
+
+    def test_an_unknown_species_falls_back_to_its_name(self):
+        self.assertEqual(plotly_label("NotAThing"), "NotAThing")
+
+    def test_the_matplotlib_helper_still_returns_mathtext(self):
+        """The two are for different renderers and both are needed."""
+        self.assertEqual(pretty("HAsO4--"), "$HAsO_4^{2-}$")
+
+    def test_the_exported_page_carries_no_mathtext_labels(self):
+        """Parses the embedded payload rather than grepping the file.
+
+        A plain search for `"labels"` finds Plotly's own minified source long
+        before it reaches ours, and passes whatever we wrote.
+        """
+        import json
+
+        grid = element_grid("As", temperatures=(25.0,))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "as"
+            plot_interactive_element("As", grid=grid, save_html=path)
+            written = path.with_suffix(".html").read_text()
+
+        start = written.index("var GRID = ") + len("var GRID = ")
+        payload = json.loads(written[start : written.index(";\nvar TITLE", start)])
+
+        self.assertEqual(payload["species"], list(grid.species))
+        self.assertTrue(any("<sub>" in label for label in payload["labels"]))
+        for label in payload["labels"]:
+            with self.subTest(label=label):
+                self.assertNotIn("$", label)
 
 
 class TestFigures(unittest.TestCase):
