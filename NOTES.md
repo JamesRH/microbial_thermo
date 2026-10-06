@@ -403,12 +403,50 @@ in carbon-rich sediment because it consumes eight electrons per nitrate rather
 than five -- a competition over what is limiting, not over yield. The ladder
 ranks yield; organisms compete over the scarce thing.
 
+**A disproportionation's per-electron energy depends on how it is written.**
+`methylotrophic_methanogenesis` routes methanol through CO2 (donor
+CH3OH -> CO2, acceptor CO2 -> CH4) and so counts 24 e- for
+4 CH3OH -> 3 CH4 + CO2; the CH3OH/CH4 couple counts the 6 the methyl
+chemistry actually moves. Same net reaction, same energy per CH4 (-86.6
+kJ/mol), per-electron values a factor of four apart. The new methyl entries
+(methylamine, DMS) follow the through-CO2 form so the ladder stays
+internally consistent. Compare methanogenic pathways per CH4. The
+H2-consuming entries are exact per electron, since per 2 e- is per H2.
+
+**A multi-species side needs explicit proportions when they are not 1:1.**
+`donor: [DMS, ["CO2(aq)", "HS-"]]` balances with one CO2 per HS- and fails
+atom conservation on sulfur; DMS needs `[["CO2(aq)", 2], ["HS-", 1]]`.
+`energy_table` reports it as a `problem` row rather than raising, so check
+the table after adding an entry.
+
+**The no-auxiliaries ladder rule now has one exception: a SMILES.**
+`state_is_conventional` admits a species whose auxiliary atoms are, read off
+its bonds by `atom_oxidation_states`, at the same state as in the basis
+species. DMS and methanethiol against HS-, methylamine against NH4+. Against
+the default sulfate basis DMS is still refused, and minerals have no SMILES,
+so pyrite and siderite are refused exactly as before. Any failure in the
+check refuses.
+
+**Methylamine is the neutral amine only.** speq23 has `Methanamine(aq)` and
+no methylammonium. At pH 7 the real substrate is >99.9% CH3NH3+ (pKa ~10.6),
+so anything using it is too favourable by 2.303 RT (pKa - 7) = 20.5 kJ per
+methylamine. Notebook 13 makes the correction explicitly and lands at -77
+kJ/mol CH4 against Thauer's -75. Trimethylamine, dimethylamine and TMAO are
+in no database here.
+
+**Graphite on a carbon Frost diagram puts the hull through C(0).** Every
+organic substrate then "disproportionates to graphite", which is true and
+biologically meaningless. Leaving graphite out of `species=` keeps it as the
+zero of the y axis and makes the hull the CH4-HCO3- line, which is the one a
+methanogen lives on. Notebook 13 does this, and checks the height of acetate
+above that line against the balanced reaction (-14.8 vs -14.9 kJ/mol).
+
 ---
 
 ## Where this was left (24 September 2026, second run)
 
 Everything below is committed and pushed; `main` and `origin/main` agree.
-Full suite **650 tests, ~230 s, all passing**.
+Full suite **714 tests, ~300 s, all passing** (as of notebook 13, 6 October 2026).
 
 **Done this run:** #24 (Latimer), #25 (Frost-Ebsworth), #26 (all three under
 sliders, ipywidgets and exported HTML) and #28 (per-element notebooks 05-12,

@@ -22,9 +22,11 @@ matplotlib.use("Agg")
 import microbial_thermo as mt
 from microbial_thermo.exceptions import MicrobialThermoError
 from microbial_thermo.figures.syntrophy import (
+    SYNTROPHY_DIV_ID,
     _carrier_label,
     _longest_run,
     _zero_crossing,
+    plot_syntrophy_interactive,
     plot_syntrophy_window,
     syntrophy_window,
 )
@@ -280,6 +282,57 @@ class TestFigure(unittest.TestCase):
             self.assertGreater(len(with_note.axes[0].texts), len(without.axes[0].texts))
         finally:
             matplotlib.pyplot.close("all")
+
+
+class TestInteractive(unittest.TestCase):
+    """The Plotly version: same window, plain-text labels, a standalone page."""
+
+    @classmethod
+    def setUpClass(cls):
+        conditions = syntrophic_conditions()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            cls.producer = reaction("syntrophic_propionate_oxidation", conditions)
+            cls.consumer = reaction("hydrogenotrophic_methanogenesis", conditions)
+            cls.window = syntrophy_window(
+                cls.producer, cls.consumer, low=1e-10, high=1.0, points=13
+            )
+        cls.figure, cls.returned = plot_syntrophy_interactive(
+            cls.producer, cls.consumer, window=cls.window
+        )
+
+    def test_it_returns_the_window_it_drew(self):
+        self.assertIs(self.returned, self.window)
+
+    def test_both_curves_are_the_window_values(self):
+        lines = [trace for trace in self.figure.data if trace.mode == "lines"]
+        self.assertEqual(len(lines), 2)
+        np.testing.assert_allclose(lines[0].y, self.window.producer_delta_g)
+        np.testing.assert_allclose(lines[1].y, self.window.consumer_delta_g)
+
+    def test_the_best_shared_point_is_marked(self):
+        markers = [trace for trace in self.figure.data if trace.mode == "markers"]
+        self.assertEqual(len(markers), 1)
+        pressure, shared = self.window.best_shared
+        self.assertAlmostEqual(markers[0].x[0], pressure)
+        self.assertAlmostEqual(markers[0].y[0], shared)
+
+    def test_no_mathtext_reaches_plotly(self):
+        """Plotly prints $...$ literally; that already shipped once."""
+        texts = [trace.name for trace in self.figure.data]
+        texts += [self.figure.layout.xaxis.title.text, self.figure.layout.yaxis.title.text]
+        texts.append(self.figure.layout.title.text)
+        for text in texts:
+            self.assertNotIn("$", text)
+
+    def test_the_page_is_written_with_a_pinned_div(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "window"
+            plot_syntrophy_interactive(
+                self.producer, self.consumer, window=self.window, save_html=target
+            )
+            page = target.with_suffix(".html").read_text()
+        self.assertIn(f'id="{SYNTROPHY_DIV_ID}"', page)
 
 
 if __name__ == "__main__":

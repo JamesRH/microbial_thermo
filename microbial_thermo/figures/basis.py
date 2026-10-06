@@ -230,8 +230,41 @@ class SpeciesEnergy:
         depends on a carbonate activity that a single-element ladder has
         nowhere to state. The Eh-pH diagram keeps it, and that is where a
         siderite field belongs.
+
+        **The one exception is a species with a SMILES**, where that
+        independent assignment exists: :func:`atom_oxidation_states` reads
+        each atom's state off the bonds. Dimethyl sulfide against a bisulfide
+        basis has S(-II) in both, so its count *is* carbon's state and it may
+        stand on the carbon ladder; against the default sulfate basis it may
+        not. Minerals carry no SMILES, so pyrite and siderite are still
+        refused, and any failure in the check refuses too.
         """
-        return not self.auxiliaries
+        return all(
+            _auxiliary_state_matches(self.species, el, name) for el, name in self.auxiliaries
+        )
+
+
+def _auxiliary_state_matches(species, element: str, basis_name: str) -> bool:
+    """Whether every ``element`` atom in ``species`` has its state in the basis.
+
+    Only answers yes when it can prove it: the species needs a SMILES, the
+    basis species needs a conventional state, and every atom of the element
+    must agree. Anything else -- no SMILES, no RDKit, an assignment that
+    raises -- is a no.
+    """
+    from ..oxidation import atom_oxidation_states, mean_oxidation_state
+    from ..species import resolve
+
+    smiles = getattr(species, "smiles", None)
+    if not smiles:
+        return False
+    try:
+        basis = resolve(basis_name)
+        target = mean_oxidation_state(element, basis.formula)
+        states = [state for symbol, state in atom_oxidation_states(smiles) if symbol == element]
+    except Exception:
+        return False
+    return bool(states) and all(state == target for state in states)
 
 
 @dataclass(frozen=True)

@@ -357,3 +357,118 @@ def plot_syntrophy_window(
                 bbox_inches="tight",
             )
     return figure, window
+
+
+#: Pinned so a re-export is byte-identical when nothing has changed; see
+#: :data:`~microbial_thermo.figures.explorer.EXPLORER_DIV_ID`.
+SYNTROPHY_DIV_ID = "syntrophy-window"
+
+
+def plot_syntrophy_interactive(
+    producer,
+    consumer,
+    carrier: str = DEFAULT_CARRIER,
+    producer_label: str = "producer — needs the carrier low",
+    consumer_label: str = "consumer — needs the carrier high",
+    low: float = 1e-10,
+    high: float = 1.0,
+    points: int = 61,
+    energy_quantum=None,
+    window: SyntrophyWindow | None = None,
+    save_html: str | Path | None = None,
+    title: str | None = None,
+):
+    """The syntrophic window as a Plotly figure. Returns ``(figure, window)``.
+
+    The same curves, shading and best-shared point as
+    :func:`plot_syntrophy_window`, as a self-contained page with hover. Labels
+    are plain text: Plotly prints matplotlib mathtext literally.
+    """
+    import plotly.graph_objects as go
+
+    from .explorer import SVG_CONFIG
+
+    if window is None:
+        window = syntrophy_window(producer, consumer, carrier, low, high, points)
+    quantum = as_magnitude(energy_quantum or DEFAULT_BIOLOGICAL_ENERGY_QUANTUM, KJ_PER_MOL_STR)
+    carrier_text = _carrier_label(window.carrier)
+    unit = f"kJ/mol per {window.n_electrons:g} e⁻"
+
+    figure = go.Figure()
+    for values, label, colour in (
+        (window.producer_delta_g, producer_label, PALETTE["oxidation"]),
+        (window.consumer_delta_g, consumer_label, PALETTE["reduction"]),
+    ):
+        figure.add_trace(
+            go.Scatter(
+                x=window.pressures,
+                y=values,
+                mode="lines",
+                name=label,
+                line={"color": colour, "width": 2.5},
+                hovertemplate=f"%{{x:.2e}} bar<br>ΔG %{{y:.1f}} {unit}<extra>{label}</extra>",
+            )
+        )
+
+    figure.add_hline(y=0.0, line={"color": PALETTE["annotation"], "width": 1})
+    figure.add_hrect(
+        y0=min(0.0, quantum),
+        y1=max(0.0, quantum),
+        fillcolor=PALETTE["quantum_band"],
+        opacity=0.18,
+        line_width=0,
+        annotation_text="below the biological energy quantum",
+        annotation_position="bottom left",
+        annotation={"font": {"size": 10, "color": PALETTE["muted"]}},
+    )
+
+    if window.exists:
+        figure.add_vrect(
+            x0=window.low,
+            x1=window.high,
+            fillcolor=PALETTE["exergonic"],
+            opacity=0.13,
+            line_width=0,
+            annotation_text=f"both exergonic ({window.decades:.1f} decades)",
+            annotation_position="top",
+            annotation={"font": {"size": 11, "color": PALETTE["annotation"]}},
+        )
+        pressure, shared = window.best_shared
+        figure.add_trace(
+            go.Scatter(
+                x=[pressure],
+                y=[shared],
+                mode="markers",
+                name="best either partner can be guaranteed",
+                marker={"size": 9, "color": PALETTE["annotation"]},
+                hovertemplate=(
+                    f"best shared: %{{y:.1f}} {unit}<br>at %{{x:.1e}} bar<extra></extra>"
+                ),
+            )
+        )
+
+    if title is None:
+        title = "The syntrophic window"
+        if window.exists:
+            title += (
+                f"<br><sub>{window.low:.1e} to {window.high:.1e} bar — "
+                f"{window.decades:.1f} decades wide</sub>"
+            )
+        else:
+            title += "<br><sub>none at these conditions</sub>"
+
+    figure.update_layout(
+        template="simple_white",
+        title=title,
+        xaxis={"title": {"text": carrier_text}, "type": "log", "exponentformat": "power"},
+        yaxis={"title": {"text": f"ΔG ({unit})"}},
+        legend={"orientation": "h", "yanchor": "top", "y": -0.18, "x": 0.0},
+        margin={"l": 70, "r": 30, "t": 90, "b": 110},
+        hovermode="closest",
+    )
+
+    if save_html is not None:
+        path = Path(save_html).with_suffix(".html")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        figure.write_html(path, include_plotlyjs=True, config=SVG_CONFIG, div_id=SYNTROPHY_DIV_ID)
+    return figure, window

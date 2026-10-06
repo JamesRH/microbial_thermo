@@ -68,6 +68,15 @@ species:
   - {backend: "Methanol(aq)",    formula: "CH4O",    display: "CH_3OH",     phase: aq, smiles: "CO",         aliases: [methanol, "CH3OH"]}
   - {backend: "Ethanol(aq)",     formula: "C2H6O",   display: "C_2H_5OH",   phase: aq, smiles: "CCO",        aliases: [ethanol, "C2H5OH"]}
 
+  # Methylated substrates of methylotrophic methanogens. Methylamine is in
+  # speq23 as the neutral amine only -- there is no methylammonium entry, so at
+  # pH 7 it stands in for a species that is >99.9% protonated (pKa ~10.6).
+  # DMS and methanethiol are OBIGT imports (Schulte 2010; Schulte & Rogers
+  # 2004). Trimethylamine, dimethylamine and TMAO are in no database here.
+  - {backend: "Methanamine(aq)",  formula: "CH5N",   display: "CH_3NH_2",   phase: aq, smiles: "CN",         aliases: [methylamine, monomethylamine, MMA, "CH3NH2"]}
+  - {backend: "dimethyl sulfide", formula: "C2H6S",  display: "(CH_3)_2S",  phase: aq, smiles: "CSC",        aliases: [DMS, "dimethyl sulfide(aq)", "(CH3)2S"]}
+  - {backend: "methanethiol",     formula: "CH4S",   display: "CH_3SH",     phase: aq, smiles: "CS",         aliases: [methyl mercaptan, MeSH, "CH3SH"]}
+
   # --- iron and manganese ---
   #
   # Aqueous Fe and Mn come from the HKF database. The solid phases come from
