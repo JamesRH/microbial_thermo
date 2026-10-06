@@ -475,36 +475,79 @@ change under the per-ion reading.
 
 ---
 
-## Where this was left (24 September 2026, second run)
+## Where this was left (6 October 2026)
 
-Everything below is committed and pushed; `main` and `origin/main` agree.
-Full suite **714 tests, ~300 s, all passing** (as of notebook 13, 6 October 2026).
+**Three unpushed branches, stacked.** `main` = `origin/main` = `07225d5`
+(landing page; includes notebook 13 and James's notebook edits). On top:
 
-**Done this run:** #24 (Latimer), #25 (Frost-Ebsworth), #26 (all three under
-sliders, ipywidgets and exported HTML) and #28 (per-element notebooks 05-12,
-for C, N, S, Fe, Mn, As, Se and a joint Cr/U). All four were the diagram
-sequence James asked for, in order.
+1. `ai/claude/surface-skipped-species` (`564c481`) -- Frost and Latimer name
+   every species they did not draw; `series.skipped` merged into `.excluded`;
+   omitted-species note under both plots (`show_omitted=`); Latimer
+   half-reaction block moved into the axis layout. Full suite passed, 728.
+2. `ai/claude/methanogenesis-ion-floors` (`5a13c50`) -- per-organism per-ion
+   floors on notebook 13's syntrophy plots, `show_quantum_band=` on both
+   syntrophy plots, the low-H2 table in section 3, and the
+   `test_shipped_species_agree_across_databases` speed fix (259 s -> ~20 s).
+   **Full suite NOT re-run end to end on this commit**: the fast tests, the
+   fixed test, test_minerals and notebook 13 were each run and pass.
+3. `ai/claude/notebook-watchdog` -- branched, nothing on it but this note.
 
-The three element diagrams now share `figures/basis.py`, which holds the
-decomposition they all needed. `figures/pourbaix.py` uses it and re-exports the
-old names, so `_basis_coefficients` and `FIXED_DEFAULTS` still import from
-where the tests expect them.
+James has not yet said whether to merge and push. Ask; do not assume.
 
-**Nothing is queued.** The open items in `README.md` -- #2, #8, #9, #12, #15,
-#16, #17 -- are independent of each other. If asked to pick: **#9**
-(two-dimensional contours) and **#15** (uncertainty propagation) are the two
-that would add most to the figures that now exist, and #2 is still blocked on
-hydroxylamine being in no machine-readable source we can reach.
+**Next, the watchdog James asked for** (`tests/test_notebooks.py`). The hang
+looks like: kernel alive at ~1% CPU, client waiting, passes on retry. Today
+only `CELL_TIMEOUT_S = 240` plus one retry catches it. Design agreed: a
+thread samples the kernel's CPU time (psutil 7.2.2 is installed; include
+children) every ~5 s; if a cell is executing and CPU has not advanced in
+~30 s, kill the kernel process tree. nbclient's `_async_poll_kernel_alive`
+then cancels the wait and raises `DeadKernelError`, which `execute()`
+already retries. Record that the watchdog fired so the final error says
+"stalled", not "died". Kernel pid: `client.km.provisioner.process.pid`
+(LocalProvisioner has both `process` and `pid`).
 
-**Numbering is in `README.md` and is stable** -- but only because the tier
-lists are plain bullets with literal `#N` labels. They were an ordered list
-until the previous run, which meant Markdown renumbered them and the rendered
-README showed different numbers than the file. Do not turn them back.
+**Trap found while reading nbclient 0.11** (`client.py` ~line 981):
+`on_cell_complete` fires immediately after the execute request is *sent*,
+not when the cell finishes. "Cell is running" is therefore
+`on_cell_execute` -> `on_cell_executed` (which fires after the reply), not
+`on_cell_execute` -> `on_cell_complete`. Getting this wrong makes the
+watchdog think no cell is ever running. Also: a hung client may never reach
+`on_cell_executed`, which is exactly the case to catch, so the stall clock
+must run from `on_cell_execute` regardless.
 
-**The best single demonstration in the new notebooks** is `07_sulfur`:
-elemental sulfur is on the convex hull at unit activity, which is what every
-published Frost diagram shows, and leaves it below about 1.7e-2 activity. At
-10 uM disproportionation pays 18 kJ/mol S. That is the quantitative version of
-"sulfur disproportionators need a sulfide sink", computed from our own data,
-and it is the clearest argument in the project for computing these diagrams
-rather than reproducing them.
+Test it with a throwaway notebook: a `time.sleep(600)` cell must be killed
+in about stall + startup seconds; a pure-CPU loop longer than the stall
+window must not be. Make the stall window a parameter so the test can use
+~5 s. Also update the module docstring ("roughly 20 seconds" is stale: the
+notebooks take ~240 s on battery, ~100 s plugged in, notebook 13 the
+largest).
+
+**Queued after the watchdog**, in James's order of interest:
+
+- *Parallel notebook execution*: the 13 are independent; a thread pool in
+  `setUpClass` with per-notebook result lookups would cut wall time to about
+  the slowest notebook. Optional: skip a notebook whose `.py`, library source
+  and package versions hash the same as its last pass.
+- *A `turnover:` field per curated metabolism* in `reactions.yaml`, and the
+  floor helpers (`turnovers`, `floors_for`, `draw_floors`,
+  `draw_floors_plotly`) moved from notebook 13 into the library, so floors
+  appear automatically wherever the metabolism is known. Then apply to:
+  02's propionate window (per ion the methanogen clears one ion per CH4, 1.1,
+  and the propionate oxidiser gets only ~0.8 per propionate -- the current
+  text says "neither partner is guaranteed one quantum"), 02's H2 sweep,
+  07's sulfur-disproportionation plot (its "inside the quantum until 5e-6"
+  claim compares -20 against per-mol-S; recompute before rewriting), 13's
+  section 5 floor plot and toy model, and the affinity ladders as per-bar
+  ticks.
+- Notebook 03 has not been re-run since the seven new metabolisms; its
+  committed outputs say 53 metabolisms, the library has 60.
+
+**Before timing anything, check the power state.** See the trap above:
+on battery the suite runs 2.4x slower and it looks like a regression.
+
+**Kernels:** James runs JupyterLab; never kill a kernel that is not yours.
+Kill your own nbconvert and its kernel by PID only.
+
+**The best single demonstration in the notebooks** is still `07_sulfur`
+(sulfur leaves the hull below ~1.7e-2 activity), now joined by 13's
+toy competition: a methyl reducer pulls H2 below the hydrogenotroph's floor
+in 3.4 h and the hydrogenotroph takes nothing after that.
