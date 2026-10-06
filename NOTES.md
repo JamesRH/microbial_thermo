@@ -541,6 +541,12 @@ largest).
 - Notebook 03 has not been re-run since the seven new metabolisms; its
   committed outputs say 53 metabolisms, the library has 60.
 
+**README Future-work items still open** -- #2, #8, #9, #12, #15, #16, #17,
+independent of each other. If asked to pick, #9 (two-dimensional contours)
+and #15 (uncertainty propagation) add most; #2 is blocked on hydroxylamine.
+Item numbers are literal `#N` bullets on purpose; never make them an
+ordered list (see "Where the planned work is recorded").
+
 **Before timing anything, check the power state.** See the trap above:
 on battery the suite runs 2.4x slower and it looks like a regression.
 
