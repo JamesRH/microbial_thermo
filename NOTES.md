@@ -477,24 +477,15 @@ change under the per-ion reading.
 
 ## Where this was left (6 October 2026)
 
-**Three unpushed branches, stacked.** `main` = `origin/main` = `07225d5`
-(landing page; includes notebook 13 and James's notebook edits). On top:
+**Everything is merged and pushed** (7 October): the skipped-species fix, the
+per-ion floors and low-H2 table, the database-test speed fix, notebook 13's
+interactive substrate page (`methanogenesis_interactive.html`, linked from
+the README and `index.html`), and the exported element page now naming
+species it dropped for temperature. Full suite **729 tests, ~205 s
+plugged in**, all passing. Corrections found along the way are README
+Future work **#29-#34**.
 
-1. `ai/claude/surface-skipped-species` (`564c481`) -- Frost and Latimer name
-   every species they did not draw; `series.skipped` merged into `.excluded`;
-   omitted-species note under both plots (`show_omitted=`); Latimer
-   half-reaction block moved into the axis layout. Full suite passed, 728.
-2. `ai/claude/methanogenesis-ion-floors` (`5a13c50`) -- per-organism per-ion
-   floors on notebook 13's syntrophy plots, `show_quantum_band=` on both
-   syntrophy plots, the low-H2 table in section 3, and the
-   `test_shipped_species_agree_across_databases` speed fix (259 s -> ~20 s).
-   **Full suite NOT re-run end to end on this commit**: the fast tests, the
-   fixed test, test_minerals and notebook 13 were each run and pass.
-3. `ai/claude/notebook-watchdog` -- branched, nothing on it but this note.
-
-James has not yet said whether to merge and push. Ask; do not assume.
-
-**Next, the watchdog James asked for** (`tests/test_notebooks.py`). The hang
+**Next, the watchdog James asked for** (#33, `tests/test_notebooks.py`). The hang
 looks like: kernel alive at ~1% CPU, client waiting, passes on retry. Today
 only `CELL_TIMEOUT_S = 240` plus one retry catches it. Design agreed: a
 thread samples the kernel's CPU time (psutil 7.2.2 is installed; include

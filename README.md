@@ -151,7 +151,7 @@ and they are the subject of the next section.
 **[jamesrh.github.io/microbial_thermo](https://jamesrh.github.io/microbial_thermo/)**
 is the landing page: a short summary, every page below, and the notebooks.
 
-Six self-contained pages are published on **GitHub Pages**. Each bundles
+Seven self-contained pages are published on **GitHub Pages**. Each bundles
 Plotly, needs no server, no Python and no kernel — click and they run:
 
 | page | what it is |
@@ -159,6 +159,7 @@ Plotly, needs no server, no Python and no kernel — click and they run:
 | [**Redox tower**](https://jamesrh.github.io/microbial_thermo/notebooks/tower_interactive.html) | the tower, with pH, temperature and oxidised:reduced ratio on sliders |
 | [**Free-energy explorer**](https://jamesrh.github.io/microbial_thermo/notebooks/explorer_methanogenesis.html) | hydrogenotrophic methanogenesis across its conditions |
 | [**Arsenic redox diagrams**](https://jamesrh.github.io/microbial_thermo/notebooks/arsenic_interactive.html) | Latimer, Frost and Eh–pH together, with temperature, pH and activity sliders and the `show` / `label` dropdowns |
+| [**Methanogenic substrates**](https://jamesrh.github.io/microbial_thermo/notebooks/methanogenesis_interactive.html) | the same three diagrams for every methanogenic substrate (notebook 13), on an HS⁻/NH₄⁺ basis |
 | [**Syntrophy: the H₂ producer alone**](https://jamesrh.github.io/microbial_thermo/notebooks/syntrophy_ethanol_oxidizer.html) | ethanol oxidation to acetate and H₂ (the "S organism"), across its conditions |
 | [**Syntrophy: the methanogen alone**](https://jamesrh.github.io/microbial_thermo/notebooks/syntrophy_methanogen.html) | hydrogenotrophic methanogenesis at the same digester conditions |
 | [**Syntrophy: both together**](https://jamesrh.github.io/microbial_thermo/notebooks/syntrophy_together.html) | the two against H₂ partial pressure, crossing, with the window where both pay shaded |
@@ -1405,7 +1406,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 569 tests, ~180 s
+python -m unittest discover -s tests     # 729 tests, ~205 s plugged in
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # skip the slow notebook runs
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
@@ -1454,9 +1455,12 @@ the digits written, so a file saying 24, 25, 26, 27 rendered as 18, 19, 20, 21
 and nobody reading GitHub saw the numbers this repo cites. They are plain
 bullets with literal `#N` labels now, which render the same everywhere.
 
-**Next up:** nothing is queued. The open items below are independent of each
-other; **9** (two-dimensional contours) and **15** (uncertainty propagation)
-are the two that would add most to the figures that now exist.
+**Next up:** **#33** (the notebook-run watchdog, designed in `NOTES.md`) and
+then **#29** (per-ion energy floors), which corrects claims in notebooks 02
+and 07. #29–#34 are corrections found while building notebook 13; the older
+items are independent of each other, and **9** (two-dimensional contours) and
+**15** (uncertainty propagation) are the two that would add most to the
+figures that now exist.
 
 ### Completed
 
@@ -1529,6 +1533,56 @@ are the two that would add most to the figures that now exist.
    digitised; that should settle it. `Biomass(aq)` is on the unverified list
    **permanently** and correctly: ⟨CH₂O⟩ is a modelling placeholder, not a
    compound.
+- **#29 · Per-ion energy floors, library-wide.** The −20 kJ/mol energy quantum
+   is Schink's cost of pumping *one ion*, so an organism's floor is one ion
+   per turnover of its own substrate. The library draws it at −20 per reaction
+   *as written* (per 2 e⁻), which matches no organism: per 2 e⁻ it should be
+   −10 for an ethanol oxidiser and −5 for a methanogen. Notebook 13 draws
+   per-organism floors by hand. Add a `turnover:` species to each curated
+   metabolism in `reactions.yaml`, move notebook 13's helpers (`turnovers`,
+   `floors_for`, `draw_floors`, `draw_floors_plotly`) into the library, and let
+   the syntrophy window, explorer and affinity ladder draw them. **Two
+   notebooks make claims that change** and must be recomputed, not
+   reworded: 02's propionate window ("neither partner is guaranteed one
+   quantum" — per ion the methanogen clears ~1.1 ions per CH₄ and the
+   propionate oxidiser gets ~0.8 per propionate), and 07's sulfur
+   disproportionation ("inside the quantum until about 5 × 10⁻⁶", which
+   compares −20 against ΔG per mol S).
+- **#30 · Electron accounting for methyl disproportionations.**
+   `methylotrophic_methanogenesis`, `methylamine_methanogenesis` and
+   `dms_methanogenesis` are written through CO₂ (substrate → CO₂, CO₂ → CH₄),
+   which counts 24 e⁻ for 4 CH₃X → 3 CH₄ + CO₂ where the chemistry moves 6.
+   Energy per CH₄ is exact; per-electron values, and so their places on every
+   affinity ladder, are a factor of four too small. Rewrite with CH₃X/CH₄
+   acceptor couples, and re-run 03 and 13, whose ladders and prose depend on
+   it.
+- **#31 · Methylammonium and the missing methyl compounds.** speq23 has only
+   neutral `Methanamine(aq)`; at pH 7 the substrate is >99.9 % CH₃NH₃⁺
+   (p*K*a ≈ 10.6), so every methylamine reaction is ~20.5 kJ per methylamine
+   too favourable. Notebook 13 corrects it by hand. Find a sourced value for
+   methylammonium (or add an acid–base family with a cited p*K*a), and look
+   for trimethylamine, dimethylamine and TMAO, which are in none of our
+   databases.
+- **#32 · Check unverified attributions.** `reactions.yaml` lists
+   `syntrophic_ethanol_oxidation` organisms as "Syntrophus, the classic S
+   organism"; the S organism of *Methanobacillus omelianskii* was never
+   assigned to *Syntrophus* — confirm and correct. Notebook 13 cites Feldewert
+   *et al.* 2020, Cai *et al.* 2018, Leu *et al.* 2020, Hoehler *et al.* 2001
+   and Jackson & McInerney 2002 from memory, and the last two are summarised
+   ("methanogens near −10 kJ/mol", "single-digit kJ/mol") without the papers
+   checked. Verify each against the source.
+- **#33 · Notebook-run watchdog and faster notebook tests.** Kernels hang
+   intermittently (alive, ~1 % CPU); today only a 240 s cell timeout catches
+   it. Detect it by stalled kernel CPU time and kill for the existing retry;
+   design and an nbclient hook trap are in `NOTES.md`. Then run the 13
+   notebooks in parallel. Also refresh `tests/test_notebooks.py`'s docstring
+   ("roughly 20 seconds" is long stale).
+- **#34 · Figure-text collisions and wording.** `plot_frost` puts the
+   "no elemental form" warning in a `figure.text` at the bottom and the new
+   omitted-species note in an axis annotation; when both apply they can
+   overlap (no shipped figure has both today). The Frost legend's "other forms
+   of the same state" is misleading when distinct compounds share a state, as
+   at C(−II) in notebook 13.
 
 ### Tier 2 — moderate, mostly new figures over existing machinery
 

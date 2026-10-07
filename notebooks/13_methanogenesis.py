@@ -25,7 +25,7 @@
 #
 # * **Type I — hydrogenotrophic.** CO₂ is the acceptor and H₂ (or formate)
 #   is the donor:
-#   $$4\,H_2 + CO_2 \rightarrow CH_4 + 2\,H_2O$$
+#   *  $4\,H_2 + CO_2 \rightarrow CH_4 + 2\,H_2O$
 # * **Type II — methyl and acetate.** The substrate already carries a methyl
 #   group, and the electrons either come from the substrate itself or from
 #   H₂:
@@ -57,6 +57,20 @@
 #
 # Every number is computed here, not quoted.
 
+# %% [markdown]
+# * *Type I — hydrogenotrophic*
+# $$4\,H_2 + CO_2 \rightarrow CH_4 + 2\,H_2O$$
+# * *Type II w/ cytochromes — aceticlastic*
+# $$CH_3COO^- + H^+ \rightarrow CH_4 + CO_2$$
+# * *Type II w/ cytochromes — methylotrophic disproportionation*
+# $$4\,CH_3OH \rightarrow 3\,CH_4 + CO_2 + 2\,H_2O$$
+# * *Type II w/ cytochromes — methylamines and methyl sulfides*
+# $$2\,(CH_3)_2S + 2\,H_2O \rightarrow 3\,CH_4 + CO_2 + 2\,H_2S$$
+# * *Type II w/out cytochromes —  methyl reduction*
+# $$CH_3OH + H_2 \rightarrow CH_4 + H_2O$$
+#
+#
+
 # %%
 import warnings
 
@@ -69,15 +83,17 @@ import microbial_thermo as mt
 from microbial_thermo import Couple
 from microbial_thermo.figures import (
     frost_diagram,
+    interactive_element,
     plot_affinity_ladder,
     plot_energy_explorer,
     plot_frost,
     plot_half_reactions,
+    plot_interactive_element,
     plot_syntrophy_interactive,
     plot_syntrophy_window,
     syntrophy_window,
 )
-from microbial_thermo.figures.basis import FARADAY_KJ
+from microbial_thermo.figures.basis import FARADAY_KJ, element_grid
 from microbial_thermo.figures.explorer import SVG_CONFIG
 from microbial_thermo.figures.style import PALETTE
 from microbial_thermo.figures.syntrophy import SYNTROPHY_DIV_ID
@@ -238,6 +254,52 @@ print(
 #   and a methanogen has to pay for it out of the small energy its catabolism
 #   releases. (⟨CH₂O⟩ is a placeholder, not a measured compound — see its
 #   provenance in `supplemental_gibbs.yaml`.)
+
+# %% [markdown]
+# ### The same substrates under sliders
+#
+# This is the interactive figure from the carbon notebook (05), given the
+# methanogenic substrates and the same HS⁻ and NH₄⁺ basis. The Latimer, Frost
+# and Eh–pH panels share three sliders — temperature, pH and dissolved
+# activity — and the Frost panel has its own **show** and **label**
+# dropdowns.
+#
+# **Biomass is not on it.** ⟨CH₂O⟩ is a placeholder tabulated only at 25 °C,
+# and a species that appeared and vanished as the temperature slider moved
+# would make it a different diagram at each position. It is dropped from all
+# temperatures and named on the figure instead.
+#
+# The temperature grid is built once (about ten seconds) and shared by the
+# live widget and the exported page.
+
+# %%
+substrate_grid = element_grid("C", species=substrates, fixed=held)
+interactive_element("C", grid=substrate_grid, initial_ph=7.0, initial_log_activity=0.0, label="all")
+
+# %% [markdown]
+# The same three panels as a standalone page, with sliders that work without
+# Python, written next to this notebook as `methanogenesis_interactive.html`:
+
+# %%
+plot_interactive_element(
+    "C",
+    grid=substrate_grid,
+    initial_ph=7.0,
+    initial_log_activity=0.0,
+    save_html="methanogenesis_interactive",
+    title="Methanogenic substrates: Latimer, Frost and Eh–pH",
+).show(config=SVG_CONFIG)
+
+# %% [markdown]
+# Things worth trying:
+#
+# - Set **label** to *all forms* and find the four C(−II) substrates. Which
+#   one is lowest, and does that change with temperature?
+# - Drag **pH** from 4 to 10. Which substrates move relative to the
+#   CH₄–HCO₃⁻ line, and which do not? (Hint: which carry a charge or
+#   release a proton?)
+# - Drag **activity** down. Everything here is dissolved, so every point
+#   moves — but not all by the same amount. Why?
 
 # %% [markdown]
 # ## 2. The half reactions
