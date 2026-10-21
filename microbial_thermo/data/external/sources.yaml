@@ -56,3 +56,30 @@ sources:
       means speq23 wins every one of those, and the disagreement is asserted
       in tests/test_external.py so it cannot be forgotten. Do not "fix" this
       by promoting OBIGT ahead of the primary database.
+
+  - name: OBIGT inorganic (selected)
+    file: obigt_inorganic_aq.csv
+    kind: hkf_aqueous
+    energy_units: cal
+    retrieved: 2026-10-21
+    url: https://github.com/jedick/CHNOSZ/blob/main/inst/extdata/OBIGT/inorganic_aq.csv
+    license: GPL-3.0 (CHNOSZ)
+    citation: >-
+      Dick, J. M. (2019). CHNOSZ: Thermodynamic calculations and diagrams for
+      geochemistry. Frontiers in Earth Science 7:180. Each row carries its own
+      primary citation.
+    note: >-
+      TWO ROWS ONLY, not the whole table: NO and N2O, the denitrification
+      intermediates that no database bundled with pyGCC carries in solution.
+      Both from Schulte, Shock and Wood (2001), copied column for column and
+      renamed from OBIGT's "NO" and "N2O" to "NO(aq)" and "N2O(aq)" to match
+      this library's naming. Their a1-a4 are zero in OBIGT itself (no volume
+      data), which costs nothing at 1 bar and little along saturation.
+      Cross-checked rather than trusted: NO(aq) minus NO(g) from thermo.com
+      (NBS, Wagman et al. 1982) is a solvation energy of 15.50 kJ/mol, a
+      Henry's constant of 1.9e-3 mol/kg/bar; N2O(aq) against the NBS N2O(g)
+      of 104.20 kJ/mol gives 2.5e-2. Both match the usual tabulated
+      solubilities. The same table carries N2H5+ at exactly the speq23 value,
+      and AsH3 (arsine), which is otherwise in none of our databases.
+      Importing the rest of inorganic_aq.csv would need the audit the organic
+      table had, species by species against speq23; it has not been done.

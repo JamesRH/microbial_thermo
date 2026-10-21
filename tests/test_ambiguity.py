@@ -35,8 +35,10 @@ class TestPhaseAmbiguity(unittest.TestCase):
             # and aragonite share a formula, as do troilite and pyrrhotite.
             # "c" joined with graphite and diamond, registered together for
             # the carbon diagrams; graphite is the declared winner, being the
-            # stable form and the one a bare "C" is meant to mean.
-            ["c", "caco3", "ch4", "co2", "fes", "h2", "n2", "o2"],
+            # stable form and the one a bare "C" is meant to mean. "no" joined
+            # with NO(aq) from OBIGT beside NO(g) from the GWB file; the
+            # dissolved form wins, as for every other gas.
+            ["c", "caco3", "ch4", "co2", "fes", "h2", "n2", "no", "o2"],
         )
 
     def test_a_bare_name_means_the_dissolved_form(self):
@@ -47,6 +49,7 @@ class TestPhaseAmbiguity(unittest.TestCase):
             ("N2", "N2(aq)"),
             ("CO2", "CO2(aq)"),
             ("CH4", "Methane(aq)"),
+            ("NO", "NO(aq)"),
         ]:
             with self.subTest(name=name):
                 self.assertEqual(resolve(name).backend, expected)

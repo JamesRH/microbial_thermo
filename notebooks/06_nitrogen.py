@@ -17,7 +17,7 @@
 # # 6. Nitrogen
 #
 # Nitrogen has the widest span of oxidation states any element uses
-# biologically — eight of them, from ammonium at −III to nitrate at +V — and
+# biologically — eight electrons, from ammonium at −III to nitrate at +V — and
 # unlike carbon it has a *gas* sitting in the middle of the range. That one
 # fact organises the whole nitrogen cycle: every path down from nitrate and
 # every path up from ammonium runs into N₂, and N₂ is where nitrogen stays.
@@ -44,10 +44,28 @@ from microbial_thermo.speciation import pKa_ladder
 warnings.filterwarnings("ignore", category=UserWarning)
 
 # %% [markdown]
-# ## The ladder, and an honest gap in it
+# ## The ladder
+#
+# Every form of nitrogen this notebook uses, including both members of each
+# acid-base pair; at a given pH each ladder and diagram keeps whichever one
+# predominates.
 
 # %%
-ladder = latimer_diagram("N", pH=7.0)
+NITROGEN_SPECIES = [
+    "N2(aq)",
+    "NO3-",
+    "NO2-",
+    "HNO2(aq)",
+    "NO(aq)",
+    "N2O(aq)",
+    "NH4+",
+    "NH3(aq)",
+    "NH3OH+",
+    "NH2OH(aq)",
+    "N2H5+",
+    "N2H4(aq)",
+]
+ladder = latimer_diagram("N", species=NITROGEN_SPECIES, pH=7.0)
 ladder.to_frame()
 
 # %%
@@ -55,26 +73,19 @@ plot_latimer("N", diagram=ladder)
 plt.show()
 
 # %% [markdown]
-# **Nitric oxide and nitrous oxide are missing, and that is a property of the
-# database rather than of nitrogen.** NO at +II and N₂O at +I are the two
-# intermediates of denitrification, and neither is in the SUPCRT-lineage
-# aqueous data this library is built on. The library says so rather than
-# quietly drawing a ladder that looks complete:
+# **Every intermediate is on it, and they come from four places.** Not all of
+# them are equally trustworthy, so here is each one's source:
 
 # %%
 for name in ("NO(aq)", "N2O(aq)", "N2H5+", "N2H4(aq)", "NH2OH(aq)", "NH3OH+"):
-    try:
-        record = mt.get_backend().resolve(name)
-        print(f"{name}: present, from {record.source}")
-    except Exception as exc:
-        print(f"{name}: {type(exc).__name__}")
+    record = mt.get_backend().resolve(name)
+    print(f"{name:10s} {record.source}")
 
 # %% [markdown]
-# So the nitrite → N₂ arrow above is a three-electron step that a real
-# denitrifier walks in three enzymatic stages through species this diagram
-# cannot show. The potential is right; the path is not drawn.
-#
-# The two intermediates on the *other* side of N₂ are there.
+# **NO and N₂O**, the two denitrification intermediates, are in none of the
+# databases pyGCC bundles. They come from CHNOSZ's OBIGT database, and through
+# it from Schulte, Shock and Wood (2001). Until they were imported, this
+# ladder ran straight from nitrite to N₂ in one three-electron arrow.
 # **Hydrazinium**, N₂H₅⁺, is the protonated hydrazine that anammox bacteria
 # make, and the form that dominates below pH ≈ 8. It is in pyGCC's own HKF
 # data, and was all along: an earlier version of this notebook reported it
@@ -82,14 +93,31 @@ for name in ("NO(aq)", "N2O(aq)", "N2H5+", "N2H4(aq)", "NH2OH(aq)", "NH3OH+"):
 # **Hydroxylamine**, the intermediate of every ammonia oxidiser, is in no
 # database at all; its value is typed in by hand and unverified.
 #
-# Each also has a second form that takes over at one end of the pH scale,
-# and neither of those is in any database: neutral **N₂H₄** above pH 8, and
-# **NH₃OH⁺** below pH 6. Both are derived here from their partner and a pKa.
-# Without them a pH slider would draw the minority form at each end and
-# present it as the real one. All three hand-made values are unverified, and
-# every figure that uses one says so. None of them is on the ladder above,
-# which keeps to the default species; all of them join the Frost diagram
-# below.
+# Hydroxylamine and hydrazine each also have a second form that takes over at
+# one end of the pH scale, and neither of those is in any database: neutral
+# **N₂H₄** above pH 8, and **NH₃OH⁺** below pH 6. Both are derived here from
+# their partner and a pKa. Without them a pH slider would draw the minority
+# form at each end and present it as the real one. All three hand-made values
+# are unverified, and every figure that uses one says so.
+#
+# **Denitrification's four steps are wildly unequal.** Nitrite to NO is the
+# weakest of the four, +0.24 V. NO to N₂O and N₂O to N₂ are
+# both above +1.2 V. That is higher than O₂/H₂O at +0.815 V, so per electron
+# N₂O is a better acceptor than oxygen.
+#
+# **Published values for these couples are usually for the gases**, and the
+# ladder uses the dissolved forms. Dissolved NO sits 15.5 kJ/mol above the
+# gas, which moves the nitrite step by 0.16 V:
+
+# %%
+for no in ("NO(aq)", "NO(g)"):
+    couple = mt.half_reaction(no, "NO2-", conditions=mt.Conditions(pH=7.0))
+    print(f"NO2-/{no:6s} E°' = {couple.E_standard_prime.to('V').magnitude:+.3f} V")
+
+# %% [markdown]
+# The red outlines are a *local* test: each rung against its two neighbours.
+# Nitrite and hydrazinium pass it and still fall off the Frost hull below,
+# because the species they actually fall apart into are not their neighbours.
 
 # %% [markdown]
 # ## What is stable
@@ -99,21 +127,11 @@ for name in ("NO(aq)", "N2O(aq)", "N2H5+", "N2H4(aq)", "NH2OH(aq)", "NH3OH+"):
 # filled markers are the form that predominates at each oxidation state, and
 # the open grey squares are the other forms of that state. It is fixed at
 # 25 °C because hydroxylamine and the two derived forms have no temperature
-# dependence. Spanning temperatures would mean dropping them.
+# dependence. Spanning temperatures would mean dropping them. The
+# temperature-capable version, without them, is in the *Interactive* section
+# further down.
 
 # %%
-NITROGEN_SPECIES = [
-    "N2(aq)",
-    "NO3-",
-    "NO2-",
-    "HNO2(aq)",
-    "NH4+",
-    "NH3(aq)",
-    "NH3OH+",
-    "NH2OH(aq)",
-    "N2H5+",
-    "N2H4(aq)",
-]
 nitrogen_forms = element_series("N", species=NITROGEN_SPECIES)
 interactive_element(
     "N",
@@ -140,18 +158,21 @@ for event in frost.disproportionation():
 # this minimum, not because the enzyme is badly designed.
 #
 # **Nitrite is above the hull by a wide margin** — about 62 kJ per mole of
-# nitrite at pH 7 — and would fall apart into nitrate and N₂ on its own.
-# Nitrite really is the least stable intermediate in the cycle, it really does
-# accumulate only transiently, and the organisms that oxidise it or reduce it
-# are exploiting a species that had nowhere good to sit.
+# nitrite at pH 7 — and would fall apart into nitrate and N₂ on its own. It is
+# not the least stable intermediate, though. With every intermediate on the
+# diagram it is one of the mildest; only N₂O, at about 56, sits closer to the
+# hull. The organisms that oxidise or reduce nitrite are still exploiting a
+# species that had nowhere good to sit.
 #
-# **Hydroxylamine and hydrazinium sit higher above the hull than nitrite
-# does**: hydroxylamine by about 221 kJ per mole of nitrogen, hydrazinium by
-# about 85, and both would fall apart into N₂ and ammonium. Those energies,
+# **Hydroxylamine, NO and hydrazinium sit higher above the hull than nitrite
+# does**: hydroxylamine by about 221 kJ per mole of nitrogen, NO by 110,
+# hydrazinium by 85. Hydroxylamine and hydrazinium fall to N₂ and ammonium, NO
+# and N₂O to N₂ and nitrate. Those energies,
 # like everything on a Frost diagram, are per mole of N; hydrazinium carries
-# two, so per mole of N₂H₅⁺ its fall is about 169 kJ. These are the two
-# intermediates that nitrogen-cycle organisms make on purpose and never let
-# accumulate: hydroxylamine in ammonia oxidisers, hydrazine in anammox. Their
+# two, so per mole of N₂H₅⁺ its fall is about 169 kJ. Hydroxylamine and
+# hydrazine are intermediates that nitrogen-cycle organisms make on purpose
+# and never let accumulate: hydroxylamine in ammonia oxidisers, hydrazine in
+# anammox. Their
 # height is the point. A species far above the hull has a long way to fall,
 # and anammox takes hydrazine's fall as four low-potential electrons, from a
 # couple well below H⁺/H₂:
@@ -231,10 +252,18 @@ plt.show()
 # %% [markdown]
 # ## Interactive
 
-# %%
-from microbial_thermo.figures import interactive_element
+# %% [markdown]
+# All three panels, with temperature as well. Hydroxylamine and the two
+# derived forms are left out here because they exist only at 25 °C. NO, N₂O
+# and nitrous acid are kept, since they carry a full temperature dependence.
 
-interactive_element("N", initial_ph=7.0, initial_log_activity=-5.0)
+# %%
+interactive_element(
+    "N",
+    species=["N2(aq)", "NO3-", "NO2-", "HNO2(aq)", "NO(aq)", "N2O(aq)", "NH4+", "NH3(aq)"],
+    initial_ph=7.0,
+    initial_log_activity=-5.0,
+)
 
 # %% [markdown]
 # ## Who lives on each step
@@ -280,10 +309,21 @@ pair[["label", "dG per e- (kJ/mol)"]]
 # on a timescale of months, while *Methylomirabilis* grows on its own. The
 # ladder explains both facts at once.
 #
-# *Methylomirabilis* has a further trick that the thermodynamics cannot see:
-# it is thought to dismutate NO into N₂ and **O₂**, then use the oxygen in an
-# ordinary methane monooxygenase — making its own oxidant inside an anoxic
-# cell. Worth remembering whenever a diagram says a reaction is impossible:
+# *Methylomirabilis* has a further trick: it is thought to dismutate NO into
+# N₂ and **O₂**, then use the oxygen in an ordinary methane monooxygenase —
+# making its own oxidant inside an anoxic cell. The ladder says why that is
+# possible at all. NO sits above the O₂/H₂O line, so it can oxidise water's
+# oxygen, and splitting it runs downhill:
+
+# %%
+dismutation = mt.Reaction.from_couples(
+    donor=("H2O", "O2(aq)"), acceptor=("N2(aq)", "NO(aq)"), conditions=conditions, normalize_to="O2(aq)"
+)
+print(f"{dismutation.delta_G_standard_prime.to('kJ/mol').magnitude:+.1f} kJ/mol   {dismutation}")
+
+# %% [markdown]
+# What the thermodynamics cannot see is that any enzyme does it. Worth
+# remembering whenever a diagram says a reaction is impossible, or possible:
 # the diagram constrains the overall energy, never the route.
 
 # %% [markdown]
@@ -319,17 +359,20 @@ print(f"NO3- to NH4+ {frost.slope('NO3-', 'NH4+'):+.3f} V")
 #
 # *Alcaligenes ammonioxydans* oxidises ammonia straight to N₂ by way of
 # hydroxylamine, a pathway called **Dirammox** (direct ammonia oxidation).
-# With oxygen as the acceptor, both the whole pathway and its second step
-# run steeply downhill:
+# With oxygen as the acceptor, the whole pathway and its second step run
+# steeply downhill. The first step, in the middle line, does not:
 
 # %%
 overall = mt.Reaction.from_couples(
     donor=("NH4+", "N2(g)"), acceptor=("H2O", "O2(g)"), conditions=conditions, normalize_to="NH4+"
 )
+first = mt.Reaction.from_couples(
+    donor=("NH4+","NH2OH"), acceptor=("H2O", "O2(g)"), conditions=conditions, normalize_to="NH4+"
+)
 second = mt.Reaction.from_couples(
     donor=("NH2OH", "N2(g)"), acceptor=("H2O", "O2(g)"), conditions=conditions, normalize_to="NH2OH"
 )
-for reaction in (overall, second):
+for reaction in (overall, first, second):
     energy = reaction.delta_G_standard_prime.to("kJ/mol").magnitude
     print(f"{energy:+7.1f} kJ/mol   {reaction}")
 

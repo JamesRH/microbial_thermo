@@ -433,7 +433,7 @@ species; it never changes a number an earlier one already produced.**
 | 1 | `speq23.dat` | HKF, direct | 1597 aqueous species, gases, common minerals |
 | 2 | `thermo.com.dat` | GWB log K + HKF basis | 2937 entries, chiefly minerals |
 | 3 | `supcrtbl.dat` | Holland & Powell (HP11) | 266 species nothing else has |
-| 4 | OBIGT (`data/external/`) | HKF, imported | 536 organic aqueous species with per-species citations |
+| 4 | OBIGT (`data/external/`) | HKF, imported | 536 organic aqueous species, plus NO and N₂O, with per-species citations |
 | 5 | supplemental table | hand-entered | 6 species no database carries |
 
 `speq23.dat` replaced pyGCC's default `speq21.dat` and the upgrade was free:
@@ -469,7 +469,7 @@ the difference from the hand-entered supplemental table: these arrive with a
 citation already attached, so they are verified on arrival rather than
 pending.
 
-Currently one source: **OBIGT**, the database inside CHNOSZ. It is
+Currently one database, in two files: **OBIGT**, the database inside CHNOSZ. It is
 SUPCRT-lineage, so the standard state already matches — and that is checkable
 rather than asserted: **acetate's HKF parameters are identical in OBIGT and
 `speq23` to the last digit**, which is what licensed the import. 536 organic
@@ -496,6 +496,16 @@ to *G*, *H* and *S*, and a mis-scaled coefficient is wrong only away from
 25 °C — where nothing here would catch it. Worth doing carefully later; the
 prize is N-acetylglucosamine, N-acetylmuramic acid and diaminopimelic acid,
 i.e. peptidoglycan.
+
+A second, much smaller file takes **two rows** from OBIGT's *inorganic* table:
+dissolved **NO and N₂O**, the denitrification intermediates, from Schulte,
+Shock & Wood (2001). Only those two, not the whole table, because the rest
+would need the same species-by-species audit against `speq23` the organic
+table had. Both were cross-checked on the way in: NO(aq) against NO(g) from
+the GWB file gives a solvation energy of 15.50 kJ/mol, which is the tabulated
+solubility of nitric oxide (asserted in `tests/test_external.py`). The same
+table also carries arsine (AsH₃), otherwise in none of our databases, if the
+arsenic notebook ever wants it.
 
 ### Species pyGCC does not have
 
@@ -1438,9 +1448,12 @@ ruff check microbial_thermo tests
   `verified: false` — they warn on every use and footnote any figure that
   depends on them. All three are 25 °C only, so a nitrogen diagram that
   includes them cannot also have a temperature slider.
-- **NO, N₂O and N₂H₆²⁺ are not drawn.** Nitric and nitrous oxide are in no
-  database here. `N2H6++` is in `speq23.dat` but unregistered; it matters only
-  below pH ≈ −1.
+- **NO and N₂O are dissolved forms only.** They come from OBIGT (see
+  *Imported external data*). NO(g) is available from the GWB file; N₂O(g) is
+  in none of our databases. Published denitrification potentials are usually
+  for the gases and differ from the dissolved ones by the solvation energy,
+  0.16 V for nitrite/NO. `N2H6++` is in `speq23.dat` but unregistered; it
+  matters only below pH ≈ −1.
 - **Isothermal minerals.** A few phases — manganite and birnessite among them —
   are tabulated at 25 °C only in the source database. They evaluate at 25 °C and
   raise `OutOfRangeError` elsewhere rather than inventing a temperature

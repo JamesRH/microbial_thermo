@@ -40,7 +40,7 @@ from fractions import Fraction
 from pathlib import Path
 
 from .basis import FARADAY_KJ, element_series, ladder_entries, pretty
-from .style import PALETTE, SIZES, add_omitted_footnote, omitted_footnote
+from .style import PALETTE, SIZES, add_omitted_footnote, omitted_footnote, unverified_notice
 
 #: Oxidation states within this of each other count as the same rung. Magnetite
 #: is +8/3 and nothing else is near it, so the tolerance only ever collapses
@@ -90,8 +90,11 @@ class LatimerStep:
         Coefficients are per mole of the element and are therefore fractional
         for a mixed-valence phase -- a third of a magnetite per iron.
         """
-        left = [self.oxidized.backend]
-        right = [self.reduced.backend]
+        # Per mole of the element, so a species carrying two atoms of it takes
+        # a half. This used to be left out, which printed N2O -> N2 and
+        # Hematite -> Magnetite with one of each and conserved nothing.
+        left = [f"{_coefficient(1 / self.oxidized.n_element)} {self.oxidized.backend}".strip()]
+        right = [f"{_coefficient(1 / self.reduced.n_element)} {self.reduced.backend}".strip()]
 
         protons = self.reduced.protons - self.oxidized.protons
         if protons:
@@ -475,8 +478,13 @@ def plot_latimer(
         title = f"{element} — Latimer diagram\n{subtitle}"
     ax.set_title(title, fontsize=SIZES["title"], pad=8)
     if owns_figure:
+        import textwrap
+
         below = 4 + (12 * len(diagram.steps) + 8 if show_half_reactions else 0)
-        add_omitted_footnote(ax, omitted, below_points=below)
+        # Not an omission, and not switched off with them (SPEC 2.1).
+        warning = unverified_notice(rung.backend for rung in diagram.rungs)
+        notes = [omitted, textwrap.fill(warning, width=110) if warning else None]
+        add_omitted_footnote(ax, "\n".join(n for n in notes if n) or None, below_points=below)
         figure.tight_layout()
 
     if save is not None:

@@ -61,7 +61,23 @@ class TestImportedSpecies(unittest.TestCase):
         cls.backend = mt.get_backend()
 
     def test_the_expected_number_arrived(self):
-        self.assertEqual(len(self.species), 536)
+        # 536 organic, plus NO and N2O picked from the inorganic table.
+        self.assertEqual(len(self.species), 538)
+        self.assertEqual(
+            {s.name for s in self.species.values() if s.source != "OBIGT"},
+            {"NO(aq)", "N2O(aq)"},
+        )
+
+    def test_nitrogen_oxides_match_their_gases_and_solubilities(self):
+        """NO(aq) arrives from OBIGT, NO(g) from the GWB file: different
+        databases, so their difference is a real check. 15.50 kJ/mol of
+        solvation is a Henry's constant of 1.9e-3 mol/kg/bar, the tabulated
+        solubility of nitric oxide."""
+        aqueous = self.backend.delta_Gf("NO(aq)", 25.0).to("kJ/mol").magnitude
+        gas = self.backend.delta_Gf("NO(g)", 25.0).to("kJ/mol").magnitude
+        self.assertAlmostEqual(aqueous, 24390 * 4.184 / 1000, places=2)
+        henry = np.exp(-(aqueous - gas) * 1000 / (8.314462618 * 298.15))
+        self.assertAlmostEqual(henry, 1.9e-3, delta=0.1e-3)
 
     def test_each_carries_its_own_primary_citation(self):
         """Not just the database's citation -- the paper the number came

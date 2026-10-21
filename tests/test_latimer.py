@@ -194,6 +194,53 @@ class TestHalfReactions(unittest.TestCase):
         text = diagram.steps[0].half_reaction()
         self.assertEqual(text, "H3AsO4(aq) + 2 H+ + 2 e- -> As(OH)3(aq) + H2O")
 
+    def test_every_printed_step_conserves_atoms_and_charge(self):
+        """Parse each half reaction back out of its string and count.
+
+        Recomputing the coefficients would only check the formula twice; the
+        string is what a reader sees. Species with two or three atoms of the
+        element -- N2, N2O, N2H5+, hematite, magnetite -- used to print with
+        a coefficient of one, which conserved nothing.
+        """
+        from fractions import Fraction
+
+        import microbial_thermo as mt
+
+        def imbalance(text):
+            totals = {}
+            for sign, side in zip((-1, 1), text.split(" -> "), strict=True):
+                for term in side.split(" + "):
+                    *number, name = term.split(" ")
+                    amount = sign * Fraction(number[0] if number else 1)
+                    if name == "e-":
+                        counts, charge = {}, -1
+                    else:
+                        parsed = mt.resolve(name).parsed
+                        counts, charge = parsed.elements, parsed.charge
+                    for symbol, count in counts.items():
+                        totals[symbol] = totals.get(symbol, 0) + amount * count
+                    totals["charge"] = totals.get("charge", 0) + amount * charge
+            return {key: value for key, value in totals.items() if value}
+
+        nitrogen = [
+            "N2(aq)",
+            "NO3-",
+            "NO2-",
+            "NO(aq)",
+            "N2O(aq)",
+            "NH4+",
+            "NH2OH(aq)",
+            "N2H5+",
+        ]
+        cases = [("N", nitrogen, 7.0), ("Fe", None, 0.0), ("Mn", None, 0.0), ("As", None, 7.0)]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for element, species, ph in cases:
+                for step in latimer_diagram(element, species=species, pH=ph).steps:
+                    text = step.half_reaction()
+                    with self.subTest(element=element, step=text):
+                        self.assertEqual(imbalance(text), {})
+
     def test_fractional_coefficients_print_as_fractions(self):
         self.assertEqual(_coefficient(1 / 3), "1/3")
         self.assertEqual(_coefficient(8 / 3), "8/3")
@@ -313,6 +360,27 @@ class TestNothingIsDroppedSilently(unittest.TestCase):
             self.assertFalse([t for t in _notes(figure) if "Not drawn" in t])
         finally:
             matplotlib.pyplot.close(figure)
+
+
+class TestUnverifiedNotice(unittest.TestCase):
+    """A ladder with hydroxylamine on it says so (SPEC 2.1)."""
+
+    def _notes(self, species):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            figure, _ = plot_latimer("N", species=species, pH=7.0)
+        try:
+            return [text.get_text() for ax in figure.axes for text in ax.texts]
+        finally:
+            matplotlib.pyplot.close(figure)
+
+    def test_hydroxylamine_is_flagged(self):
+        notes = self._notes(["N2(aq)", "NO3-", "NH4+", "NH2OH(aq)"])
+        self.assertTrue(any("unverified" in n and "NH2OH(aq)" in n for n in notes))
+
+    def test_nothing_flagged_without_it(self):
+        notes = self._notes(["N2(aq)", "NO3-", "NH4+", "NO(aq)", "N2O(aq)"])
+        self.assertFalse(any("unverified" in n for n in notes))
 
 
 if __name__ == "__main__":

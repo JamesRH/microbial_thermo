@@ -51,6 +51,12 @@ species:
   # no database; it is derived from this one in supplemental_gibbs.yaml and
   # takes the alias "hydrazine", since the pKa is near 8.
   - {backend: "N2H5+",   formula: "N2H5+", display: "N_2H_5^+", phase: aq, aliases: [hydrazinium]}
+  # The denitrification intermediates. The dissolved forms come from OBIGT
+  # (Schulte, Shock & Wood 2001, see data/external/); NO(g) is GWB/NBS. N2O
+  # has no gas phase in any of our databases.
+  - {backend: "NO(aq)",  formula: "NO",    display: "NO(aq)",   phase: aq, canonical: true, aliases: [NO, "nitric oxide"]}
+  - {backend: "NO(g)",   formula: "NO",    display: "NO(g)",    phase: g,  aliases: ["NO(g)"]}
+  - {backend: "N2O(aq)", formula: "N2O",   display: "N_2O(aq)", phase: aq, aliases: [N2O, "nitrous oxide"]}
 
   # --- carbon, inorganic ---
   - {backend: "CO2(aq)",     formula: "CO2",  display: "CO_2(aq)", phase: aq, canonical: true, aliases: [CO2, "carbon dioxide"]}
@@ -309,3 +315,16 @@ species:
   - {backend: "K+",   formula: "K+",   display: "K^+",     phase: aq, aliases: [potassium]}
   - {backend: "Na+",  formula: "Na+",  display: "Na^+",    phase: aq, aliases: [sodium]}
   - {backend: "Cl-",  formula: "Cl-",  display: "Cl^-",    phase: aq, aliases: [chloride]}
+
+  # --- oxidants stronger than O2, all from speq23 ---
+  # Every one of these sits above the O2/H2O line and so is unstable in
+  # water; they persist only because they react slowly. Perchlorate's
+  # strength is back-loaded: its first two-electron step (to chlorate) is
+  # weaker than O2, and the power is all in chlorite.
+  - {backend: "H2O2(aq)", formula: "H2O2",  display: "H_2O_2(aq)", phase: aq, aliases: [H2O2, "hydrogen peroxide", peroxide]}
+  - {backend: "HO2-",     formula: "HO2-",  display: "HO_2^-",     phase: aq, aliases: [hydroperoxide]}
+  - {backend: "ClO4-",    formula: "ClO4-", display: "ClO_4^-",    phase: aq, aliases: [perchlorate]}
+  - {backend: "ClO3-",    formula: "ClO3-", display: "ClO_3^-",    phase: aq, aliases: [chlorate]}
+  - {backend: "ClO2-",    formula: "ClO2-", display: "ClO_2^-",    phase: aq, aliases: [chlorite]}
+  - {backend: "HClO(aq)", formula: "HClO",  display: "HClO(aq)",   phase: aq, aliases: [HClO, HOCl, "hypochlorous acid"]}
+  - {backend: "ClO-",     formula: "ClO-",  display: "ClO^-",      phase: aq, aliases: [hypochlorite]}

@@ -502,6 +502,23 @@ textbook pH 0 diagram. Likewise the Dirammox first step is above O2/H2O at
 every pH at unit activity, but by 114 mV in acid and only 17 mV (3 kJ/mol)
 above pH 9.2, which is inside the hydroxylamine value's own uncertainty.
 
+**The Latimer half-reaction strings had the Frost bug's twin.** The
+docstring promised "a third of a magnetite per iron" and the code wrote
+every species with coefficient one, so N2O -> N2, hematite -> magnetite and
+Mn2O3 steps printed unbalanced while their potentials were right. Fixed, and
+`test_latimer.py` now parses every printed step back and counts atoms and
+charge -- the string is what a reader sees, so that is what gets checked.
+
+**NO and N2O come from OBIGT's inorganic table, two rows only.** Nothing
+bundled with pyGCC carries either in solution; GWB has NO(g). The two SSW01
+rows are in `data/external/obigt_inorganic_aq.csv`, renamed to `NO(aq)`,
+`N2O(aq)`. NO(aq) minus NO(g) is 15.50 kJ/mol, the textbook solubility, and
+that is tested. The rest of `inorganic_aq.csv` (686 rows, AsH3 among them)
+is unaudited against speq23; do not import it wholesale without the
+comparison the organic table got. Peroxide and the chlorine oxyanions are
+registered (`H2O2(aq)`, `ClO4-` etc., all speq23) for later use; they are
+not in notebook 06 by James's choice.
+
 **+0.899 V for NH2OH/NH4+ is the NH4+ form.** With NH3 the same couple is
 +0.832 V at pH 7. The arsenate trap again: name the species before quoting
 the potential.
