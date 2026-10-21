@@ -47,7 +47,7 @@ import numpy as np
 
 from .basis import FARADAY_KJ, element_series, ladder_entries, pretty
 from .latimer import STATE_TOLERANCE, _state_label
-from .style import PALETTE, SIZES, add_omitted_footnote, omitted_footnote
+from .style import PALETTE, SIZES, add_omitted_footnote, omitted_footnote, unverified_notice
 
 
 @dataclass(frozen=True)
@@ -72,20 +72,31 @@ class FrostPoint:
 
 @dataclass(frozen=True)
 class Disproportionation:
-    """A species that is unstable with respect to two others."""
+    """A species that is unstable with respect to two others.
+
+    **Everything here is per mole of the element**, like the diagram itself,
+    not per mole of the species. The two agree only when the species and both
+    products carry one atom of the element each. They used to be documented
+    and printed as per species, which put hydrazinium's energy out by a factor
+    of two and had nitrite making "0.4 N2" where it makes 0.2: 0.4 is the
+    share of the nitrogen, not moles of N2.
+    """
 
     species: str
     oxidation_state: float
     into: tuple  # (more oxidized backend, more reduced backend)
-    fractions: tuple  # moles of each, per mole of the species
-    delta_g: float  # kJ per mole of the species, negative when it proceeds
+    fractions: tuple  # share of the element's atoms going to each; sums to 1
+    delta_g: float  # kJ per mole of the element, negative when it proceeds
+    element: str = ""
 
     def __str__(self) -> str:
         high, low = self.into
         f_high, f_low = self.fractions
+        element = self.element or "element"
         return (
-            f"{self.species} -> {f_high:.3g} {high} + {f_low:.3g} {low}  "
-            f"({self.delta_g:+.1f} kJ/mol {self.species})"
+            f"{self.species} -> {high} + {low}  "
+            f"({f_high:.3g} : {f_low:.3g} of the {element}, "
+            f"{self.delta_g:+.1f} kJ/mol {element})"
         )
 
 
@@ -227,6 +238,7 @@ class FrostDiagram:
                     into=(high.backend, low.backend),
                     fractions=(f_high, f_low),
                     delta_g=(chord - point.volt_equivalent) * FARADAY_KJ,
+                    element=self.element,
                 )
             )
         return found
@@ -637,8 +649,18 @@ def plot_frost(
     if owns_figure:
         # Below the x-axis label. Only on a figure this call owns: a panel in
         # someone else's figure leaves its footnotes to that figure.
-        if show_omitted:
-            add_omitted_footnote(ax, omitted_footnote(diagram.excluded), below_points=36)
+        # The unverified notice is not an omission and is not switched off
+        # with them. It goes in the same annotation so the two cannot overlap.
+        import textwrap
+
+        warning = unverified_notice(point.backend for point in shown)
+        notes = [
+            omitted_footnote(diagram.excluded) if show_omitted else None,
+            textwrap.fill(warning, width=110) if warning else None,
+        ]
+        notes = [note for note in notes if note]
+        if notes:
+            add_omitted_footnote(ax, "\n".join(notes), below_points=36)
         figure.tight_layout()
     if save is not None:
         base = Path(save)

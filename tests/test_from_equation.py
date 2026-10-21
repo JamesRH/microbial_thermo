@@ -172,9 +172,10 @@ class TestSupplementalTable(unittest.TestCase):
         Hydroxylamine is still outstanding -- it is in no pyGCC database and
         not in OBIGT either. Biomass(aq) is a permanent resident: <CH2O> is a
         modelling placeholder, not a compound, so it can never become
-        "verified" in this sense.
+        "verified" in this sense. N2H4(aq) and NH3OH+ are derived from a
+        partner and a pKa, so they are no better than their sources.
         """
-        self.assertEqual(unverified_names(), ["Biomass(aq)", "NH2OH(aq)"])
+        self.assertEqual(unverified_names(), ["Biomass(aq)", "N2H4(aq)", "NH2OH(aq)", "NH3OH+"])
 
     def test_refuses_another_temperature_by_default(self):
         with self.assertRaises(OutOfRangeError):

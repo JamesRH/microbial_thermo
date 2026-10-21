@@ -490,5 +490,27 @@ class TestFigures(unittest.TestCase):
             )
 
 
+class TestUnverifiedNotice(unittest.TestCase):
+    """The shared canvas owes the reader the same warning a static figure does."""
+
+    def _texts(self, species):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            grid = element_grid("N", species=species, temperatures=(25.0,))
+            figure = _figure(grid, 25.0, 7.0, 1.0, (8.0, 6.0), (-1.0, 1.4), 40, panels=("frost",))
+        try:
+            return [text.get_text() for text in figure.texts]
+        finally:
+            matplotlib.pyplot.close(figure)
+
+    def test_hydroxylamine_is_flagged(self):
+        texts = self._texts(["N2(aq)", "NO3-", "NH4+", "NH2OH(aq)"])
+        self.assertTrue(any("unverified" in t and "NH2OH(aq)" in t for t in texts))
+
+    def test_nothing_flagged_without_it(self):
+        texts = self._texts(["N2(aq)", "NO3-", "NH4+", "N2H5+"])
+        self.assertFalse(any("unverified" in t for t in texts))
+
+
 if __name__ == "__main__":
     unittest.main()

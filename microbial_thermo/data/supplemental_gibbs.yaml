@@ -39,6 +39,45 @@ species:
       Suppl. 2 -- which are not machine-readable from here; NIST has since
       published a digitised version that would settle it. CHECK BEFORE USE.
 
+  # The next two are DERIVED, not tabulated: a parent's formation energy plus
+  # 2.303 RT pKa at 25 C (5.708 kJ/mol per pKa unit). They exist because each
+  # is the form that dominates at one end of the pH scale, and without them a
+  # pH slider draws the minority form there and reads it as the real one.
+  - backend: "NH3OH+"
+    formula: "NH4O+"
+    display: "NH_3OH^+"
+    phase: aq
+    aliases: [hydroxylammonium, "NH3OH+", "NH3OH+(aq)"]
+    delta_Gf_kJ_mol: -57.520
+    temperature_c: 25.0
+    verified: false
+    provenance: >-
+      DERIVED AND UNVERIFIED. NH2OH(aq) above (-23.5, itself unverified) minus
+      2.303 RT pKa, with pKa = 5.96 for NH3OH+ = NH2OH + H+ at 25 C; quoted
+      values run 5.94-5.96, so the pKa adds about 0.1 kJ/mol of doubt to
+      whatever is wrong with the parent. In no database bundled with pyGCC.
+      Predominates below pH 6, which is the only reason it is here. No
+      enthalpy, so it is refused away from 25 C.
+
+  - backend: "N2H4(aq)"
+    formula: "N2H4"
+    display: "N_2H_4(aq)"
+    phase: aq
+    aliases: [hydrazine, "N2H4", "N2H4(aq)"]
+    delta_Gf_kJ_mol: 128.032
+    temperature_c: 25.0
+    verified: false
+    provenance: >-
+      DERIVED AND UNVERIFIED. N2H5+ from speq23 (19700 cal/mol = 82.425
+      kJ/mol, Shock et al. 1997, verified) plus 2.303 RT pKa, with pKa = 7.99
+      for N2H5+ = N2H4 + H+ at 25 C. Quoted pKa values run 7.93-8.1, about
+      +-0.6 kJ/mol. The commonly cited NBS figure for N2H4(aq), 128.1 kJ/mol,
+      agrees to 0.1 kJ/mol, but was recalled rather than read from the
+      tables, so it is a consistency check and not a verification. Neutral
+      hydrazine is in no database bundled with pyGCC. Predominates above
+      pH 8. No enthalpy, so it is refused away from 25 C even though its
+      parent has a full temperature dependence.
+
   - backend: "Glucose(aq)"
     formula: "C6H12O6"
     display: "glucose"

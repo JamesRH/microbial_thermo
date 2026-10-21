@@ -43,6 +43,11 @@ class TestPkaValues(unittest.TestCase):
         "sulfate": [1.99],
         "arsenate": [2.24, 6.96, 11.50],
         "arsenite": [9.23],
+        # Circular, and listed only so every family is covered: one member of
+        # each was derived from exactly this pKa (supplemental_gibbs.yaml), so
+        # agreement checks the arithmetic of the derivation, not the data.
+        "hydroxylamine": [5.96],
+        "hydrazine": [7.99],
     }
 
     #: Families needing a wider tolerance than the default, with the reason.

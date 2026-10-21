@@ -58,6 +58,16 @@ families:
     members: ["HNO2(aq)", "NO2-"]
     aliases: [nitrite, "total nitrite"]
 
+  # Both have a hand-derived member (see supplemental_gibbs.yaml), so both
+  # work at 25 C only, and their pKa values come back out by construction.
+  - name: hydroxylamine
+    members: ["NH3OH+", "NH2OH(aq)"]
+    aliases: ["total hydroxylamine"]
+
+  - name: hydrazine
+    members: ["N2H5+", "N2H4(aq)"]
+    aliases: ["total hydrazine"]
+
   - name: sulfate
     members: ["HSO4-", "SO4--"]
     aliases: [sulfate, "total sulfate"]

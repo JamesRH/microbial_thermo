@@ -93,8 +93,11 @@ extrapolated in T. Requesting a supplemented species at T ≠ 25 °C raises unle
 caller constructs the backend with `allow_extrapolation=True`, which applies a
 van 't Hoff correction if $\Delta H_f$ is known and otherwise refuses.
 
-Implemented in `supplemental.py`. All three shipped entries — hydroxylamine,
-glucose, pyruvate — are currently `verified: false`.
+Implemented in `supplemental.py`. Six entries ship. Glucose and pyruvate are
+traced through OBIGT and verified. Hydroxylamine and the `Biomass(aq)`
+placeholder are `verified: false`, and so are `NH3OH+` and `N2H4(aq)`, which
+are derived from a partner species plus 2.303 *RT* p*K*a rather than read from
+any table.
 
 ---
 

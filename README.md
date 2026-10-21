@@ -434,7 +434,7 @@ species; it never changes a number an earlier one already produced.**
 | 2 | `thermo.com.dat` | GWB log K + HKF basis | 2937 entries, chiefly minerals |
 | 3 | `supcrtbl.dat` | Holland & Powell (HP11) | 266 species nothing else has |
 | 4 | OBIGT (`data/external/`) | HKF, imported | 536 organic aqueous species with per-species citations |
-| 5 | supplemental table | hand-entered | 4 species no database carries |
+| 5 | supplemental table | hand-entered | 6 species no database carries |
 
 `speq23.dat` replaced pyGCC's default `speq21.dat` and the upgrade was free:
 a strict superset, +3 species, and **not one formation energy of the 85
@@ -502,13 +502,20 @@ i.e. peptidoglycan.
 Hydroxylamine, glucose and pyruvate are in none of pyGCC's databases, so they
 come from a small hand-entered table instead. The biomass placeholder
 `<CH2O>` lives there too, though it is a different kind of thing again — see
-below.
+below. So do two **derived** species, hydroxylammonium (`NH3OH+`) and neutral
+hydrazine (`N2H4(aq)`): each is its partner's formation energy plus
+2.303 *RT* p*K*a (5.96 and 7.99), added so that a pH slider shows the form
+that actually dominates at each end of the scale. Hydrazinium (`N2H5+`) itself
+needs no such help; it is in `speq23.dat` (Shock *et al.* 1997) and is
+verified.
 
 **These values are of a different kind from everything else here.** They are
 literature figures typed in by hand, not computed from an equation of state and
 not cross-checked against a second source the way the mineral data was. Each
 carries a `verified` flag, an unverified one **warns every time it is used**, and
-any figure resting on one is footnoted in red. **Two of the four are now traced.** Glucose and pyruvate come from the OBIGT
+any figure resting on one is footnoted in red — the redox tower, the half-reaction
+figure, the Frost diagram and the interactive element panels all do this.
+**Two of the six are now traced.** Glucose and pyruvate come from the OBIGT
 database of CHNOSZ, and through it from Amend & Plyasunov (2001) and Canovas &
 Shock (2016) respectively. OBIGT is SUPCRT-lineage, so the standard state
 matches the rest of this library. Tracing them also gained each an enthalpy,
@@ -517,8 +524,10 @@ moved 4.7 kJ/mol in the process (−917.2 → −912.5), which is a useful remin
 of what an untraced "commonly cited" number is worth.
 
 Hydroxylamine is still unverified, and its provenance now records where it was
-looked for and not found, so nobody repeats the search. `Biomass(aq)` is
-unverified permanently and by design.
+looked for and not found, so nobody repeats the search. `NH3OH+` inherits its
+doubt, plus about 0.1 kJ/mol from the p*K*a; `N2H4(aq)` rests on a verified
+parent and carries only the p*K*a's spread (7.93–8.1, about ±0.6 kJ/mol).
+`Biomass(aq)` is unverified permanently and by design.
 
 **`Biomass(aq)` is not a compound at all.** `<CH2O>` is a stand-in for cell
 carbon at oxidation state zero, and its value is this library's own glucose
@@ -1106,14 +1115,19 @@ plot_frost("Mn", pH=7.0)
 diagram = frost_diagram("Cu", pH=0.0)
 diagram.most_stable.backend                     # 'Cu'
 [str(d) for d in diagram.disproportionation()]
-# ['Cu+ -> 0.5 Cu++ + 0.5 Cu  (-17.2 kJ/mol Cu+)']
+# ['Cu+ -> Cu++ + Cu  (0.5 : 0.5 of the Cu, -17.2 kJ/mol Cu)']
 ```
 
 Volt equivalent against oxidation state: the **slope** between two points is
 that couple's potential, a point **above** the line joining two others
 disproportionates, and the **lowest** point is where the element ends up. The
 stable forms are the lower convex hull, and everything off it is reported with
-the reaction it would run and the energy it would release.
+the reaction it would run and the energy it would release. **Both are per mole
+of the element**, like the diagram: the fractions are the shares of the
+element's atoms going to each product, and the energy is per mole of N, Cu or
+Mn. That is per mole of the species only when every form carries one atom of
+the element; hydrazinium (N₂H₅⁺) falls 84.5 kJ per mole of N at pH 7, which is
+169 per mole of N₂H₅⁺.
 
 **Showing every form of a state.** By default each oxidation state
 contributes one point — the form with the lowest energy at the working pH,
@@ -1419,9 +1433,14 @@ ruff check microbial_thermo tests
 - **Glucose, pyruvate and hydroxylamine are absent** from every database pyGCC
   ships. Acetate, formate, lactate, propanoate, butanoate, methanol and ethanol
   are present. The three missing ones come from the hand-entered supplemental
-  table instead, and all three are flagged `verified: false` — they warn on every
-  use and footnote any figure that depends on them. Tracing them to primary
-  sources is the one real correctness debt outstanding.
+  table instead. Glucose and pyruvate are now traced; hydroxylamine, and the
+  two species derived by p*K*a (`NH3OH+`, `N2H4(aq)`), are flagged
+  `verified: false` — they warn on every use and footnote any figure that
+  depends on them. All three are 25 °C only, so a nitrogen diagram that
+  includes them cannot also have a temperature slider.
+- **NO, N₂O and N₂H₆²⁺ are not drawn.** Nitric and nitrous oxide are in no
+  database here. `N2H6++` is in `speq23.dat` but unregistered; it matters only
+  below pH ≈ −1.
 - **Isothermal minerals.** A few phases — manganite and birnessite among them —
   are tabulated at 25 °C only in the source database. They evaluate at 25 °C and
   raise `OutOfRangeError` elsewhere rather than inventing a temperature

@@ -363,9 +363,14 @@ def _add_energy_panel(ax, reaction, delta_g_atp, energy_quantum):
     per_atp = as_magnitude(delta_g_atp, KJ_PER_MOL_STR)
 
     viable = delta_g <= quantum
-    verdict = (
-        "above the biological energy quantum" if viable else "below the biological energy quantum"
-    )
+    # An uphill reaction is "below the quantum" only in the letter. Saying so
+    # suggests it pays a little, when as written it does not run at all.
+    if delta_g > 0:
+        verdict = "endergonic: does not run as written"
+    elif viable:
+        verdict = "above the biological energy quantum"
+    else:
+        verdict = "below the biological energy quantum"
     colour = PALETTE["exergonic"] if viable else PALETTE["endergonic"]
 
     lines = [

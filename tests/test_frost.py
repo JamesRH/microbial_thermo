@@ -549,5 +549,194 @@ class TestSkippedSpeciesAreSurfaced(unittest.TestCase):
             matplotlib.pyplot.close(figure)
 
 
+class TestNitrogenIntermediates(unittest.TestCase):
+    """Hydrazinium and hydroxylamine on the nitrogen Frost diagram.
+
+    Hydrazinium had been in speq23 all along and was reported missing only
+    because nothing registered the name. Hydroxylamine is the unverified
+    supplemental value, which a Frost figure must now say it depends on.
+    """
+
+    SPECIES = ["N2(aq)", "NO3-", "NO2-", "NH4+", "NH3(aq)", "NH2OH(aq)", "N2H5+"]
+
+    @classmethod
+    def setUpClass(cls):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            cls.diagram = frost_diagram("N", species=cls.SPECIES, pH=7.0)
+
+    def test_hydrazinium_is_the_speq23_value(self):
+        """speq23 lists N2H5+ at 19700 cal/mol (Shock et al. 1997)."""
+        import microbial_thermo as mt
+
+        species = mt.resolve("hydrazinium")
+        self.assertEqual(species.backend, "N2H5+")
+        self.assertTrue(mt.get_backend().resolve("N2H5+").verified)
+        value = mt.get_backend().delta_Gf("N2H5+", 25.0).to("kJ/mol").magnitude
+        self.assertAlmostEqual(value, 19700 * 4.184 / 1000, places=2)
+
+    def test_both_sit_at_their_oxidation_states(self):
+        states = {point.backend: point.oxidation_state for point in self.diagram.points}
+        self.assertAlmostEqual(states["N2H5+"], -2.0, places=9)
+        self.assertAlmostEqual(states["NH2OH(aq)"], -1.0, places=9)
+
+    def test_both_disproportionate_to_dinitrogen_and_ammonium(self):
+        stable = {point.backend for point in self.diagram.stable}
+        self.assertEqual(stable, {"NH4+", "N2(aq)", "NO3-"})
+        unstable = {event.species for event in self.diagram.disproportionation()}
+        self.assertTrue({"N2H5+", "NH2OH(aq)"} <= unstable)
+
+    def test_hydrazinium_energy_is_per_nitrogen_and_matches_the_balanced_reaction(self):
+        """3 N2H5+ + H+ -> N2 + 4 NH4+ carries six nitrogens.
+
+        The Frost figure is per mole of N, so it must be one sixth of the
+        balanced reaction's energy -- and half the energy per N2H5+, which is
+        what the printed label used to claim it was.
+        """
+        import microbial_thermo as mt
+
+        event = next(e for e in self.diagram.disproportionation() if e.species == "N2H5+")
+        reaction = mt.Reaction.from_couples(
+            donor=("N2H5+", "N2(aq)"),
+            acceptor=("NH4+", "N2H5+"),
+            conditions=mt.Conditions(pH=7.0),
+            normalize_to="N2(aq)",
+        )
+        coefficients = {s.backend: float(v) for s, v in reaction.coefficients.items()}
+        self.assertEqual(coefficients["N2H5+"], -3.0)
+        self.assertEqual(coefficients["NH4+"], 4.0)
+        balanced = reaction.delta_G_standard_prime.to("kJ/mol").magnitude
+        self.assertAlmostEqual(6 * event.delta_g, balanced, delta=0.01)
+        self.assertIn("kJ/mol N)", str(event))
+        for share, expected in zip(event.fractions, (1 / 3, 2 / 3), strict=True):
+            self.assertAlmostEqual(share, expected, places=12)
+
+    def test_frost_slope_matches_the_half_reaction_and_the_quoted_value(self):
+        """Two routes to one number, and the +0.899 V James quoted.
+
+        The Frost slope comes from the basis decomposition; the half
+        reaction from balancing a Couple. They share only the backend. The
+        quoted figure is the NH4+ form at pH 7 -- three protons. Hydroxylamine
+        is unverified, so this also pins the hand-entered value, to a window
+        under 1 kJ/mol wide (2 mV is 0.39 kJ/mol at two electrons).
+        """
+        import microbial_thermo as mt
+
+        slope = self.diagram.slope("NH2OH(aq)", "NH4+")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            couple = mt.half_reaction("NH4+", "NH2OH", conditions=mt.Conditions(pH=7.0))
+        self.assertAlmostEqual(slope, couple.E_standard_prime.to("V").magnitude, places=9)
+        self.assertAlmostEqual(slope, 0.899, delta=0.002)
+
+    def test_the_figure_says_it_rests_on_an_unverified_value(self):
+        figure, _ = plot_frost("N", diagram=self.diagram)
+        try:
+            notes = [text for text in _notes(figure) if "unverified" in text]
+            self.assertEqual(len(notes), 1)
+            self.assertIn("NH2OH(aq)", notes[0])
+        finally:
+            matplotlib.pyplot.close(figure)
+
+    def test_the_warning_survives_turning_omissions_off(self):
+        figure, _ = plot_frost("N", diagram=self.diagram, show_omitted=False)
+        try:
+            self.assertTrue([text for text in _notes(figure) if "unverified" in text])
+        finally:
+            matplotlib.pyplot.close(figure)
+
+    def test_no_warning_without_hydroxylamine(self):
+        diagram = frost_diagram("N", species=self.SPECIES[:-2] + ["N2H5+"], pH=7.0)
+        figure, _ = plot_frost("N", diagram=diagram)
+        try:
+            self.assertFalse([text for text in _notes(figure) if "unverified" in text])
+        finally:
+            matplotlib.pyplot.close(figure)
+
+
+class TestDerivedProtonationPartners(unittest.TestCase):
+    """NH3OH+ and N2H4(aq), derived from a partner and a pKa.
+
+    They exist so that a pH slider shows the form that really dominates at
+    each end of the scale, so the tests check exactly that: the pKa comes back
+    out, and each one takes over on the right side of it.
+    """
+
+    SPECIES = [
+        "N2(aq)",
+        "NO3-",
+        "NO2-",
+        "HNO2(aq)",
+        "NH4+",
+        "NH3(aq)",
+        "NH3OH+",
+        "NH2OH(aq)",
+        "N2H5+",
+        "N2H4(aq)",
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            cls.series = element_series("N", species=cls.SPECIES)
+
+    def _predominant(self, ph):
+        diagram = frost_diagram("N", series=self.series, pH=ph)
+        return {round(point.oxidation_state): point.backend for point in diagram.predominant}
+
+    def test_the_pka_values_come_back_out(self):
+        from microbial_thermo.speciation import pKa_ladder
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.assertAlmostEqual(pKa_ladder("hydroxylamine")[0], 5.96, places=3)
+            self.assertAlmostEqual(pKa_ladder("hydrazine")[0], 7.99, places=3)
+
+    def test_hydrazine_names_the_neutral_molecule(self):
+        import microbial_thermo as mt
+
+        self.assertEqual(mt.resolve("hydrazine").backend, "N2H4(aq)")
+        self.assertEqual(mt.resolve("hydrazinium").backend, "N2H5+")
+        self.assertEqual(mt.resolve("hydroxylammonium").backend, "NH3OH+")
+
+    def test_each_takes_over_on_the_right_side_of_its_pka(self):
+        acid, base = self._predominant(0.0), self._predominant(14.0)
+        self.assertEqual((acid[-1], acid[-2]), ("NH3OH+", "N2H5+"))
+        self.assertEqual((base[-1], base[-2]), ("NH2OH(aq)", "N2H4(aq)"))
+
+    def test_ammonium_is_the_bottom_in_acid_and_dinitrogen_at_neutral(self):
+        """The textbook pH 0 diagram has NH4+ in the basin; pH 7 has N2."""
+        bottom = {
+            ph: frost_diagram("N", series=self.series, pH=ph).most_stable.backend
+            for ph in (0.0, 3.5, 4.0, 7.0, 14.0)
+        }
+        self.assertEqual(
+            bottom,
+            {0.0: "NH4+", 3.5: "NH4+", 4.0: "N2(aq)", 7.0: "N2(aq)", 14.0: "N2(aq)"},
+        )
+
+    def test_the_first_step_gap_has_three_plateaus(self):
+        """114 mV in acid, 83 mV at pH 7, 17 mV in base, all above O2/H2O."""
+        import microbial_thermo as mt
+
+        def gap(ph):
+            forms = self._predominant(ph)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                step = mt.Reaction.from_couples(
+                    donor=(forms[-3], forms[-1]),
+                    acceptor=("H2O", "O2(g)"),
+                    conditions=mt.Conditions(pH=ph),
+                )
+            return -step.delta_E_standard_prime.to("V").magnitude
+
+        self.assertAlmostEqual(gap(0.0), gap(4.0), places=9)
+        self.assertAlmostEqual(gap(11.0), gap(14.0), places=9)
+        self.assertAlmostEqual(gap(0.0), 0.114, delta=0.001)
+        self.assertAlmostEqual(gap(7.0), 0.083, delta=0.001)
+        self.assertAlmostEqual(gap(14.0), 0.017, delta=0.001)
+
+
 if __name__ == "__main__":
     unittest.main()

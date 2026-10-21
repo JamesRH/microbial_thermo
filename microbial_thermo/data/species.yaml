@@ -47,6 +47,10 @@ species:
   - {backend: "N2(g)",   formula: "N2",    display: "N_2(g)",  phase: g,  aliases: ["N2(g)"]}
   - {backend: "NH4+",    formula: "NH4+",  display: "NH_4^+",  phase: aq, aliases: [ammonium]}
   - {backend: "NH3(aq)", formula: "NH3",   display: "NH_3(aq)", phase: aq, aliases: [NH3, ammonia]}
+  # Hydrazinium, the anammox intermediate, from speq23. Neutral N2H4(aq) is in
+  # no database; it is derived from this one in supplemental_gibbs.yaml and
+  # takes the alias "hydrazine", since the pKa is near 8.
+  - {backend: "N2H5+",   formula: "N2H5+", display: "N_2H_5^+", phase: aq, aliases: [hydrazinium]}
 
   # --- carbon, inorganic ---
   - {backend: "CO2(aq)",     formula: "CO2",  display: "CO_2(aq)", phase: aq, canonical: true, aliases: [CO2, "carbon dioxide"]}

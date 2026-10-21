@@ -42,7 +42,7 @@ from .basis import DEFAULT_TEMPERATURES, FARADAY_KJ, element_grid, plotly_label
 from .frost import frost_diagram, plot_frost
 from .latimer import latimer_diagram, plot_latimer
 from .pourbaix import plot_pourbaix, pourbaix_field
-from .style import PALETTE, SIZES
+from .style import PALETTE, SIZES, unverified_notice
 
 #: Activity slider bounds, as powers of ten. Unit activity is the
 #: standard-state convention; 1e-6 is the Pourbaix convention; 1e-9 is a
@@ -143,7 +143,7 @@ def _figure(
 
     # The panel-level warnings that plot_frost would have drawn on a figure
     # it owned: on a shared canvas they belong at the bottom, once.
-    notes = ["  ·  ".join(str(event) for event in frost.disproportionation())]
+    notes = [str(event) for event in frost.disproportionation()]
     if not frost.reference_is_element:
         notes.append(
             f"no elemental {grid.element} available, so the volt-equivalent zero "
@@ -154,17 +154,30 @@ def _figure(
             "not on the interactive diagram, being unavailable at some temperature: "
             + ", ".join(name for name, _ in grid.dropped)
         )
+    # SPEC 2.1: a figure resting on a hand-entered value says so, here as
+    # much as on a static figure.
+    notes.append(unverified_notice(entry.backend for entry in series) or "")
     unstable = [note for note in notes if note]
     if unstable:
+        import textwrap
+
+        # One line per note, wrapped by hand, with the axes lifted to make
+        # room. A single joined line with wrap=True ran off both edges and
+        # over the x label once nitrogen had three disproportionations and an
+        # unverified species to report.
+        fontsize = SIZES["annotation"] - 1
+        width = int(figure.get_figwidth() * 72 / (fontsize * 0.6))
+        text = "\n".join(textwrap.fill(note, width=width) for note in unstable)
+        line = fontsize * 1.3 / (figure.get_figheight() * 72)
+        figure.subplots_adjust(bottom=0.11 + line * (text.count("\n") + 1))
         figure.text(
             0.5,
             0.005,
-            "\n".join(unstable),
+            text,
             ha="center",
             va="bottom",
-            fontsize=SIZES["annotation"] - 1,
+            fontsize=fontsize,
             color=PALETTE["endergonic"],
-            wrap=True,
         )
     return figure
 

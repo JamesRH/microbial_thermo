@@ -113,6 +113,38 @@ class TestRendering(unittest.TestCase):
             self.assertTrue(base.with_suffix(".png").exists())
 
 
+class TestEnergyPanelVerdict(unittest.TestCase):
+    """The tower's side panel must not call an uphill reaction "below the quantum".
+
+    +16 kJ/mol is numerically above -20, so the old two-way test filed it with
+    reactions that pay a little. It pays nothing: as written it does not run.
+    """
+
+    CONDITIONS = mt.Conditions(temperature_c=25.0, pH=7.0)
+
+    def _panel(self, donor, acceptor):
+        from microbial_thermo.figures import plot_redox_tower
+
+        reaction = mt.Reaction.from_couples(
+            donor=donor, acceptor=acceptor, conditions=self.CONDITIONS
+        )
+        figure = plot_redox_tower(reaction)
+        try:
+            return "\n".join(text.get_text() for text in figure.texts)
+        finally:
+            matplotlib.pyplot.close(figure)
+
+    def test_water_splitting_is_called_endergonic(self):
+        panel = self._panel(donor=("H2O", "O2(g)"), acceptor=("H2(g)", "H+"))
+        self.assertIn("endergonic: does not run as written", panel)
+        self.assertNotIn("below the biological energy quantum", panel)
+
+    def test_an_exergonic_reaction_keeps_its_verdict(self):
+        panel = self._panel(donor=("H2(g)", "H+"), acceptor=("H2O", "O2(g)"))
+        self.assertIn("above the biological energy quantum", panel)
+        self.assertNotIn("endergonic", panel)
+
+
 class TestReferenceCouples(unittest.TestCase):
     def test_tower_is_ordered_and_spans_the_expected_range(self):
         from microbial_thermo.tower import reference_couples

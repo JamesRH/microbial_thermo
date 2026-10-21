@@ -104,9 +104,18 @@ def unverified_footnote(reaction) -> str | None:
     supplemental number say so. A reader looking at a rendered figure has no
     other way to know, since the console warning is long gone by then.
     """
+    return unverified_notice(s.backend for s in reaction.coefficients)
+
+
+def unverified_notice(names) -> str | None:
+    """:func:`unverified_footnote` for a bare list of species names.
+
+    A Frost or Latimer diagram has no reaction to ask, only the species it
+    drew, and owes the reader the same warning.
+    """
     from ..supplemental import uses_unverified
 
-    names = uses_unverified(s.backend for s in reaction.coefficients)
+    names = uses_unverified(names)
     if not names:
         return None
     return (

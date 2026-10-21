@@ -473,6 +473,39 @@ Notebooks 02 and 07 still use the band, and both make claims ("neither
 partner is guaranteed one quantum"; "inside the quantum until 5e-6") that
 change under the per-ion reading.
 
+**"Not in the database" may mean "not in species.yaml".** Notebook 06
+printed `N2H5+: SpeciesNotFoundError` for months; hydrazinium was in
+`speq23.dat` (Shock et al. 1997) the whole time, and only the registry
+lacked it. `N2H6++` is there too, still unregistered. Before calling a
+species absent, grep pyGCC's `default_db/` and `data/external/`.
+
+**Frost disproportionation is per mole of the element.** `Disproportionation`
+was documented and printed as per mole of the *species*, which is the same
+thing only when every form has one atom of the element. Hydrazinium printed
+-84.5 "kJ/mol N2H5+" when it is -169; nitrite printed "0.4 N2" when it makes
+0.2 (0.4 is the share of the nitrogen). The numbers were always per element,
+like the diagram, and `sum(fractions) == 1` was already tested; the docs and
+the string were wrong. Fixed in the label, not the numbers.
+
+**A pH slider needs both forms of every acid-base pair.** Without NH3OH+
+(pKa 5.96) and N2H4 (7.99), the nitrogen diagram drew the minority form at
+each end of the scale and read it as the real one -- 0.35 V too high for
+hydroxylamine at pH 0. Both are now in `supplemental_gibbs.yaml`, derived
+from their partner plus 2.303RT pKa and marked unverified; their pKa tests in
+`test_speciation.py` are circular by construction and say so. Being 25 C
+only, any nitrogen figure carrying them has no temperature slider.
+
+**Check a claim across the whole slider before writing it.** Notebook 06
+said the three Frost results "hold at any pH". Two do. The third, "N2 is the
+bottom of the curve", fails below pH 3.88, where ammonium is lowest -- the
+textbook pH 0 diagram. Likewise the Dirammox first step is above O2/H2O at
+every pH at unit activity, but by 114 mV in acid and only 17 mV (3 kJ/mol)
+above pH 9.2, which is inside the hydroxylamine value's own uncertainty.
+
+**+0.899 V for NH2OH/NH4+ is the NH4+ form.** With NH3 the same couple is
++0.832 V at pH 7. The arsenate trap again: name the species before quoting
+the potential.
+
 ---
 
 ## Where this was left (6 October 2026)
