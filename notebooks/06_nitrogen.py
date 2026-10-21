@@ -383,8 +383,8 @@ for reaction in (overall, first, second):
 # $$\text{NH}_4^+ + \text{H}_2\text{O} \rightarrow \text{NH}_2\text{OH} + 3\,\text{H}^+ + 2e^-$$
 #
 # Any acceptor for those two electrons has to sit at a higher potential than
-# this couple does. Here is the couple, beside the strongest oxidant that can
-# exist in water:
+# this couple does. Here is the couple, beside the strongest oxidant that is
+# stable in water:
 
 # %%
 for reduced, oxidized in (("NH4+", "NH2OH"), ("NH3(aq)", "NH2OH"), ("H2O", "O2(g)")):
@@ -393,9 +393,11 @@ for reduced, oxidized in (("NH4+", "NH2OH"), ("NH3(aq)", "NH2OH"), ("H2O", "O2(g
 
 # %% [markdown]
 # **+0.898 V against +0.815 V, at pH 7.** An oxidant above the O₂/H₂O
-# line would oxidise water itself, so no electron acceptor that can exist in
+# line would oxidise water itself, so no electron acceptor that is stable in
 # water can take ammonia's electrons and leave hydroxylamine behind. Not
-# nitrate, not Fe(III), not oxygen.
+# nitrate, not Fe(III), not oxygen. Stronger oxidants do exist, peroxide
+# among them, but only because they react with water slowly; none is a
+# standing pool a respiratory chain can draw on.
 #
 # Mind which species the potential is written for. The figure usually quoted,
 # +0.899 V, is NH₄⁺/NH₂OH, with three protons. Written for NH₃, the neutral form
@@ -472,7 +474,7 @@ widgets.VBox([ph_slider, barrier_output])
 # more.
 #
 # The Frost diagram makes the same statement as a slope. The line from NH₄⁺
-# up to NH₂OH is steeper than any oxidant in water can climb:
+# up to NH₂OH is steeper than any oxidant stable in water can climb:
 
 # %%
 print(f"slope NH4+ to NH2OH  {frost.slope('NH2OH(aq)', 'NH4+'):+.3f} V")
@@ -562,7 +564,7 @@ print(f"oxygen breaks even at NH4+/NH2OH = {10 ** (gaps[1e-3] / per_decade):,.0f
 # transfer is still uphill. It is paid for inside the same reaction by the
 # second oxygen atom, which falls all the way to water with two electrons
 # from a far more negative donor. That is how the monooxygenase gets round
-# the tower: not by finding a stronger acceptor, which water does not allow,
+# the tower: not by finding a stronger acceptor, which water will not keep,
 # but by spending a large downhill step to buy a small uphill one.
 #
 # Whatever enzyme makes hydroxylamine in a Dirammox organism faces the same
