@@ -508,6 +508,11 @@ every species with coefficient one, so N2O -> N2, hematite -> magnetite and
 Mn2O3 steps printed unbalanced while their potentials were right. Fixed, and
 `test_latimer.py` now parses every printed step back and counts atoms and
 charge -- the string is what a reader sees, so that is what gets checked.
+Notebooks 08 and 09 were re-run for it, and their prose corrected: iron's
+magnetite margin and manganese's hausmannite/bixbyite margins had been
+quoted as "per mole" when they were per mole of metal (x3, x2 per mineral),
+and 09 had compared them to the biological energy quantum, which is the
+wrong ruler for an abiotic mineral; it now uses RT.
 
 **NO and N2O come from OBIGT's inorganic table, two rows only.** Nothing
 bundled with pyGCC carries either in solution; GWB has NO(g). The two SSW01

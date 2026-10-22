@@ -58,6 +58,8 @@ plt.show()
 # Magnetite sits between Fe(III) and Fe(II) at **+8/3**, which is not a
 # typo: Fe₃O₄ is one ferrous iron and two ferric, and the mean state is
 # exactly 8/3. The fractional electron counts on the arrows follow from it.
+# So do the fractional coefficients in the table: every step is written per
+# mole of iron, so half a hematite (Fe₂O₃) becomes a third of a magnetite.
 #
 # Two iron minerals were offered and refused a rung, and the reason is worth
 # reading:
@@ -117,14 +119,16 @@ for event in real.disproportionation():
 
 # %% [markdown]
 # Now Fe²⁺ is stable and **magnetite** is the marginal phase, unstable to
-# hematite plus Fe²⁺ by a few kJ per mole. That is about right: magnetite's
+# hematite plus Fe²⁺ by 4.5 kJ per mole of iron. Like everything on a Frost
+# diagram that is per mole of the element; magnetite carries three irons, so
+# per mole of Fe₃O₄ it is 13.5. That is about right: magnetite's
 # stability field is genuinely narrow and genuinely sensitive to how much
 # ferrous iron is in solution. Watch it move:
 
 # %%
 for activity in (1e-2, 1e-4, 1e-6, 1e-8):
     diagram = frost_diagram("Fe", pH=7.0, activity=activity)
-    off = [f"{e.species} ({e.delta_g:+.1f} kJ/mol)" for e in diagram.disproportionation()]
+    off = [f"{e.species} ({e.delta_g:+.1f} kJ/mol Fe)" for e in diagram.disproportionation()]
     print(f"activity {activity:.0e}: hull {[p.backend for p in diagram.stable]}"
           f"{'  off-hull: ' + ', '.join(off) if off else ''}")
 

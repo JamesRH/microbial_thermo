@@ -50,8 +50,9 @@ plt.show()
 # %% [markdown]
 # Five rungs, two of them mixed-valence oxides. Hausmannite is Mn₃O₄ at
 # **+8/3** — the manganese analogue of magnetite — and bixbyite is Mn₂O₃ at
-# +III, with manganite (MnOOH) offered at the same state and beaten to the
-# rung:
+# +III. Every step in the table is written per mole of manganese, which is
+# why a bixbyite step carries half a bixbyite. Manganite (MnOOH) was offered
+# at the same state as bixbyite and beaten to the rung:
 
 # %%
 ladder.alternatives
@@ -60,15 +61,30 @@ ladder.alternatives
 # ## Mn(III) disproportionates, until it does not
 
 # %%
+# Frost energies are per mole of manganese; times the Mn count gives them
+# per mole of mineral.
 for ph in (0.0, 2.0, 4.0, 6.0, 7.0, 8.0):
     diagram = frost_diagram("Mn", pH=ph, activity=1e-6)
-    off = ", ".join(f"{e.species} {e.delta_g:+.1f}" for e in diagram.disproportionation())
+    atoms = {point.backend: point.entry.n_element for point in diagram.points}
+    off = ", ".join(
+        f"{e.species} {e.delta_g:+.1f} per Mn ({e.delta_g * atoms[e.species]:+.1f} per mole)"
+        for e in diagram.disproportionation()
+    )
     print(f"pH {ph:4.1f}   {off or 'nothing above the hull'}")
 
 # %% [markdown]
-# At pH 2 hausmannite is unstable by 45 kJ per mole and bixbyite by 30. By pH
-# 7 those have fallen to 7 and 1.5 — inside the biological energy quantum,
-# which is to say effectively at equilibrium.
+# At pH 2 hausmannite is unstable by 45 kJ per mole of manganese and
+# bixbyite by 30: 135 kJ per mole of Mn₃O₄, 60 per mole of Mn₂O₃. By pH 7
+# those have fallen to 7 and 1.5 per manganese, 21 and 3 per mole of mineral.
+# Bixbyite is then within RT (2.5 kJ/mol) of the hull, effectively at
+# equilibrium. Hausmannite is close behind, and by pH 8 bixbyite is on the
+# hull outright.
+#
+# (An earlier version of this text called the pH 7 values "inside the
+# biological energy quantum". That compared a per-manganese number with a
+# yardstick meant for what an organism can conserve, and per mole of
+# hausmannite it is not even true. RT is the right ruler for whether a
+# mineral is near equilibrium.)
 #
 # That is the whole reason Mn(III) is a laboratory curiosity in acid and a
 # **major environmental species** at circumneutral pH: manganese(III) complexes
