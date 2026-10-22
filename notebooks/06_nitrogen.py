@@ -575,3 +575,9 @@ print(f"oxygen breaks even at NH4+/NH2OH = {10 ** (gaps[1e-3] / per_decade):,.0f
 # itself a diiron oxygenase.) As with *Methylomirabilis* above, the
 # diagram constrains the energy and not the route. Here, though, the energy
 # rules out an entire class of route.
+
+# %%
+
+# %%
+
+# %%
