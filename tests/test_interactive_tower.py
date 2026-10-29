@@ -140,8 +140,9 @@ class TestGridShape(unittest.TestCase):
         """Cheap on pH, sparse on temperature -- that asymmetry is deliberate
         and reversing it would make the grid far slower to build."""
         self.assertGreater(len(DEFAULT_GRID_PH), len(DEFAULT_GRID_TEMPERATURES))
-        self.assertEqual(min(DEFAULT_GRID_PH), 3.0)
-        self.assertEqual(max(DEFAULT_GRID_PH), 11.0)
+        # Strong acid to strong base, as the course uses it.
+        self.assertEqual(min(DEFAULT_GRID_PH), -1.0)
+        self.assertEqual(max(DEFAULT_GRID_PH), 14.0)
         self.assertLessEqual(max(DEFAULT_GRID_TEMPERATURES), 100.0)
         self.assertGreater(min(DEFAULT_GRID_TEMPERATURES), 0.0)
 

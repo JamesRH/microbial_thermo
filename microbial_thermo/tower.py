@@ -108,7 +108,7 @@ def tower_table(conditions: Conditions | None = None, backend=None, primed: bool
 #: nearly free -- formation energies are cached per temperature, and pH enters
 #: only through the proton activity term. Temperature is sampled coarsely
 #: because each new value costs a full round of backend calls.
-DEFAULT_GRID_PH = tuple(x / 2 for x in range(6, 23))  # 3.0 to 11.0 by 0.5
+DEFAULT_GRID_PH = tuple(x / 2 for x in range(-2, 29))  # -1.0 to 14.0 by 0.5
 DEFAULT_GRID_TEMPERATURES = (4.0, 15.0, 25.0, 37.0, 55.0, 80.0)
 
 

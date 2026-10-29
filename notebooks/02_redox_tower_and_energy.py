@@ -92,7 +92,7 @@ plt.show()
 from microbial_thermo.tower import tower_grid
 
 grid = tower_grid(
-    ph_values=(5.0, 6.0, 7.0, 8.0, 9.0),
+    ph_values=tuple(x / 2 for x in range(-2, 29)),  # pH -1 to 14 by 0.5
     temperature_values=(4.0, 25.0, 55.0),
 )
 print(f"{len(grid.labels)} couples over {len(grid.ph_values)} pH x "
