@@ -27,6 +27,16 @@ ruff format microbial_thermo tests && ruff check microbial_thermo tests
 The suite now executes the numbered teaching notebooks, which is the slowest
 part (~25 s) and the part most likely to catch a rename you did not expect.
 
+**Notebook 02 is re-run before every commit** (James's standing request), so
+`notebooks/tower_interactive.html` always matches the committed tower. A
+Claude Code `PreToolUse` hook does it: `.claude/hooks/rerun-notebook-02.sh`,
+wired in the git-ignored `.claude/settings.local.json`. On any `git commit` it
+syncs the jupytext pair, executes 02 in place, drops the notebook's saved
+widget state (fresh random IDs every run), and stages the `.ipynb`, the `.py`
+and the page. A failed run blocks the commit. The hook adds ~25 s per commit.
+Do not pass `store_widget_state=False` to nbconvert instead: 02's Output
+widget makes nbclient raise `KeyError`.
+
 ---
 
 ## What pyGCC will and will not do
