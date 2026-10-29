@@ -145,6 +145,10 @@ class TestEnergyPanelVerdict(unittest.TestCase):
         self.assertNotIn("endergonic", panel)
 
 
+#: Reference couples stronger than O2/H2O at pH 7 and 25 C.
+ABOVE_OXYGEN = {"ClO-/Cl-"}
+
+
 class TestReferenceCouples(unittest.TestCase):
     def test_tower_is_ordered_and_spans_the_expected_range(self):
         from microbial_thermo.tower import reference_couples
@@ -157,11 +161,16 @@ class TestReferenceCouples(unittest.TestCase):
         self.assertLess(values[0], -0.3)
         self.assertGreater(values[-1], 0.7)
 
-    def test_oxygen_is_the_strongest_acceptor(self):
+    def test_only_the_oxidants_unstable_in_water_sit_above_oxygen(self):
+        # Anything above O2/H2O would oxidise water. The ones that do are on
+        # the tower because they persist kinetically, and nothing else should
+        # have crept above the line.
         from microbial_thermo.tower import reference_couples
 
         entries = reference_couples(mt.Conditions(temperature_c=25.0, pH=7.0))
-        self.assertEqual(entries[-1].label, "O2/H2O")
+        labels = [e.label for e in entries]
+        above = set(labels[labels.index("O2/H2O") + 1 :])
+        self.assertEqual(above, ABOVE_OXYGEN)
 
 
 class TestAtpScale(unittest.TestCase):

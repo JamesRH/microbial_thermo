@@ -26,3 +26,7 @@ couples:
   - {label: "CrO4-2/Cr3+",      reduced: "Cr+++",       oxidized: "CrO4--",  key_element: Cr, group: metal}
   - {label: "UO2+2/UO2(s)",     reduced: "Uraninite",   oxidized: "UO2++",   key_element: U,  group: metal}
   - {label: "O2/H2O",           reduced: "H2O",         oxidized: "O2(g)",   group: oxygen}
+  # Above O2/H2O, so unstable in water; it persists because it reacts slowly.
+  # Below pH 7.6 (the pKa these data imply) HClO dominates; HClO/Cl- is
+  # 17 mV weaker at pH 7.
+  - {label: "ClO-/Cl-",         reduced: "Cl-",         oxidized: "ClO-",    group: chlorine}

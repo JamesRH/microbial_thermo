@@ -34,7 +34,7 @@ from ..tower import TowerGrid, tower_grid
 from .style import PALETTE, SIZES
 from .tower import _GROUP_COLOURS, _stagger
 
-#: Ratio slider bounds, as powers of ten. Ten orders either way covers
+#: Ratio slider bounds, as powers of ten. Six orders either way covers
 #: everything from a pristine aquifer to a laboratory reagent bottle.
 DEFAULT_LOG_RATIO_RANGE = (-6.0, 6.0)
 
@@ -57,6 +57,27 @@ def _subtitle(pH: float, temperature_c: float, log_ratio: float) -> str:
     kind = "E°′" if True else "E°"
     ratio_text = "1:1" if abs(log_ratio) < 1e-9 else f"10^{log_ratio:g} : 1"
     return f"pH {pH:g} · {temperature_c:g} °C · oxidised:reduced {ratio_text} · {kind} in volts"
+
+
+def _potential_range(grid: TowerGrid, log_ratio_range=DEFAULT_LOG_RATIO_RANGE) -> list[float]:
+    """Axis limits holding every couple at every grid point and ratio.
+
+    Taken from the grid rather than fixed, because the couples above O2/H2O
+    (hypochlorite, the denitrification intermediates) run well past the
+    +1 V a fixed axis was sized for. The limits do not change while a slider
+    moves, so movement along the axis stays readable.
+    """
+    import numpy as np
+
+    low, high = np.inf, -np.inf
+    for pH in grid.ph_values:
+        for temperature in grid.temperature_values:
+            for log_ratio in log_ratio_range:
+                volts = np.asarray(grid.at(pH, temperature, 10.0**log_ratio))
+                volts = volts[np.isfinite(volts)]
+                low, high = min(low, volts.min()), max(high, volts.max())
+    # Round outward to the next 0.1 V, so the axis ticks land on round values.
+    return [float(np.floor(low * 10) / 10), float(np.ceil(high * 10) / 10)]
 
 
 # --------------------------------------------------------------------------
@@ -182,7 +203,7 @@ def _draw_static(grid, pH, temperature_c, log_ratio, figsize=(9.0, 7.5)):
 
     ax.axhline(0.0, color=PALETTE["muted"], linewidth=0.8, linestyle=":")
     ax.set_xlim(-0.06, 1.25)
-    ax.set_ylim(-0.75, 1.05)
+    ax.set_ylim(*_potential_range(grid))
     ax.set_ylabel("E (V) vs SHE", fontsize=SIZES["potential"])
     ax.set_xticks([])
     for side in ("top", "right", "bottom"):
@@ -256,7 +277,10 @@ def plot_interactive_tower(
     figure.update_layout(
         template="simple_white",
         title={"text": f"{title}<br><sub>{_subtitle(initial_ph, initial_temperature, 0.0)}</sub>"},
-        xaxis={"title": {"text": "E (V) vs SHE"}, "range": [-0.75, 1.05]},
+        xaxis={
+            "title": {"text": "E (V) vs SHE"},
+            "range": _potential_range(grid, log_ratio_range),
+        },
         yaxis={
             "title": {"text": ""},
             "categoryorder": "array",
@@ -264,7 +288,9 @@ def plot_interactive_tower(
         },
         margin={"l": 190, "r": 40, "t": 110, "b": 60},
         legend={"orientation": "h", "y": -0.16},
-        height=620,
+        # One category row per couple: about 20 px each keeps the labels
+        # from colliding as the list grows.
+        height=max(620, 200 + 20 * len(grid.labels)),
     )
     figure.add_vline(x=0.0, line={"color": PALETTE["muted"], "width": 1, "dash": "dot"})
 

@@ -117,7 +117,8 @@ interactive_tower(grid)
 # %%
 for log_ratio in (0, 1, 2):
     order = [row[0] for row in grid.entries_at(7.0, 25.0, 10.0**log_ratio)]
-    print(f"ratio 10^{log_ratio}: strongest oxidant is {order[-1]}")
+    iron_wins = order.index("Fe3+/Fe2+") > order.index("O2/H2O")
+    print(f"ratio 10^{log_ratio}: {'iron' if iron_wins else 'oxygen'} is the stronger oxidant")
 
 # %% [markdown]
 # The same grid exports to a standalone HTML file. The sliders are rebuilt in

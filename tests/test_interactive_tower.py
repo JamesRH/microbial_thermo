@@ -64,6 +64,7 @@ EXPECTED_PROTONS = {
     "SeO4-2/SeO3-2": 2,
     "CrO4-2/Cr3+": 8,
     "UO2+2/UO2(s)": 0,
+    "ClO-/Cl-": 2,
 }
 
 #: Couples whose reduction consumes no protons, so pH does not move them.
@@ -209,8 +210,10 @@ class TestActivityRatio(unittest.TestCase):
         at_parity = [r[0] for r in self.grid.entries_at(7.0, 25.0, 1.0)]
         enriched = [r[0] for r in self.grid.entries_at(7.0, 25.0, 1e3)]
         self.assertNotEqual(at_parity, enriched)
-        self.assertEqual(at_parity[-1], "O2/H2O")
-        self.assertEqual(enriched[-1], "Fe3+/Fe2+")
+        # Compared with each other, not with the top of the tower: the
+        # oxidants unstable in water sit above both.
+        self.assertGreater(at_parity.index("O2/H2O"), at_parity.index("Fe3+/Fe2+"))
+        self.assertGreater(enriched.index("Fe3+/Fe2+"), enriched.index("O2/H2O"))
 
     def test_the_crossover_is_between_ten_and_a_hundred(self):
         """Pinning it down, so a change in the iron data or the shift is

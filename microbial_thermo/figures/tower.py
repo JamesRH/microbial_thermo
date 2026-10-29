@@ -39,6 +39,9 @@ _GROUP_COLOURS = {
     # would otherwise sit right beside on the tower.
     "metalloid": "#A8467A",
     "oxygen": "#3C7BA8",
+    # Teal: halfway between the oxygen blue and the carbon green it would
+    # otherwise be confused with, and darker than both.
+    "chlorine": "#1F8A7A",
     "other": PALETTE["muted"],
 }
 
