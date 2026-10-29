@@ -12,6 +12,13 @@ couples:
   - {label: "CO2/acetate",      reduced: "acetate",     oxidized: "CO2(aq)", key_element: C, group: carbon}
   - {label: "2H+/H2",           reduced: "H2(g)",       oxidized: "H+",      group: hydrogen}
   - {label: "CO2/CH4",          reduced: "methane",     oxidized: "CO2(aq)", group: carbon}
+  # Added to cover the MicroDynamics half-reaction list (Oct 2026).
+  - {label: "acetate/ethanol",  reduced: "ethanol",     oxidized: "acetate", key_element: C, group: carbon}
+  - {label: "CO2/glucose",      reduced: "glucose",     oxidized: "CO2(aq)", key_element: C, group: carbon}
+  - {label: "CO2/formate",      reduced: "formate",     oxidized: "CO2(aq)", group: carbon}
+  - {label: "methanol/CH4",     reduced: "methane",     oxidized: "methanol", group: carbon}
+  - {label: "NAD+/NADH",        reduced: "NADH",        oxidized: "NAD+",    key_element: C, group: other}
+  - {label: "HPO4-2/HPO3-2",    reduced: "HPO3-2",      oxidized: "HPO4-2",  group: other}
   - {label: "S0/HS-",           reduced: "HS-",         oxidized: "Sulfur(s)", group: sulfur}
   - {label: "SO4-2/HS-",        reduced: "HS-",         oxidized: "SO4-2",   group: sulfur}
   - {label: "SO4-2/SO3-2",      reduced: "SO3-2",       oxidized: "SO4-2",   group: sulfur}
@@ -28,6 +35,8 @@ couples:
   - {label: "SO3-2/S0",         reduced: "Sulfur(s)",   oxidized: "SO3-2",   group: sulfur}
   - {label: "SO4-2/S2O3-2",     reduced: "S2O3-2",      oxidized: "SO4-2",   key_element: S, group: sulfur}
   - {label: "Fe3+/Fe2+",        reduced: "Fe+2",        oxidized: "Fe+3",    group: metal}
+  - {label: "Fe2+/Fe0",         reduced: "Fe",          oxidized: "Fe+2",    group: metal}
+  - {label: "MnO2/Mn2+",        reduced: "Mn+2",        oxidized: "Pyrolusite", group: metal}
   - {label: "NO3-/NO2-",        reduced: "NO2-",        oxidized: "NO3-",    group: nitrogen}
   - {label: "NO3-/NH4+",        reduced: "NH4+",        oxidized: "NO3-",    group: nitrogen}
   - {label: "NO2-/NH4+",        reduced: "NH4+",        oxidized: "NO2-",    group: nitrogen}
@@ -41,6 +50,8 @@ couples:
   - {label: "N2O/N2",           reduced: "N2(aq)",      oxidized: "N2O(aq)", key_element: N, group: nitrogen}
   - {label: "N2/NH4+",          reduced: "NH4+",        oxidized: "N2(aq)",  key_element: N, group: nitrogen}
   - {label: "N2/N2H5+",         reduced: "N2H5+",       oxidized: "N2(aq)",  key_element: N, group: nitrogen}
+  # Nitrogenase as it actually runs: one H2 is obligate with every N2.
+  - {label: "N2/NH3 + H2",      reduced: {"NH3(aq)": 2, "H2(g)": 1}, oxidized: "N2(aq)", key_element: N, group: nitrogen}
   - {label: "NO2-/NH2OH",       reduced: "NH2OH(aq)",   oxidized: "NO2-",    group: nitrogen}
   - {label: "NH2OH/NH4+",       reduced: "NH4+",        oxidized: "NH2OH(aq)", group: nitrogen}
   # Li et al. 2025, Fig. 2: ammonia oxidisers take NH2OH to NO, not straight
@@ -52,6 +63,7 @@ couples:
   - {label: "CrO4-2/Cr3+",      reduced: "Cr+++",       oxidized: "CrO4--",  key_element: Cr, group: metal}
   - {label: "UO2+2/UO2(s)",     reduced: "Uraninite",   oxidized: "UO2++",   key_element: U,  group: metal}
   - {label: "O2/H2O",           reduced: "H2O",         oxidized: "O2(g)",   group: oxygen}
+  - {label: "H2O2/H2O",         reduced: "H2O",         oxidized: "H2O2(aq)", group: oxygen}
   # Above O2/H2O, so unstable in water; it persists because it reacts slowly.
   # Below pH 7.6 (the pKa these data imply) HClO dominates; HClO/Cl- is
   # 17 mV weaker at pH 7.

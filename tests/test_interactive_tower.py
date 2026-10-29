@@ -79,21 +79,32 @@ EXPECTED_PROTONS = {
     "SO3-2/S0": 6,
     "SO4-2/S2O3-2": 10,
     "NO/NH2OH": 3,
+    "acetate/ethanol": 5,
+    "CO2/glucose": 24,
+    "CO2/formate": 1,
+    "methanol/CH4": 2,
+    "NAD+/NADH": 1,
+    "HPO4-2/HPO3-2": 2,
+    "N2/NH3 + H2": 8,
+    "Fe2+/Fe0": 0,
+    "MnO2/Mn2+": 4,
+    "H2O2/H2O": 1,
 }
 
 #: Couples whose reduction consumes no protons, so pH does not move them.
 #: Uranyl to uraninite joined iron here when the metal set was widened, and
 #: tetrathionate when the sulfur intermediates were added.
-PROTON_FREE = {"Fe3+/Fe2+", "UO2+2/UO2(s)", "S4O6-2/S2O3-2"}
+PROTON_FREE = {"Fe3+/Fe2+", "UO2+2/UO2(s)", "S4O6-2/S2O3-2", "Fe2+/Fe0"}
 
 
 #: Couples written with one electron, which the ratio slider moves furthest.
 #: Tetrathionate is one per thiosulfate produced.
-ONE_ELECTRON = {"Fe3+/Fe2+", "NO2-/NO", "S4O6-2/S2O3-2"}
+#: Peroxide is written per water formed, so it is one too.
+ONE_ELECTRON = {"Fe3+/Fe2+", "NO2-/NO", "S4O6-2/S2O3-2", "H2O2/H2O"}
 
 #: Couples resting on a supplemental value with no enthalpy route used here,
 #: so refused away from 25 C.
-ONLY_AT_25C = {"NO2-/NH2OH", "NH2OH/NH4+", "NO/NH2OH"}
+ONLY_AT_25C = {"NO2-/NH2OH", "NH2OH/NH4+", "NO/NH2OH", "CO2/glucose"}
 
 
 def small_grid():
@@ -117,8 +128,8 @@ class TestGridShape(unittest.TestCase):
         self.assertEqual(set(self.grid.labels), set(EXPECTED_PROTONS))
 
     def test_only_the_25_c_couples_are_missing(self):
-        # Hydroxylamine's value is pinned to 25 C, so its two couples are
-        # refused at 55 C; everything else must be present everywhere.
+        # Hydroxylamine's and glucose's values are pinned to 25 C, so their
+        # couples are refused at 55 C; everything else must be present.
         missing = {
             label
             for k, label in enumerate(self.grid.labels)

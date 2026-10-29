@@ -538,7 +538,18 @@ Three couples came from the course readings: SO3-2/S0 and SO4-2/S2O3-2
 and why: polysulfide (SUPCRT has S2-2 to S5-2, but HSn- dominates near
 pH 7 and the data are unaudited), APS (not in any database), DMSO (not in
 any database; DMS is). Li's feammox and Mn-ammox also need Fe(OH)3/Fe2+
-and MnO2/Mn2+, which are not S or N couples and are not on the tower.
+and MnO2/Mn2+, which are not S or N couples. (MnO2/Mn2+ was added later,
+with Fe2+/Fe0, for the MicroDynamics list below.)
+
+**The MicroDynamics half-reaction list** (a CSV James supplied, 29 Oct 2026)
+is now covered: every row that is a half reaction maps to a tower couple,
+except DMS/DMSO (DMSO is in no database). Its dG values track this library
+at **pH 7.5** with aqueous gases (eQuilibrator's defaults), not pH 7. Five
+rows disagree beyond that: H2S -> S0 (-270.8, should be about -58),
+SO4-2 <-> S0 (sign reversed, magnitude off), CO2 <-> glucose (114.5 vs 84),
+N2O -> N2 (-236 vs -247), and NO2- -> NO, which is the NO(g) value. NAD
+came from OBIGT's organic table and phosphite from speq23; both needed only
+registry lines. Glucose, like hydroxylamine, is 25 C only on the tower.
 
 **+0.899 V for NH2OH/NH4+ is the NH4+ form.** With NH3 the same couple is
 +0.832 V at pH 7. The arsenate trap again: name the species before quoting

@@ -90,7 +90,7 @@ def _footnotes(grid: TowerGrid) -> list[str]:
     notice = unverified_notice(grid.unverified)
     if notice is not None:
         notes.append(notice)
-    # Hydroxylamine's value is pinned to 25 C, so its couples vanish when the
+    # Hydroxylamine and glucose are pinned to 25 C, so their couples vanish when the
     # temperature slider moves. Say so, or the vanishing reads as a bug.
     potentials = np.asarray(grid.potentials)
     partial = [label for k, label in enumerate(grid.labels) if np.isnan(potentials[:, :, k]).any()]

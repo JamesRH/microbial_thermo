@@ -125,6 +125,12 @@ species:
   - {backend: "H3PO4(aq)", formula: "H3PO4",  display: "H_3PO_4",     phase: aq, aliases: ["phosphoric acid"]}
   - {backend: "H2PO4-",    formula: "H2PO4-", display: "H_2PO_4^-",   phase: aq, aliases: ["H2PO4-", "dihydrogen phosphate"]}
   - {backend: "HPO4--",    formula: "HPO4-2", display: "HPO_4^{2-}",  phase: aq, aliases: ["HPO4-2", "hydrogen phosphate"]}
+  # Phosphite, the electron donor of phosphite-oxidising bacteria (speq23).
+  - {backend: "HPO3--",    formula: "HPO3-2", display: "HPO_3^{2-}",  phase: aq, aliases: [phosphite, "HPO3-2"]}
+  # The NAD pair, from OBIGT's organic table (LaRowe & Helgeson 2006), as
+  # the ions that dominate at pH 7.
+  - {backend: "NAD(ox)-",   formula: "C21H26N7O14P2-",  display: "NAD^+", phase: aq, aliases: ["NAD+", NAD, "NAD(ox)"]}
+  - {backend: "NAD(red)-2", formula: "C21H27N7O14P2-2", display: "NADH",  phase: aq, aliases: [NADH, "NAD(red)"]}
   - {backend: "PO4---",    formula: "PO4-3",  display: "PO_4^{3-}",   phase: aq, aliases: ["PO4-3", orthophosphate]}
   - {backend: "HSO3-",     formula: "HSO3-",  display: "HSO_3^-",     phase: aq, aliases: [bisulfite]}
   - {backend: "HSO4-",     formula: "HSO4-",  display: "HSO_4^-",     phase: aq, aliases: [bisulfate]}
