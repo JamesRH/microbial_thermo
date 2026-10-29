@@ -524,6 +524,15 @@ comparison the organic table got. Peroxide and the chlorine oxyanions are
 registered (`H2O2(aq)`, `ClO4-` etc., all speq23) for later use; they are
 not in notebook 06 by James's choice.
 
+**The tower no longer has O2/H2O on top** (29 Oct 2026). ClO-/Cl-, NO/N2O,
+N2O/N2 and NH2OH/NH4+ sit above it at pH 7; anything that assumed
+`entries[-1]` is oxygen is wrong, and the potential axis is now sized from
+the grid instead of fixed at -0.75 to +1.05 V. The two hydroxylamine
+couples are refused off 25 C (no extrapolation is requested), so they drop
+out of the 4 and 55 C frames; the page says so in a footnote. Thiosulfate
+reductase (S2O3-2/HS- + SO3-2) is -0.456 V here against Thauer's -0.40,
+which is his older thiosulfate formation energy, not a bug.
+
 **+0.899 V for NH2OH/NH4+ is the NH4+ form.** With NH3 the same couple is
 +0.832 V at pH 7. The arsenate trap again: name the species before quoting
 the potential.

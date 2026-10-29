@@ -4,8 +4,27 @@
     {
       "name": "streamlit-microbial-thermo",
       "runtimeExecutable": "/home/jamesrh/miniforge3/envs/microbial-thermo/bin/streamlit",
-      "runtimeArgs": ["run", "app.py", "--server.headless", "true"],
+      "runtimeArgs": [
+        "run",
+        "app.py",
+        "--server.headless",
+        "true"
+      ],
       "port": 8501
+    },
+    {
+      "name": "notebooks-static",
+      "runtimeExecutable": "/home/jamesrh/miniforge3/envs/microbial-thermo/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "notebooks"
+      ],
+      "port": 8765
     }
   ]
 }

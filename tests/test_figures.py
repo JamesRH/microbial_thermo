@@ -146,7 +146,7 @@ class TestEnergyPanelVerdict(unittest.TestCase):
 
 
 #: Reference couples stronger than O2/H2O at pH 7 and 25 C.
-ABOVE_OXYGEN = {"ClO-/Cl-"}
+ABOVE_OXYGEN = {"ClO-/Cl-", "NO/N2O", "N2O/N2", "NH2OH/NH4+"}
 
 
 class TestReferenceCouples(unittest.TestCase):

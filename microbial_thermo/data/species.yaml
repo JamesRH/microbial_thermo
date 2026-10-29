@@ -35,6 +35,7 @@ species:
   - {backend: "SO4--",    formula: "SO4-2",   display: "SO_4^{2-}",   phase: aq, aliases: [sulfate, "SO4-2", "SO42-"]}
   - {backend: "SO3--",    formula: "SO3-2",   display: "SO_3^{2-}",   phase: aq, aliases: [sulfite, "SO3-2"]}
   - {backend: "S2O3--",   formula: "S2O3-2",  display: "S_2O_3^{2-}", phase: aq, aliases: [thiosulfate, "S2O3-2"]}
+  - {backend: "S4O6--",   formula: "S4O6-2",  display: "S_4O_6^{2-}", phase: aq, aliases: [tetrathionate, "S4O6-2"]}
   - {backend: "HS-",      formula: "HS-",     display: "HS^-",        phase: aq, aliases: [bisulfide, hydrosulfide]}
   - {backend: "H2S(aq)",  formula: "H2S",     display: "H_2S(aq)",    phase: aq, aliases: [H2S, "hydrogen sulfide"]}
   - {backend: "S--",      formula: "S-2",     display: "S^{2-}",      phase: aq, aliases: [sulfide ion, "S-2"]}

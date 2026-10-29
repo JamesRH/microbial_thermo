@@ -65,11 +65,32 @@ EXPECTED_PROTONS = {
     "CrO4-2/Cr3+": 8,
     "UO2+2/UO2(s)": 0,
     "ClO-/Cl-": 2,
+    "SO4-2/S0": 8,
+    "SO3-2/HS-": 7,
+    "S2O3-2/HS- + SO3-2": 1,
+    "S4O6-2/S2O3-2": 0,
+    "NO2-/NO": 2,
+    "NO/N2O": 2,
+    "N2O/N2": 2,
+    "N2/NH4+": 4,
+    "N2/N2H5+": 5,
+    "NO2-/NH2OH": 5,
+    "NH2OH/NH4+": 3,
 }
 
 #: Couples whose reduction consumes no protons, so pH does not move them.
-#: Uranyl to uraninite joined iron here when the metal set was widened.
-PROTON_FREE = {"Fe3+/Fe2+", "UO2+2/UO2(s)"}
+#: Uranyl to uraninite joined iron here when the metal set was widened, and
+#: tetrathionate when the sulfur intermediates were added.
+PROTON_FREE = {"Fe3+/Fe2+", "UO2+2/UO2(s)", "S4O6-2/S2O3-2"}
+
+
+#: Couples written with one electron, which the ratio slider moves furthest.
+#: Tetrathionate is one per thiosulfate produced.
+ONE_ELECTRON = {"Fe3+/Fe2+", "NO2-/NO", "S4O6-2/S2O3-2"}
+
+#: Couples resting on a supplemental value with no enthalpy route used here,
+#: so refused away from 25 C.
+ONLY_AT_25C = {"NO2-/NH2OH", "NH2OH/NH4+"}
 
 
 def small_grid():
@@ -92,8 +113,20 @@ class TestGridShape(unittest.TestCase):
     def test_every_reference_couple_is_present(self):
         self.assertEqual(set(self.grid.labels), set(EXPECTED_PROTONS))
 
-    def test_nothing_is_missing_at_these_conditions(self):
-        self.assertFalse(np.isnan(self.grid.potentials).any())
+    def test_only_the_25_c_couples_are_missing(self):
+        # Hydroxylamine's value is pinned to 25 C, so its two couples are
+        # refused at 55 C; everything else must be present everywhere.
+        missing = {
+            label
+            for k, label in enumerate(self.grid.labels)
+            if np.isnan(self.grid.potentials[:, :, k]).any()
+        }
+        self.assertEqual(missing, ONLY_AT_25C)
+        at_25 = self.grid.temperature_values.index(25.0)
+        self.assertFalse(np.isnan(self.grid.potentials[:, at_25, :]).any())
+
+    def test_hydroxylamine_is_named_as_unverified(self):
+        self.assertEqual(self.grid.unverified, ("NH2OH(aq)",))
 
     def test_labels_groups_and_electrons_line_up(self):
         self.assertEqual(len(self.grid.labels), len(self.grid.groups))
@@ -188,7 +221,9 @@ class TestActivityRatio(unittest.TestCase):
         moves = {
             label: abs(b - s) for label, b, s in zip(self.grid.labels, base, shifted, strict=True)
         }
-        self.assertEqual(max(moves, key=moves.get), "Fe3+/Fe2+")
+        furthest = max(moves.values())
+        swingers = {label for label, move in moves.items() if abs(move - furthest) < 1e-9}
+        self.assertEqual(swingers, ONE_ELECTRON)
 
     def test_the_shift_grows_with_temperature(self):
         """RT/nF, so a hotter tower spreads further for the same ratio."""
@@ -357,6 +392,22 @@ class TestHtmlExport(unittest.TestCase):
             self.assertIn("tower-plot", text)
             self.assertNotIn('<script src="https://', text)
             self.assertIn("input", text)
+
+    def test_the_page_footnotes_the_unverified_species(self):
+        figure = plot_interactive_tower(self.grid)
+        notes = [a.text for a in figure.layout.annotations]
+        self.assertTrue(any("unverified" in n and "NH2OH(aq)" in n for n in notes))
+        self.assertTrue(any("absent from some frames: NO2-/NH2OH, NH2OH/NH4+" in n for n in notes))
+
+    def test_the_axis_holds_every_couple_at_the_ratio_extremes(self):
+        figure = plot_interactive_tower(self.grid)
+        low, high = figure.layout.xaxis.range
+        for log_ratio in (-6.0, 6.0):
+            for pH in self.grid.ph_values:
+                for temperature in self.grid.temperature_values:
+                    volts = self.grid.at(pH, temperature, 10.0**log_ratio)
+                    self.assertGreaterEqual(np.nanmin(volts), low)
+                    self.assertLessEqual(np.nanmax(volts), high)
 
     def test_the_figure_has_one_trace_per_group(self):
         figure = plot_interactive_tower(self.grid)

@@ -31,16 +31,17 @@ import json
 from pathlib import Path
 
 from ..tower import TowerGrid, tower_grid
-from .style import PALETTE, SIZES
+from .style import PALETTE, SIZES, unverified_notice
 from .tower import _GROUP_COLOURS, _stagger
 
 #: Ratio slider bounds, as powers of ten. Six orders either way covers
 #: everything from a pristine aquifer to a laboratory reagent bottle.
 DEFAULT_LOG_RATIO_RANGE = (-6.0, 6.0)
 
-#: Minimum vertical gap between two labels, in volts. Below this they are
-#: nudged apart and given leader lines back to the rule.
-LABEL_SEPARATION_V = 0.035
+#: Minimum vertical gap between two labels, as a fraction of the potential
+#: axis. Below this they are nudged apart and given leader lines back to the
+#: rule. A fraction rather than volts, because the axis is sized to the grid.
+LABEL_SEPARATION = 0.02
 
 SVG_CONFIG = {
     "toImageButtonOptions": {"format": "svg", "filename": "redox_tower"},
@@ -80,6 +81,28 @@ def _potential_range(grid: TowerGrid, log_ratio_range=DEFAULT_LOG_RATIO_RANGE) -
     return [float(np.floor(low * 10) / 10), float(np.ceil(high * 10) / 10)]
 
 
+def _footnotes(grid: TowerGrid) -> list[str]:
+    """What the reader must be told about the grid: unverified data, and
+    couples that drop out of some frames."""
+    import numpy as np
+
+    notes = []
+    notice = unverified_notice(grid.unverified)
+    if notice is not None:
+        notes.append(notice)
+    # Hydroxylamine's value is pinned to 25 C, so its couples vanish when the
+    # temperature slider moves. Say so, or the vanishing reads as a bug.
+    potentials = np.asarray(grid.potentials)
+    partial = [label for k, label in enumerate(grid.labels) if np.isnan(potentials[:, :, k]).any()]
+    if partial:
+        notes.append(
+            "Not computable at every temperature, so absent from some frames: "
+            + ", ".join(partial)
+            + "."
+        )
+    return notes
+
+
 # --------------------------------------------------------------------------
 # ipywidgets front end
 # --------------------------------------------------------------------------
@@ -87,7 +110,7 @@ def _potential_range(grid: TowerGrid, log_ratio_range=DEFAULT_LOG_RATIO_RANGE) -
 
 def interactive_tower(
     grid: TowerGrid | None = None,
-    figsize=(9.0, 7.5),
+    figsize=(9.0, 10.0),
     log_ratio_range=DEFAULT_LOG_RATIO_RANGE,
     initial_ph: float = 7.0,
     initial_temperature: float = 25.0,
@@ -159,7 +182,7 @@ def interactive_tower(
     return box
 
 
-def _draw_static(grid, pH, temperature_c, log_ratio, figsize=(9.0, 7.5)):
+def _draw_static(grid, pH, temperature_c, log_ratio, figsize=(9.0, 10.0)):
     """One matplotlib frame of the tower at fixed conditions."""
     import matplotlib.pyplot as plt
 
@@ -171,7 +194,8 @@ def _draw_static(grid, pH, temperature_c, log_ratio, figsize=(9.0, 7.5)):
     # Rules sit at the true potential; labels are nudged apart and joined back
     # to their rule by a leader, so a crowded region stays readable without
     # misreporting where a couple actually is.
-    label_positions = _stagger([r[3] for r in rows], LABEL_SEPARATION_V)
+    low, high = _potential_range(grid)
+    label_positions = _stagger([r[3] for r in rows], LABEL_SEPARATION * (high - low))
     for (label, group, n, volts), text_y in zip(rows, label_positions, strict=True):
         colour = _GROUP_COLOURS.get(group, PALETTE["muted"])
         ax.hlines(volts, 0.06, 0.52, color=colour, linewidth=2.6)
@@ -203,7 +227,7 @@ def _draw_static(grid, pH, temperature_c, log_ratio, figsize=(9.0, 7.5)):
 
     ax.axhline(0.0, color=PALETTE["muted"], linewidth=0.8, linestyle=":")
     ax.set_xlim(-0.06, 1.25)
-    ax.set_ylim(*_potential_range(grid))
+    ax.set_ylim(low, high)
     ax.set_ylabel("E (V) vs SHE", fontsize=SIZES["potential"])
     ax.set_xticks([])
     for side in ("top", "right", "bottom"):
@@ -226,6 +250,19 @@ def _draw_static(grid, pH, temperature_c, log_ratio, figsize=(9.0, 7.5)):
         arrowprops={"arrowstyle": "<-", "color": PALETTE["muted"], "linewidth": 0.9},
     )
     figure.tight_layout()
+    notes = _footnotes(grid)
+    if notes:
+        figure.subplots_adjust(bottom=0.04 + 0.04 * len(notes))
+        figure.text(
+            0.5,
+            0.005,
+            "\n".join(notes),
+            fontsize=SIZES["annotation"] - 1,
+            color=PALETTE["endergonic"],
+            ha="center",
+            va="bottom",
+            wrap=True,
+        )
     return figure
 
 
@@ -252,6 +289,13 @@ def plot_interactive_tower(
 
     grid = grid if grid is not None else tower_grid()
     rows = _ordered(grid, initial_ph, initial_temperature, 1.0)
+    notes = _footnotes(grid)
+    # Layout in pixels: about 20 px per category row keeps the couple labels
+    # from colliding, the legend sits below the tick labels and axis title,
+    # and the footnotes below that.
+    plot_px = max(420, 20 * len(grid.labels))
+    legend_px = 70
+    bottom_px = legend_px + 40 + 16 * len(notes)
 
     figure = go.Figure()
     for group in sorted({r[1] for r in rows}):
@@ -286,13 +330,25 @@ def plot_interactive_tower(
             "categoryorder": "array",
             "categoryarray": [r[0] for r in rows],
         },
-        margin={"l": 190, "r": 40, "t": 110, "b": 60},
-        legend={"orientation": "h", "y": -0.16},
-        # One category row per couple: about 20 px each keeps the labels
-        # from colliding as the list grows.
-        height=max(620, 200 + 20 * len(grid.labels)),
+        margin={"l": 190, "r": 40, "t": 110, "b": bottom_px},
+        legend={"orientation": "h", "y": -legend_px / plot_px, "yanchor": "top"},
+        height=110 + plot_px + bottom_px,
     )
     figure.add_vline(x=0.0, line={"color": PALETTE["muted"], "width": 1, "dash": "dot"})
+    if notes:
+        # Below the legend, in the same red the static figures use. Placed in
+        # pixels, so it clears the legend whatever the number of couples.
+        figure.add_annotation(
+            text="<br>".join(notes),
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=0.0,
+            yanchor="top",
+            yshift=-(legend_px + 34),
+            showarrow=False,
+            font={"size": 11, "color": PALETTE["endergonic"]},
+        )
 
     if save_html is not None:
         path = Path(save_html).with_suffix(".html")

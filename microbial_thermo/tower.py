@@ -132,6 +132,9 @@ class TowerGrid:
     n_electrons: tuple[float, ...]
     potentials: object  # numpy array [pH, temperature, couple]
     primed: bool = True
+    #: Backend names of unverified species any couple depends on, so the
+    #: figures can footnote them.
+    unverified: tuple[str, ...] = ()
 
     def nearest_index(self, axis: str, value: float) -> int:
         """Index of the closest grid point. Sliders are restricted to grid
@@ -212,10 +215,13 @@ def tower_grid(
     """
     import numpy as np
 
+    from .supplemental import uses_unverified
+
     ph_values = tuple(float(x) for x in ph_values)
     temperature_values = tuple(float(x) for x in temperature_values)
 
     collected: dict[str, dict] = {}
+    species: set[str] = set()
     cells: dict[tuple[int, int], dict[str, float]] = {}
     total = len(ph_values) * len(temperature_values)
     done = 0
@@ -225,6 +231,8 @@ def tower_grid(
             entries = reference_couples(conditions, backend, primed=primed)
             cells[(i, j)] = {e.label: e.potential_v for e in entries}
             for entry in entries:
+                for side in (entry.couple.reduced_side, entry.couple.oxidized_side):
+                    species.update(member.backend for member, _ in side)
                 collected.setdefault(
                     entry.label,
                     {"group": entry.group, "n_electrons": entry.n_electrons},
@@ -248,4 +256,5 @@ def tower_grid(
         n_electrons=tuple(collected[x]["n_electrons"] for x in labels),
         potentials=potentials,
         primed=primed,
+        unverified=tuple(uses_unverified(species)),
     )
