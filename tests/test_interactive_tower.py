@@ -76,6 +76,9 @@ EXPECTED_PROTONS = {
     "N2/N2H5+": 5,
     "NO2-/NH2OH": 5,
     "NH2OH/NH4+": 3,
+    "SO3-2/S0": 6,
+    "SO4-2/S2O3-2": 10,
+    "NO/NH2OH": 3,
 }
 
 #: Couples whose reduction consumes no protons, so pH does not move them.
@@ -90,7 +93,7 @@ ONE_ELECTRON = {"Fe3+/Fe2+", "NO2-/NO", "S4O6-2/S2O3-2"}
 
 #: Couples resting on a supplemental value with no enthalpy route used here,
 #: so refused away from 25 C.
-ONLY_AT_25C = {"NO2-/NH2OH", "NH2OH/NH4+"}
+ONLY_AT_25C = {"NO2-/NH2OH", "NH2OH/NH4+", "NO/NH2OH"}
 
 
 def small_grid():
@@ -398,7 +401,10 @@ class TestHtmlExport(unittest.TestCase):
         figure = plot_interactive_tower(self.grid)
         notes = [a.text for a in figure.layout.annotations]
         self.assertTrue(any("unverified" in n and "NH2OH(aq)" in n for n in notes))
-        self.assertTrue(any("absent from some frames: NO2-/NH2OH, NH2OH/NH4+" in n for n in notes))
+        # Parse the named couples back out of the rendered text, in any order.
+        absent = re.search(r"absent from some frames: (.*)\.", "<br>".join(notes))
+        self.assertIsNotNone(absent)
+        self.assertEqual(set(absent.group(1).split("<br>")[0].split(", ")), ONLY_AT_25C)
 
     def test_the_axis_holds_every_couple_at_the_ratio_extremes(self):
         figure = plot_interactive_tower(self.grid)

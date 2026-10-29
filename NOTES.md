@@ -532,6 +532,13 @@ couples are refused off 25 C (no extrapolation is requested), so they drop
 out of the 4 and 55 C frames; the page says so in a footnote. Thiosulfate
 reductase (S2O3-2/HS- + SO3-2) is -0.456 V here against Thauer's -0.40,
 which is his older thiosulfate formation energy, not a bug.
+Three couples came from the course readings: SO3-2/S0 and SO4-2/S2O3-2
+(Zhou et al. 2025, Table 1: reverse Dsr, Sox) and NO/NH2OH (Li et al.
+2025, Fig. 2: hydroxylamine goes to NO, not straight to nitrite). Left out,
+and why: polysulfide (SUPCRT has S2-2 to S5-2, but HSn- dominates near
+pH 7 and the data are unaudited), APS (not in any database), DMSO (not in
+any database; DMS is). Li's feammox and Mn-ammox also need Fe(OH)3/Fe2+
+and MnO2/Mn2+, which are not S or N couples and are not on the tower.
 
 **+0.899 V for NH2OH/NH4+ is the NH4+ form.** With NH3 the same couple is
 +0.832 V at pH 7. The arsenate trap again: name the species before quoting

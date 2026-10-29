@@ -22,6 +22,11 @@ couples:
   - {label: "SO3-2/HS-",        reduced: "HS-",         oxidized: "SO3-2",   group: sulfur}
   - {label: "S2O3-2/HS- + SO3-2", reduced: ["HS-", "SO3-2"], oxidized: "S2O3-2", key_element: S, group: sulfur}
   - {label: "S4O6-2/S2O3-2",    reduced: "S2O3-2",      oxidized: "S4O6-2",  key_element: S, group: sulfur}
+  # From the course readings (Zhou et al. 2025, Table 1): reverse Dsr and S0
+  # disproportionation pass through sulfite; Sox takes thiosulfate straight
+  # to two sulfates.
+  - {label: "SO3-2/S0",         reduced: "Sulfur(s)",   oxidized: "SO3-2",   group: sulfur}
+  - {label: "SO4-2/S2O3-2",     reduced: "S2O3-2",      oxidized: "SO4-2",   key_element: S, group: sulfur}
   - {label: "Fe3+/Fe2+",        reduced: "Fe+2",        oxidized: "Fe+3",    group: metal}
   - {label: "NO3-/NO2-",        reduced: "NO2-",        oxidized: "NO3-",    group: nitrogen}
   - {label: "NO3-/NH4+",        reduced: "NH4+",        oxidized: "NO3-",    group: nitrogen}
@@ -38,6 +43,9 @@ couples:
   - {label: "N2/N2H5+",         reduced: "N2H5+",       oxidized: "N2(aq)",  key_element: N, group: nitrogen}
   - {label: "NO2-/NH2OH",       reduced: "NH2OH(aq)",   oxidized: "NO2-",    group: nitrogen}
   - {label: "NH2OH/NH4+",       reduced: "NH4+",        oxidized: "NH2OH(aq)", group: nitrogen}
+  # Li et al. 2025, Fig. 2: ammonia oxidisers take NH2OH to NO, not straight
+  # to nitrite, so the 4 e- NO2-/NH2OH step is really this plus NO2-/NO.
+  - {label: "NO/NH2OH",         reduced: "NH2OH(aq)",   oxidized: "NO(aq)",  group: nitrogen}
   - {label: "As(V)/As(III)",    reduced: "As(III)",     oxidized: "As(V)",   key_element: As, group: metalloid}
   - {label: "SeO4-2/SeO3-2",    reduced: "SeO3--",      oxidized: "SeO4--",  key_element: Se, group: metalloid}
   - {label: "SeO3-2/Se0",       reduced: "Se",          oxidized: "SeO3--",  key_element: Se, group: metalloid}
