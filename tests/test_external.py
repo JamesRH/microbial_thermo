@@ -61,11 +61,20 @@ class TestImportedSpecies(unittest.TestCase):
         cls.backend = mt.get_backend()
 
     def test_the_expected_number_arrived(self):
-        # 536 organic, plus NO and N2O picked from the inorganic table.
-        self.assertEqual(len(self.species), 538)
+        # 536 organic, five joule rows (README #31), and NO and N2O picked
+        # from the inorganic table.
+        self.assertEqual(len(self.species), 543)
         self.assertEqual(
             {s.name for s in self.species.values() if s.source != "OBIGT"},
-            {"NO(aq)", "N2O(aq)"},
+            {
+                "NO(aq)",
+                "N2O(aq)",
+                "methylaminium",
+                "dimethylamine",
+                "dimethylaminium",
+                "trimethylamine",
+                "trimethylaminium",
+            },
         )
 
     def test_nitrogen_oxides_match_their_gases_and_solubilities(self):
@@ -115,6 +124,72 @@ class TestImportedSpecies(unittest.TestCase):
         record = self.backend.resolve("citrate-3")
         self.assertIn("OBIGT", record.source)
         self.assertIn("LaRowe", record.source)
+
+
+class TestJouleRows(unittest.TestCase):
+    """OBIGT's joule rows, converted to calories on import (README #31).
+
+    At 25 C only G matters, so a coefficient left in joules would pass every
+    25 C check and be wrong everywhere else. The test that catches it is the
+    heat capacity: Cp = -T d2G/dT2 depends on c1, c2, omega and the a terms,
+    and the source tabulates Cp independently of them (the Cp_J column).
+    """
+
+    NAMES = (
+        "methylaminium",
+        "dimethylamine",
+        "dimethylaminium",
+        "trimethylamine",
+        "trimethylaminium",
+    )
+
+    @classmethod
+    def setUpClass(cls):
+        import csv
+        from importlib import resources
+
+        warnings.simplefilter("ignore")
+        cls.backend = mt.get_backend()
+        text = (
+            resources.files("microbial_thermo.data.external")
+            .joinpath("obigt_organic_aq_joule.csv")
+            .read_text()
+        )
+        cls.rows = {row["name"]: row for row in csv.DictReader(text.splitlines())}
+
+    def _g(self, name, celsius):
+        return self.backend.delta_Gf(name, celsius).to("J/mol").magnitude
+
+    def test_the_converted_coefficients_reproduce_the_tabulated_heat_capacity(self):
+        step = 2.0
+        for name in self.NAMES:
+            with self.subTest(species=name):
+                g = [self._g(name, 25.0 + k * step) for k in (-1, 0, 1)]
+                cp = -298.15 * (g[0] - 2 * g[1] + g[2]) / step**2
+                self.assertAlmostEqual(cp, float(self.rows[name]["Cp_J"]), delta=0.5)
+
+    def test_g_at_25_c_is_the_tabulated_value(self):
+        for name in self.NAMES:
+            with self.subTest(species=name):
+                self.assertAlmostEqual(
+                    self._g(name, 25.0), float(self.rows[name]["G_J"]), delta=1.0
+                )
+
+    def test_methylammonium_pka(self):
+        """Robinson et al.'s own pair gives 10.643 at 25 C. The family pairs
+        their methylaminium with speq23's methylamine, which is 0.07 kJ/mol
+        lower in G, so 0.013 lower in pKa. Van 't Hoff from their enthalpy of
+        ionisation (55.2 kJ/mol) puts 50 C near 9.89."""
+        at_25 = float(mt.pKa_ladder("methylamine", temperature_c=25.0)[0])
+        at_50 = float(mt.pKa_ladder("methylamine", temperature_c=50.0)[0])
+        self.assertAlmostEqual(at_25, 10.63, delta=0.01)
+        self.assertAlmostEqual(at_50, 9.89, delta=0.03)
+
+    def test_an_unknown_energy_unit_is_refused(self):
+        from microbial_thermo.external import _entry_values
+
+        with self.assertRaises(ValueError):
+            _entry_values(self.rows["methylaminium"], "kcal")
 
 
 class TestTheOrderingIsWhatMakesItSafe(unittest.TestCase):

@@ -114,8 +114,9 @@ plt.show()
 #
 # The methanogens that escape are the three methyl disproportionations
 # (methylamine, DMS and methanol). They use no H₂, so scarce hydrogen costs
-# them nothing. (Methylamine's bar is too long: the database has only neutral
-# methylamine, and at this pH the substrate is methylammonium.)
+# them nothing. (The porewater gives no concentration for methylamine or DMS,
+# so both are at 1 M. At methanol's 1 µM, methylamine's bar would match
+# methanol's, and DMS's would fall into the band.)
 #
 # ### Exercise
 #

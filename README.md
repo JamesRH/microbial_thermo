@@ -116,7 +116,7 @@ figures included — no clone, no kernel, no install. Browse them all at
 | [`10_arsenic`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/10_arsenic.ipynb) | why reducing an aquifer mobilises arsenic: no insoluble sink, and a neutral arsenite that will not sorb |
 | [`11_selenium`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/11_selenium.ipynb) | the counter-example — measuring how much of the water window each element spends as a solid |
 | [`12_chromium_and_uranium`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/12_chromium_and_uranium.ipynb) | a Frost diagram with no honest zero, and a couple that ignores pH entirely |
-| [`13_methanogenesis`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/13_methanogenesis.ipynb) | every methanogenic substrate on one Frost diagram (methanogenesis as disproportionation), half reactions and ΔG°′ per CH₄ for H₂/CO₂, formate, acetate, methanol, methylamine, methanethiol and DMS, syntrophy as three pages, H₂ floors and how methyl reducers exclude hydrogenotrophs, and reverse methanogenesis |
+| [`13_methanogenesis`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/13_methanogenesis.ipynb) | every methanogenic substrate on one Frost diagram (methanogenesis as disproportionation), half reactions and ΔG°′ per CH₄ for H₂/CO₂, formate, acetate, methanol, methylammonium, trimethylammonium, methanethiol and DMS, syntrophy as three pages, H₂ floors and how methyl reducers exclude hydrogenotrophs, and reverse methanogenesis |
 | [`photoAs`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/photoAs.ipynb), [`photoFe`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/photoFe.ipynb), [`photoNO2`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/photoNO2.ipynb) | phototrophy: an uphill CO₂-fixation reaction per donor, then the photons that pay for it |
 | [`Scratchbook`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/Scratchbook.ipynb) | a worked problem end to end, starting from nothing but an equation string |
 
@@ -420,8 +420,10 @@ literature: carbonate 6.34 / 10.33, ammonium 9.24, phosphate 2.17 / 7.21 /
 The carbonate step is balanced with water — CO₂(aq) + H₂O ⇌ HCO₃⁻ + H⁺ — which
 a proton-only treatment gets wrong by tens of p*K* units.
 
-Twelve families ship: sulfide, carbonate, ammonia, phosphate, acetate, lactate,
-formate, propanoate, butanoate, sulfite, nitrite, sulfate.
+Nineteen families ship: sulfide, carbonate, ammonia, methylamine,
+dimethylamine, trimethylamine, phosphate, acetate, lactate, formate,
+propanoate, butanoate, sulfite, nitrite, hydroxylamine, hydrazine, sulfate,
+arsenate and arsenite.
 
 ### Where the numbers come from
 
@@ -433,7 +435,7 @@ species; it never changes a number an earlier one already produced.**
 | 1 | `speq23.dat` | HKF, direct | 1597 aqueous species, gases, common minerals |
 | 2 | `thermo.com.dat` | GWB log K + HKF basis | 2937 entries, chiefly minerals |
 | 3 | `supcrtbl.dat` | Holland & Powell (HP11) | 266 species nothing else has |
-| 4 | OBIGT (`data/external/`) | HKF, imported | 536 organic aqueous species, plus NO and N₂O, with per-species citations |
+| 4 | OBIGT (`data/external/`) | HKF, imported | 541 organic aqueous species, plus NO and N₂O, with per-species citations |
 | 5 | supplemental table | hand-entered | 6 species no database carries |
 
 `speq23.dat` replaced pyGCC's default `speq21.dat` and the upgrade was free:
@@ -490,11 +492,18 @@ nothing moved. Had OBIGT been preferred, methionine would have shifted by
 181 kJ/mol without a word. That disagreement is asserted in
 `tests/test_external.py` so it cannot quietly go away.
 
-80 rows tabulated in joules rather than calories were **skipped, not
-converted**. CHNOSZ applies its energy unit to the HKF coefficients as well as
-to *G*, *H* and *S*, and a mis-scaled coefficient is wrong only away from
-25 °C — where nothing here would catch it. Worth doing carefully later; the
-prize is N-acetylglucosamine, N-acetylmuramic acid and diaminopimelic acid,
+OBIGT tabulates 80 organic rows in joules rather than calories. CHNOSZ
+applies the energy unit to the HKF coefficients as well as to *G*, *H* and
+*S* (every one of a1–a4, c1, c2 and ω, but not the charge), and a mis-scaled
+coefficient is wrong only away from 25 °C, where a 25 °C check would not
+catch it. **Five of them are imported**, from a separate file whose manifest
+entry says `energy_units: J`: methylammonium, dimethylamine, dimethylammonium,
+trimethylamine and trimethylammonium, from Robinson *et al.* (2024,
+*Geochim. Cosmochim. Acta* 372:62). Neutral methylamine is speq23's. The
+conversion is tested where it can fail: the converted coefficients reproduce
+the heat capacity the source tabulates separately, Cp = −*T* ∂²*G*/∂*T*²,
+which depends on all of them. The other 75 are still skipped; the prize
+there is N-acetylglucosamine, N-acetylmuramic acid and diaminopimelic acid,
 i.e. peptidoglycan.
 
 A second, much smaller file takes **two rows** from OBIGT's *inorganic* table:
@@ -1495,9 +1504,9 @@ the digits written, so a file saying 24, 25, 26, 27 rendered as 18, 19, 20, 21
 and nobody reading GitHub saw the numbers this repo cites. They are plain
 bullets with literal `#N` labels now, which render the same everywhere.
 
-**Next up:** corrections before new figures (agreed 1 November 2026). #30 is
-done; next is **#29** (per-ion energy floors), which corrects claims the
-notebooks currently teach, then #31, #32 and #34. #29–#34 are corrections
+**Next up:** corrections before new figures (agreed 1 November 2026). #30
+and #31 are done; next is **#29** (per-ion energy floors), which corrects
+claims the notebooks currently teach, then #32 and #34. #29–#34 are corrections
 found while building notebook 13. The new figures come after them: #35 and
 #36 are small, #37 is the redox-cycle diagram. The older items are
 independent of each other, and **9** (two-dimensional contours) and **15**
@@ -1531,6 +1540,7 @@ now exist.
 | 28 | Per-element notebooks | `notebooks/05`–`12`, executed by `tests/test_notebooks.py` |
 | 33 (part) | Stalled-kernel watchdog for the notebook runs | `StallWatchdog` in `tests/test_notebooks.py` |
 | 30 | Methyl disproportionations count the electrons the methyls move | `reactions.yaml`, `tests/test_methanogenesis.py`, notebooks 03 and 13 |
+| 31 | Methylammonium, and the di- and trimethylamines, from OBIGT's joule rows | `data/external/obigt_organic_aq_joule.csv`, `external.py`, `acid_base.yaml`, `tests/test_external.py`, `tests/test_methanogenesis.py`, notebooks 03 and 13 |
 
 ### Tier 1 — small, and builds directly on what exists
 
@@ -1594,13 +1604,6 @@ now exist.
    propionate oxidiser gets ~0.8 per propionate), and 07's sulfur
    disproportionation ("inside the quantum until about 5 × 10⁻⁶", which
    compares −20 against ΔG per mol S).
-- **#31 · Methylammonium and the missing methyl compounds.** speq23 has only
-   neutral `Methanamine(aq)`; at pH 7 the substrate is >99.9 % CH₃NH₃⁺
-   (p*K*a ≈ 10.6), so every methylamine reaction is ~20.5 kJ per methylamine
-   too favourable. Notebook 13 corrects it by hand. Find a sourced value for
-   methylammonium (or add an acid–base family with a cited p*K*a), and look
-   for trimethylamine, dimethylamine and TMAO, which are in none of our
-   databases.
 - **#32 · Check unverified attributions.** `reactions.yaml` lists
    `syntrophic_ethanol_oxidation` organisms as "Syntrophus, the classic S
    organism"; the S organism of *Methanobacillus omelianskii* was never

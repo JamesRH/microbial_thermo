@@ -172,17 +172,47 @@ class TestTheLibraryEntries(unittest.TestCase):
                 self.assertEqual(built.n_electrons, 2)
 
     def test_the_rewrite_kept_the_energy_per_methane(self):
-        """Only the electron count changed. These are the per-CH4 values the
-        through-CO2 entries gave before the rewrite (notebook 13, section 3)."""
+        """#30 changed only the electron count. These are the per-CH4 values
+        the through-CO2 entries gave before it. Methylamine is not here: #31
+        then moved it to methylammonium, which is tested separately."""
         before = {
             "methylotrophic_methanogenesis": -86.6,
-            "methylamine_methanogenesis": -85.8,
             "dms_methanogenesis": -29.3,
         }
         for name, per_ch4 in before.items():
             with self.subTest(metabolism=name):
                 built = _quiet(reaction, name, STANDARD, normalize_to="methane")
                 self.assertAlmostEqual(built.delta_G_standard_prime.magnitude, per_ch4, delta=0.06)
+
+
+class TestMethylammonium(unittest.TestCase):
+    """README #31: methylamine methanogenesis is written for CH3NH3+."""
+
+    def test_the_substrate_is_methylammonium(self):
+        built = _quiet(reaction, "methylamine_methanogenesis", STANDARD, normalize_to="methane")
+        formulas = {species.formula for species in built.coefficients}
+        self.assertIn("CH6N+", formulas)
+        self.assertNotIn("CH5N", formulas)
+
+    def test_it_costs_the_deprotonation_energy_per_methylamine(self):
+        """Two paths: the entry as built, and the neutral-amine version plus
+        2.303 RT (pKa - 7) for each of the 4/3 methylamines per CH4."""
+        ammonium = _quiet(reaction, "methylamine_methanogenesis", STANDARD, normalize_to="methane")
+        neutral = _quiet(
+            mt.Reaction.from_couples,
+            donor=Couple.make("methylamine", ["CO2(aq)", "NH4+"], key_element="C"),
+            acceptor=Couple.make(["methane", "NH4+"], "methylamine", key_element="C"),
+            conditions=STANDARD,
+            normalize_to="methane",
+        )
+        pka = float(mt.pKa_ladder("methylamine", temperature_c=25.0)[0])
+        deprotonation = 2.302585 * 8.314462618e-3 * 298.15 * (pka - 7.0)
+        self.assertAlmostEqual(
+            ammonium.delta_G_standard_prime.magnitude,
+            neutral.delta_G_standard_prime.magnitude + (4 / 3) * deprotonation,
+            delta=0.01,
+        )
+        self.assertAlmostEqual(ammonium.delta_G_standard_prime.magnitude, -58.1, delta=0.1)
 
 
 if __name__ == "__main__":

@@ -111,14 +111,17 @@ warnings.filterwarnings("ignore", category=UserWarning)
 # joining two others is unstable and can disproportionate into them.
 #
 # Here are the substrates: CO₂ and bicarbonate, formate, acetate, the
-# placeholder biomass ⟨CH₂O⟩, methanol, methylamine, methanethiol, dimethyl
-# sulfide (DMS) and methane.
+# placeholder biomass ⟨CH₂O⟩, methanol, methylammonium, trimethylammonium,
+# methanethiol, dimethyl sulfide (DMS) and methane. The amines are drawn as
+# their cations, CH₃NH₃⁺ and (CH₃)₃NH⁺, because those are the forms at pH 7
+# (p*K*a 10.6 and 9.8).
 #
-# **What is in the databases.** Methylamine (as the neutral amine, CH₃NH₂)
-# comes from the primary database (speq23). DMS and methanethiol come from the
-# OBIGT import (Schulte 2010; Schulte & Rogers 2004). **Trimethylamine,
-# dimethylamine and TMAO are in none of our databases**, so they are left out
-# rather than guessed.
+# **What is in the databases.** Neutral methylamine comes from the primary
+# database (speq23). The methylammonium ions, and dimethylamine, come from
+# Robinson *et al.* (2024, *Geochim. Cosmochim. Acta* 372:62), by way of the
+# OBIGT import; so do DMS and methanethiol (Schulte 2010; Schulte & Rogers
+# 2004). **TMAO is in none of our databases**, so it is left out rather than
+# guessed.
 #
 # Two choices had to be made to draw this.
 #
@@ -144,7 +147,8 @@ substrates = [
     "Acetate",
     "Biomass(aq)",
     "Methanol(aq)",
-    "Methanamine(aq)",
+    "methylaminium",
+    "trimethylaminium",
     "methanethiol",
     "dimethyl sulfide",
     "Methane(aq)",
@@ -168,13 +172,13 @@ plt.show()
 #   the bottom-right end of the line. Turning it into CH₄ means climbing the
 #   hull, which needs electrons from somewhere else: H₂.
 #
-# A note on the legend. At C(−II) four different compounds share one
+# A note on the legend. At C(−II) five different compounds share one
 # x position. The library treats points at the same oxidation state as
 # "forms of the same state" and colours only the lowest (DMS) as the
-# predominant one; methanol, methylamine and methanethiol are drawn as open
-# grey squares. Here that does **not** mean they are stable. They are
-# different compounds, not acid–base forms of one compound, and all three sit
-# above the CH₄–HCO₃⁻ line too.
+# predominant one; methanol, the two methylammonium ions and methanethiol are
+# drawn as open grey squares. Here that does **not** mean they are stable.
+# They are different compounds, not acid–base forms of one compound, and all
+# four sit above the CH₄–HCO₃⁻ line too.
 #
 # On this diagram the **vertical height of a substrate above the chord**,
 # times the Faraday constant, is the energy released per carbon when it
@@ -199,7 +203,8 @@ rows = []
 for name in [
     "Acetate",
     "Methanol(aq)",
-    "Methanamine(aq)",
+    "methylaminium",
+    "trimethylaminium",
     "methanethiol",
     "dimethyl sulfide",
     "Formate(aq)",
@@ -247,9 +252,10 @@ print(
 # * **Acetate is barely above the line.** It gives the least energy per
 #   carbon of any substrate here, which is why aceticlastic methanogens
 #   (*Methanothrix*, formerly *Methanosaeta*) grow so slowly.
-# * **Methanol and methylamine are far above it.** They are the richest
-#   substrates per carbon. DMS and methanethiol are C(−II) too, but sit much
-#   lower, because the C–S bond makes them more stable to begin with.
+# * **Methanol is far above it**, the richest substrate per carbon. The two
+#   methylammonium ions are C(−II) too, and sit 21–22 kJ per carbon lower;
+#   DMS and methanethiol lower still, because the C–S bond makes them more
+#   stable to begin with.
 # * **Biomass is well above the line.** Building ⟨CH₂O⟩ from CO₂ is uphill,
 #   and a methanogen has to pay for it out of the small energy its catabolism
 #   releases. (⟨CH₂O⟩ is a placeholder, not a measured compound — see its
@@ -269,11 +275,16 @@ print(
 # would make it a different diagram at each position. It is dropped from all
 # temperatures and named on the figure instead.
 #
+# **The neutral amines are added.** The pH slider runs from 0 to 14, and above
+# p*K*a (10.6 for methylamine, 9.8 for trimethylamine) the neutral amine is the
+# form actually present, so both forms of each pair are drawn.
+#
 # The temperature grid is built once (about ten seconds) and shared by the
 # live widget and the exported page.
 
 # %%
-substrate_grid = element_grid("C", species=substrates, fixed=held)
+amine_bases = ["Methanamine(aq)", "trimethylamine"]
+substrate_grid = element_grid("C", species=[*substrates, *amine_bases], fixed=held)
 interactive_element("C", grid=substrate_grid, initial_ph=7.0, initial_log_activity=0.0, label="all")
 
 # %% [markdown]
@@ -496,11 +507,25 @@ pathways = {
     ("Type I", "formate"): (("formate", "CO2"), TO_CH4),
     ("Type II: aceticlastic", "acetate"): (("acetate", "CO2"), TO_CH4),
     ("Type II: disproportionation", "methanol"): (("methanol", "CO2"), TO_CH4),
-    ("Type II: disproportionation", "methylamine"): (("methylamine", ["CO2", "NH4+"]), TO_CH4),
+    ("Type II: disproportionation", "methylammonium"): (
+        ("methylammonium", ["CO2", "NH4+"]),
+        TO_CH4,
+    ),
+    ("Type II: disproportionation", "trimethylammonium"): (
+        ("trimethylammonium", [["CO2", 3], ["NH4+", 1]]),
+        TO_CH4,
+    ),
     ("Type II: disproportionation", "methanethiol"): (("methanethiol", ["CO2", "HS-"]), TO_CH4),
     ("Type II: disproportionation", "DMS"): (("DMS", [["CO2", 2], ["HS-", 1]]), TO_CH4),
     ("Type II: methyl reduction", "methanol + H2"): (H2, ("CH4", "methanol")),
-    ("Type II: methyl reduction", "methylamine + H2"): (H2, (["CH4", "NH4+"], "methylamine")),
+    ("Type II: methyl reduction", "methylammonium + H2"): (
+        H2,
+        (["CH4", "NH4+"], "methylammonium"),
+    ),
+    ("Type II: methyl reduction", "trimethylammonium + H2"): (
+        H2,
+        ([["CH4", 3], ["NH4+", 1]], "trimethylammonium"),
+    ),
     ("Type II: methyl reduction", "methanethiol + H2"): (H2, (["CH4", "HS-"], "methanethiol")),
     ("Type II: methyl reduction", "DMS + H2"): (H2, ([["CH4", 2], ["HS-", 1]], "DMS")),
 }
@@ -601,32 +626,36 @@ crossover = np.exp((reduction - disproportionation) / standard_rt)
 print(f"methyl reduction beats methanol disproportionation above {crossover:.2g} bar H2")
 
 # %% [markdown]
-# **Methylamine needs a correction.** The database has only neutral CH₃NH₂.
-# At pH 7 methylamine is almost entirely methylammonium, CH₃NH₃⁺
-# (p*K*a ≈ 10.6). Starting from 1 M methylammonium instead of 1 M neutral
-# amine costs the deprotonation energy, $2.303\,RT\,(\mathrm{p}K_a - 7)$, for
-# each methylamine consumed:
+# **Why the amines are written as cations.** At pH 7 methylamine is almost
+# entirely methylammonium, CH₃NH₃⁺. Writing the reaction for 1 M neutral
+# CH₃NH₂ instead starts from a form that is really $10^{\,\mathrm{p}K_a - 7}$
+# times scarcer, so it overstates the energy by the deprotonation energy,
+# $2.303\,RT\,(\mathrm{p}K_a - 7)$, for each methylamine consumed. Until
+# November 2026 this notebook had only the neutral amine and corrected it by
+# hand. Two routes to the same number:
 
 # %%
 T = 298.15
-pka_methylammonium = 10.6
+pka_methylammonium = mt.pKa_ladder("methylamine", temperature_c=25.0)[0]
 deprotonation = np.log(10) * R_KJ * T * (pka_methylammonium - 7.0)
-per_ch4 = delta_g_table.loc[
-    ("Type II: disproportionation", "methylamine"), "ΔG°' gases 1 bar (kJ/mol CH4)"
-]
-corrected = per_ch4 + (4 / 3) * deprotonation
-print(f"deprotonation at pH 7: {deprotonation:.1f} kJ/mol methylamine")
-print(
-    f"methylamine disproportionation, gas convention: {per_ch4:+.1f} -> {corrected:+.1f} kJ/mol CH4"
-)
+neutral = pathway(("Methanamine(aq)", ["CO2", "NH4+"]), TO_CH4, gas=True)
+neutral_per_ch4 = neutral.delta_G_standard_prime.magnitude
+cation_per_ch4 = pathway(("methylammonium", ["CO2", "NH4+"]), TO_CH4, gas=True)
+cation_per_ch4 = cation_per_ch4.delta_G_standard_prime.magnitude
+print(f"pKa of methylammonium at 25 C, from the database: {pka_methylammonium:.2f}")
+print(f"from 1 M CH3NH2:  {neutral_per_ch4:+.1f} kJ/mol CH4 (gas convention)")
+print(f"from 1 M CH3NH3+: {cation_per_ch4:+.1f} kJ/mol CH4")
+print(f"difference:                        {cation_per_ch4 - neutral_per_ch4:+.1f}")
+print(f"4/3 x 2.303 RT (pKa - 7):          {(4 / 3) * deprotonation:+.1f}")
 
 # %% [markdown]
-# With methylammonium as the substrate the value is about −77 kJ/mol CH₄,
-# close to Thauer's −75. The uncorrected number in the table is too
-# favourable by about 27 kJ/mol CH₄. That is the size of error you get from
-# using the wrong protonation state, and it is close to the whole energy
-# yield of aceticlastic methanogenesis (−36 kJ/mol CH₄ in the same
-# convention).
+# With methylammonium as the substrate the value is −77 kJ/mol CH₄, close to
+# Thauer's −75. The neutral amine would be too favourable by 28 kJ/mol CH₄.
+# That is the size of error the wrong protonation state costs, and it is close
+# to the whole energy yield of aceticlastic methanogenesis (−36 kJ/mol CH₄ in
+# the same convention). Trimethylammonium, which marine sediments make from
+# glycine betaine, choline and TMAO, pays almost exactly what methylammonium
+# does per CH₄.
 
 # %% [markdown]
 # ## 4. Syntrophy: an H₂ producer and a hydrogenotroph
@@ -913,12 +942,14 @@ for h2_bar in (1e-3, 1e-5, 1e-7):
 # Watch which bars move.
 #
 # * **Formate, acetate and the methyl disproportionations do not move at
-#   all.** No H₂ in the reaction, so H₂ cannot affect them. The three methyl
-#   disproportionations are the best-paid bars at every H₂ level. Each moves
-#   2 e⁻ per CH₄, the same as methyl reduction, so between those four bars
-#   per electron is also per CH₄. (Methylamine's bar is too long: the
-#   database has only neutral methylamine, and at pH 7 the substrate is
-#   methylammonium. Section 3 shows the size of that correction.)
+#   all.** No H₂ in the reaction, so H₂ cannot affect them. Methylamine and
+#   methanol disproportionation are the best-paid bars at every H₂ level;
+#   DMS is behind methyl reduction at 10⁻³ bar and ahead of it below. Each
+#   methyl disproportionation moves 2 e⁻ per CH₄, the same as methyl
+#   reduction, so between those four bars per electron is also per CH₄.
+#   (The digester gives no concentration for methylamine or DMS, so both are
+#   at 1 M, against 10⁻⁴ M for methanol. Their bars are longer than a real
+#   digester's would be.)
 # * **Everything that eats H₂ shrinks as H₂ falls**, but not equally.
 #   Homoacetogenesis goes first, then hydrogenotrophic methanogenesis, then
 #   sulfate reduction. At 10⁻⁷ bar the hydrogenotroph is endergonic.

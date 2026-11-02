@@ -258,14 +258,16 @@ metabolisms:
   - name: methylamine_methanogenesis
     label: Methylamine disproportionation
     group: methanogenesis
-    donor: [methylamine, ["CO2(aq)", "NH4+"]]
-    acceptor: [[methane, "NH4+"], methylamine]
+    donor: [methylammonium, ["CO2(aq)", "NH4+"]]
+    acceptor: [[methane, "NH4+"], methylammonium]
     key_element: C
     organisms: Methanosarcina, Methanococcoides
     note: >-
-      Uses neutral CH3NH2, the only methylamine in speq23; at pH 7 the real
-      substrate is methylammonium (pKa about 10.6), so the standard-state
-      number overstates the energy by roughly the protonation energy.
+      Written for methylammonium, CH3NH3+, the dominant form below pH 10.6
+      (its pKa here), from Robinson et al. (2024) via OBIGT. Until
+      November 2026 it used neutral CH3NH2, the only form in speq23, which
+      overstated the energy by the deprotonation energy, about 21 kJ per
+      methylamine at pH 7 (README Future work #31).
 
   - name: dms_methanogenesis
     label: Dimethyl sulfide disproportionation

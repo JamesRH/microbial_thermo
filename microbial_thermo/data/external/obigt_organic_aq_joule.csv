@@ -1,0 +1,6 @@
+name,formula,G_J,H_J,S_J,Cp_J,a1,a2,a3,a4,c1,c2,omega,z,ref_key,citation,date
+methylaminium,CH6N+,-39590,-123500,146.8,122,35.8606,16.2204,28.3764,-12.2979,97.5841,12.1546,0.0309,1,RSS+24,"K. Robinson et al. (2024) Geochim. Cosmochim. Acta 372, 62-80",2024-04-17
+dimethylamine,C2H7N,58410,-71600,128.6,260.4,49.2533,35.2109,45.1814,-20.3738,228.6815,12.8463,-0.6093,0,RSS+24,"K. Robinson et al. (2024) Geochim. Cosmochim. Acta 372, 62-80",2024-04-17
+dimethylaminium,C2H8N+,-3500,-122000,167.2,183.4,51.3762,30.9919,16.065,-12.9085,130.7419,24.6519,-0.2529,1,RSS+24,"K. Robinson et al. (2024) Geochim. Cosmochim. Acta 372, 62-80",2024-04-17
+trimethylamine,C3H9N,93610,-76420,130.8,360,65.4364,48.6966,66.7578,-29.4601,319.2623,16.6223,-0.7581,0,RSS+24,"K. Robinson et al. (2024) Geochim. Cosmochim. Acta 372, 62-80",2024-04-17
+trimethylaminium,C3H10N+,37800,-113000,195.3,216,64.7761,43.7491,6.2756,-13.4359,145.9055,31.3024,-0.7064,1,RSS+24,"K. Robinson et al. (2024) Geochim. Cosmochim. Acta 372, 62-80",2024-04-17

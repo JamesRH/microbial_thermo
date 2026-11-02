@@ -433,8 +433,11 @@ same energy per CH4 (-86.6 kJ/mol), per-electron values a factor of four
 apart. Since 1 November 2026 (#30) the methanol, methylamine and DMS
 entries use the methyl couple, so they count 2 e- per CH4, like methyl
 reduction. On every ladder they moved up fourfold: in notebook 03's
-porewater they left the energy-quantum band, and in 13's section 5 they top
-the ladder at every H2 level. Formate stays through CO2, correctly, since
+porewater they left the energy-quantum band, and in 13's section 5 methanol
+and methylamine top the ladder at every H2 level (DMS is behind methyl
+reduction at 1e-3 bar). Neither notebook gives methylamine or DMS a
+concentration, so both sit at 1 M; at methanol's 1 uM in 03, DMS would fall
+back into the band. Whether to give them one is James's call. Formate stays through CO2, correctly, since
 it is a two-electron donor. **Acetoclastic stays through CO2 (8 e- per
 CH4), decided by James on 1 November.** It can be written at 2 e-
 (donor acetate -> CO2 + CH3OH, acceptor CH3OH -> CH4; the methanol cancels
@@ -461,12 +464,21 @@ the default sulfate basis DMS is still refused, and minerals have no SMILES,
 so pyrite and siderite are refused exactly as before. Any failure in the
 check refuses.
 
-**Methylamine is the neutral amine only.** speq23 has `Methanamine(aq)` and
-no methylammonium. At pH 7 the real substrate is >99.9% CH3NH3+ (pKa ~10.6),
-so anything using it is too favourable by 2.303 RT (pKa - 7) = 20.5 kJ per
-methylamine. Notebook 13 makes the correction explicitly and lands at -77
-kJ/mol CH4 against Thauer's -75. Trimethylamine, dimethylamine and TMAO are
-in no database here.
+**Methylamine is written as methylammonium (#31, 1 November 2026).**
+speq23 has only neutral `Methanamine(aq)`; CH3NH3+ and the di- and
+trimethylamines with their cations come from OBIGT's joule rows (Robinson et
+al. 2024), in `obigt_organic_aq_joule.csv`. Every HKF coefficient but z is
+divided by 4.184 on import. The check that catches a missed one is the heat
+capacity: -T d2G/dT2 at 25 C (h = 2 K) reproduces the `Cp_J` column to
+0.5 J/mol/K, while G at 25 C would pass with c1, c2 or omega still in
+joules. pKa from the database: methylamine 10.63 (it pairs Robinson's cation
+with speq23's neutral amine, 0.07 kJ/mol off Robinson's own), dimethylamine
+10.85, trimethylamine 9.78. Dimethylamine is 0.12 above the CRC's 10.73;
+`test_speciation` allows 0.15 for it. Methylamine methanogenesis is now
+-58.1 kJ/mol CH4 dissolved, -77.2 in the gas convention (Thauer: -75); the
+neutral amine overstated it by 27.6. The cations needed SMILES (`C[NH3+]`
+etc.) or the Frost diagram refuses them against NH4+. TMAO is still in no
+database here.
 
 **Graphite on a carbon Frost diagram puts the hull through C(0).** Every
 organic substrate then "disproportionates to graphite", which is true and
@@ -630,8 +642,9 @@ its committed output says 60, so that older handoff item is closed.
      which compares -20 against ΔG per mol S.
    - 13's section 5 floor plot and toy model.
    - The affinity ladders, as per-bar ticks.
-3. **#31** (methylammonium), **#32** (attributions; `reactions.yaml` line
-   332 still says *Syntrophus*), and **#34** (figure-text collisions).
+3. **#31** (methylammonium): **done 1 November**, see "Methylamine is
+   written as methylammonium". Then **#32** (attributions; `reactions.yaml`
+   still says *Syntrophus*) and **#34** (figure-text collisions).
 4. Optionally, the other half of #33: run the notebooks in parallel.
 
 **Then the figures from James's TODO**, with his answers of 1 November:

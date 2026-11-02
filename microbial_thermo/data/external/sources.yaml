@@ -57,6 +57,34 @@ sources:
       in tests/test_external.py so it cannot be forgotten. Do not "fix" this
       by promoting OBIGT ahead of the primary database.
 
+  - name: OBIGT organic, joule rows (selected)
+    file: obigt_organic_aq_joule.csv
+    kind: hkf_aqueous
+    energy_units: J
+    retrieved: 2026-11-01
+    url: https://github.com/jedick/CHNOSZ/blob/main/inst/extdata/OBIGT/organic_aq.csv
+    license: GPL-3.0 (CHNOSZ)
+    citation: >-
+      Dick, J. M. (2019). CHNOSZ: Thermodynamic calculations and diagrams for
+      geochemistry. Frontiers in Earth Science 7:180. All five rows are from
+      Robinson, K. et al. (2024), Geochim. Cosmochim. Acta 372, 62-80,
+      doi:10.1016/j.gca.2024.03.013 (OBIGT key RSS+24).
+    note: >-
+      FIVE ROWS, for README Future work #31: methylaminium (CH3NH3+), the
+      form methylamine takes at any pH below about 10, plus dimethylamine,
+      trimethylamine and their aminiums. Copied verbatim from CHNOSZ commit
+      2aa55d0, in joules as OBIGT tabulates them (E_units J), which is why
+      the 2026-09-24 import skipped them. external.py divides every
+      energy-bearing column by 4.184: G, H and S, and also a1-a4, c1, c2 and
+      omega, because OBIGT applies E_units to the HKF coefficients too. A
+      coefficient left in joules would be wrong only away from 25 C, so
+      tests/test_external.py checks the converted parameters against the
+      source's own tabulated Cp (the Cp_J column, carried for that check
+      only). Methylamine itself is not imported: speq23 has it, and agrees
+      with Robinson et al. to 0.07 kJ/mol in G, so pairing speq23's
+      methylamine with this methylaminium moves the pKa by 0.01. TMAO is in
+      no OBIGT table.
+
   - name: OBIGT inorganic (selected)
     file: obigt_inorganic_aq.csv
     kind: hkf_aqueous

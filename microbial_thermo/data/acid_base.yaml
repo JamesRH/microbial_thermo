@@ -26,6 +26,18 @@ families:
     members: ["NH4+", "NH3(aq)"]
     aliases: [ammonia, ammonium, "total ammonia", TAN]
 
+  - name: methylamine
+    members: ["methylaminium", "Methanamine(aq)"]
+    aliases: [methylamine, methylammonium, "total methylamine"]
+
+  - name: dimethylamine
+    members: ["dimethylaminium", "dimethylamine"]
+    aliases: [dimethylamine, dimethylammonium, "total dimethylamine"]
+
+  - name: trimethylamine
+    members: ["trimethylaminium", "trimethylamine"]
+    aliases: [trimethylamine, trimethylammonium, "total trimethylamine"]
+
   - name: phosphate
     members: ["H3PO4(aq)", "H2PO4-", "HPO4--", "PO4---"]
     aliases: [phosphate, "total phosphate", orthophosphate, Pi]
