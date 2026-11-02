@@ -76,7 +76,7 @@ def plot_affinity_ladder(
     # Most negative at the top.
     usable = usable.sort_values("dG per e- (kJ/mol)", ascending=False)
     values = usable["dG per e- (kJ/mol)"].tolist()
-    labels = usable["label"].tolist()
+    labels, footnotes = _mark_ladder_notes(usable)
     groups = usable["group"].tolist()
     colours = [_GROUP_COLOURS.get(g, PALETTE["muted"]) for g in groups]
 
@@ -131,19 +131,48 @@ def plot_affinity_ladder(
     ax.set_title(title, fontsize=SIZES["title"], pad=14)
 
     if len(skipped):
+        footnotes.append("not evaluable here: " + ", ".join(skipped["label"].tolist()))
+    bottom = 0.0
+    if footnotes:
+        # One block of text, so two notes can never land on each other, and
+        # tight_layout is told to leave room for it.
+        fontsize = SIZES["annotation"] - 2
         fig.text(
             0.01,
             0.005,
-            "not evaluable here: " + ", ".join(skipped["label"].tolist()),
-            fontsize=SIZES["annotation"] - 2,
+            "\n".join(footnotes),
+            fontsize=fontsize,
             color=PALETTE["muted"],
             va="bottom",
         )
+        line = 1.5 * fontsize / 72.0 / fig.get_figheight()
+        bottom = 0.005 + line * len(footnotes)
 
-    fig.tight_layout()
+    fig.tight_layout(rect=(0.0, bottom, 1.0, 1.0))
     if save is not None:
         _save(fig, save, formats, dpi)
     return fig
+
+
+def _mark_ladder_notes(usable):
+    """Bar labels with a dagger where the entry carries a ``ladder_note``,
+    and the matching footnote lines.
+
+    A table built before the column existed, or by hand, has no notes.
+    """
+    labels = usable["label"].tolist()
+    if "ladder note" not in usable:
+        return labels, []
+    markers = "†‡§¶"
+    footnotes = []
+    notes = usable["ladder note"].fillna("").tolist()
+    for index, note in enumerate(notes):
+        if not note:
+            continue
+        marker = markers[len(footnotes) % len(markers)]
+        footnotes.append(f"{marker} {labels[index]}: {note}")
+        labels[index] = f"{labels[index]} {marker}"
+    return labels, footnotes
 
 
 def _add_atp_axis(ax, per_atp):

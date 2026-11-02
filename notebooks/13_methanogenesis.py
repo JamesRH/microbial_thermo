@@ -339,6 +339,39 @@ plot_half_reactions(reaction("acetoclastic_methanogenesis", standard))
 plt.show()
 
 # %% [markdown]
+# That figure counts 8 electrons per CH₄, as if all of the acetate were
+# oxidised to CO₂. The cell moves only 2. CO dehydrogenase oxidises the
+# carbonyl to CO₂, and those two electrons reduce the methyl group, which
+# travels at the oxidation level of methanol (as methyl-H₄MPT, then
+# methyl-CoM). Written that way, with methanol standing in for the carried
+# methyl, the same net reaction has a gap four times as wide:
+
+# %%
+two_electron = mt.Reaction.from_couples(
+    donor=Couple.make("acetate", [["CO2(aq)", 1], ["methanol", 1]], key_element="C"),
+    acceptor=Couple.make("methane", "methanol", key_element="C"),
+    conditions=standard,
+    normalize_to="methane",
+)
+eight_electron = reaction("acetoclastic_methanogenesis", standard, normalize_to="methane")
+for label, built in (("through CO2", eight_electron), ("methanol-level methyl", two_electron)):
+    gap = built.acceptor_half.E_standard_prime - built.donor_half.E_standard_prime
+    print(
+        f"{label:22s} {built.n_electrons} e- per CH4   "
+        f"{built.delta_G_standard_prime.magnitude:+6.2f} kJ/mol CH4   "
+        f"gap {gap.to('mV').magnitude:4.0f} mV"
+    )
+
+# %% [markdown]
+# The library keeps the 8-electron count on purpose. Acetate feeds about a
+# dozen metabolisms here, every one counted per electron of acetate oxidised
+# to CO₂, and that is what lets them be ranked against each other. Counted
+# at 2 instead, acetoclastic methanogenesis would look four times better per
+# electron than it is against them. At 25 °C and pH 7 it would then outrank
+# acetate-driven sulfate reduction, which pays 3.6 times as much per acetate.
+# The affinity ladders mark its bar with a † for this reason.
+
+# %% [markdown]
 # ### Type II — methylotrophic disproportionation
 #
 # One methanol in four is oxidised to CO₂ to provide the electrons that reduce
@@ -413,8 +446,9 @@ for label, built in (("CH3OH/CH4 couple", direct), ("through CO2", through_co2))
 # on how the reaction is written. The methyl couple is the count that matches
 # the chemistry. It also means the two methyl pathways can be compared per
 # electron: methyl reduction (CH₃OH + H₂ → CH₄ + H₂O) moves 2 e⁻ per CH₄ as
-# well. Acetoclastic methanogenesis is still written through CO₂, so its bar
-# on the ladders uses the 8 e⁻ count.
+# well. Acetoclastic methanogenesis is written through CO₂ on purpose (see
+# the aceticlastic note above), so its bar on the ladders uses the 8 e⁻
+# count.
 
 # %% [markdown]
 # ## 3. ΔG°′ for each pathway

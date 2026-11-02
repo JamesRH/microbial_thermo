@@ -344,6 +344,31 @@ class TestAffinityLadder(unittest.TestCase):
         twin = figure.axes[-1]
         self.assertIn("ATP", twin.get_xlabel())
 
+    def test_a_ladder_note_marks_its_bar_and_prints_a_footnote(self):
+        """Acetoclastic methanogenesis is counted at 8 e- per CH4 on purpose,
+        so a ladder that draws it says so. One that does not, does not."""
+        import warnings
+
+        from microbial_thermo.figures import plot_affinity_ladder
+        from microbial_thermo.library import energy_table
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            table = energy_table(self.conditions)
+            with_it = plot_affinity_ladder(self.conditions, table=table)
+            without = plot_affinity_ladder(
+                self.conditions, table=table[table["group"] == "sulfate reduction"]
+            )
+
+        labels = [tick.get_text() for tick in with_it.axes[0].get_yticklabels()]
+        self.assertIn("Acetoclastic methanogenesis †", labels)
+        footnotes = " ".join(text.get_text() for text in with_it.texts)
+        self.assertIn("† Acetoclastic methanogenesis: counted per electron of acetate", footnotes)
+
+        labels = [tick.get_text() for tick in without.axes[0].get_yticklabels()]
+        self.assertFalse([label for label in labels if "†" in label])
+        self.assertNotIn("†", " ".join(text.get_text() for text in without.texts))
+
     def test_empty_selection_raises(self):
         from microbial_thermo.figures import plot_affinity_ladder
         from microbial_thermo.library import energy_table

@@ -8,6 +8,10 @@
 # Doubles as the regression corpus: every entry is balanced and put through the
 # two-path cross-check by the test suite.
 #
+# ``ladder_note`` is optional: a short caveat printed as a footnote on any
+# affinity ladder that draws the entry, for a bar that cannot be read at face
+# value.
+#
 # A side may name several species, which is what lets *incomplete* oxidations
 # be catalogued: syntrophic propionate oxidation yields acetate and bicarbonate
 # together, in a ratio conservation cannot supply. Write such a side as a list,
@@ -194,6 +198,19 @@ metabolisms:
     acceptor: [methane, "CO2(aq)"]
     key_element: C
     organisms: Methanosarcina, Methanosaeta
+    note: >-
+      Counted per electron of acetate oxidised to CO2, 8 e- per CH4, like
+      every other acetate consumer in this file, so the competitors for
+      acetate rank correctly against each other on a ladder. The cell moves
+      only 2: CO dehydrogenase oxidises the carbonyl to CO2, and those
+      electrons reduce the methyl. Written with a methanol-level methyl
+      (donor acetate -> CO2 + CH3OH, acceptor CH3OH -> CH4) it would count
+      2 and look four times better per electron. At 25 C and pH 7 it would
+      then outrank acetate-driven sulfate reduction, which pays 3.6 times as
+      much per acetate. Compare methanogens per CH4.
+    ladder_note: >-
+      counted per electron of acetate oxidised to CO2 (8 per CH4), like the
+      other acetate consumers; the cell itself moves 2
 
   - name: methylotrophic_methanogenesis
     label: Methylotrophic methanogenesis from methanol

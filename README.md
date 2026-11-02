@@ -878,6 +878,14 @@ oxygen (−109 kJ/mol e⁻) > denitrification (−96) > Mn(IV) (−65) > Fe(III)
 at the famously marginal −1.4 and −3.7 kJ/mol e⁻. The zonation order is asserted
 in the test suite: if it broke, the thermodynamics would be wrong.
 
+Acetoclastic methanogenesis is counted per electron of acetate oxidised to
+CO₂ (8 per CH₄), like every other acetate consumer, which is what lets them be
+ranked against each other. The cell itself moves 2. Counted that way, it would
+outrank acetate-driven sulfate reduction, which pays 3.6 times as much per
+acetate. Ladders mark its bar with a † and say so in a footnote, through the
+entry's `ladder_note` field. The methyl disproportionations, which have no
+competitor for their donor, count the 2 e⁻ per CH₄ their methyls move (#30).
+
 The **disproportionation** group is the odd one: donor and acceptor are the
 same element, no external partner. Sulfur does it at three oxidation states,
 and elemental sulfur is the case worth knowing — *endergonic* at standard

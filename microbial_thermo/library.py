@@ -36,6 +36,8 @@ class Metabolism:
     key_element: str | None = None
     organisms: str = ""
     note: str = ""
+    #: Footnote for an affinity ladder that draws this entry; empty for none.
+    ladder_note: str = ""
 
     def build(
         self,
@@ -141,6 +143,7 @@ def default_library() -> MetabolismLibrary:
             key_element=item.get("key_element"),
             organisms=item.get("organisms", ""),
             note=item.get("note", ""),
+            ladder_note=item.get("ladder_note", ""),
         )
         for item in document["metabolisms"]
     )
@@ -205,6 +208,7 @@ def energy_table(
             "dE (V)": float("nan"),
             "reaction": "",
             "problem": "",
+            "ladder note": entry.ladder_note,
         }
         try:
             built = entry.build(conditions, backend, n_electrons=n_electrons)

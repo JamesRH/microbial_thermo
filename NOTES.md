@@ -435,11 +435,17 @@ entries use the methyl couple, so they count 2 e- per CH4, like methyl
 reduction. On every ladder they moved up fourfold: in notebook 03's
 porewater they left the energy-quantum band, and in 13's section 5 they top
 the ladder at every H2 level. Formate stays through CO2, correctly, since
-it is a two-electron donor. **Acetoclastic is still through CO2 (8 e- per
-CH4) and is an open question for James:** by formal oxidation states its
-methyl and carboxyl carbons exchange 1 e-; biochemically CO dehydrogenase
-moves 2. The library cannot express either as a couple today. Compare
-methanogens per CH4 when they are written differently.
+it is a two-electron donor. **Acetoclastic stays through CO2 (8 e- per
+CH4), decided by James on 1 November.** It can be written at 2 e-
+(donor acetate -> CO2 + CH3OH, acceptor CH3OH -> CH4; the methanol cancels
+and the cross-check passes). But acetate feeds about a dozen curated
+metabolisms, all counted at 8 per acetate, and at 2 it would outrank
+acetotrophic sulfate reduction at 25 C, pH 7 (-5.57 against -5.08
+kJ/mol e-), although sulfate reduction pays 3.6 times as much per acetate.
+That would break `test_library`'s zonation test and the README's claim.
+Instead its `ladder_note` puts a † and a footnote on every ladder, and
+notebook 13 shows the 2 e- version as an aside. Compare methanogens per
+CH4 when they are written differently.
 
 **A multi-species side needs explicit proportions when they are not 1:1.**
 `donor: [DMS, ["CO2(aq)", "HS-"]]` balances with one CO2 per HS- and fails
@@ -608,7 +614,8 @@ its committed output says 60, so that older handoff item is closed.
 
 1. **#30**, methyl electron accounting: **done 1 November**, see the trap
    "A disproportionation's per-electron energy depends on how it is
-   written". One question is left for James: acetoclastic methanogenesis.
+   written". Acetoclastic stays at 8 e- with a ladder footnote (James,
+   1 November).
 2. **#29**, per-ion floors, **next**. The affinity ladder draws its band
    from 0 to -20 on a per-electron axis (`figures/ladder.py`), which is -40
    per 2 e-, so it is further off than the per-2 e- band elsewhere. Add a `turnover:` species to each curated
