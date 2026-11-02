@@ -625,14 +625,20 @@ its committed output says 60, so that older handoff item is closed.
   Cheap, since it is mostly existing calls.
 - **#36**: Bjerrum plots, as a separate static figure.
 - **#37**: the redox-cycle diagram, with oxidation state on y and the
-  oxidative and reductive branches separated on x. Arrows carry ΔG and
-  possibly the electron count, but no enzyme or gene names. **Ask James
-  before building:** ΔG of *which* reaction? A cycle step is a half
-  reaction and needs a partner couple (see the README entry for the
-  options).
-- **#38**: gas-headspace partitioning, as future work. The formula and the
-  worked CH4 and CO2 numbers are in the README entry; recompute them if the
-  data change.
+  oxidative and reductive branches separated on x. Each arrow carries its
+  half reaction's potential E, as on the tower, and its electron count. No
+  ΔG (a half reaction has none without a partner) and no enzyme or gene
+  names. Decided 1 November, so there is no need to ask again.
+- **#38**: gas-headspace partitioning, as future work. At fixed pH it needs
+  nothing beyond this library: the total gas, headspace-to-water ratio, T
+  and pH fix p in closed form. The formula and the worked CH4 and CO2
+  numbers are in the README entry; recompute them if the data change. Once
+  the gas sets the pH, it is PHREEQC's job.
+- **#16 / PHREEQC**: not started. James has a separate PHREEQC speciation
+  project. pyGCC's `write_database` can emit PHREEQC format from the same
+  direct-access data (untested). If that works, PHREEQC results would no
+  longer be a second dataset, which was `RESEARCH.md`'s objection to
+  importing them.
 - **#39**: the global Sankey diagram, parked because it needs sourced flux
   data.
 - "Gas solubility" sliders mean partial-pressure sliders (James confirmed).

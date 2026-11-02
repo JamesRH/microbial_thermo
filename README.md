@@ -1648,14 +1648,14 @@ now exist.
     separates the oxidative branch from the reductive one, after the
     Wikipedia nitrogen-cycle figure and Fig. 2 of
     [doi:10.1186/s40168-021-01213-8](https://doi.org/10.1186/s40168-021-01213-8).
-    Each arrow is labelled with ΔG and the number of electrons moved, but
-    with no enzyme or gene names. There is a static SVG/PNG version and an
-    interactive one with sliders for pH, temperature, activities and gas
-    partial pressures. **One decision is still open:** each step on the cycle
-    is a half reaction, so its ΔG needs a partner couple. Options are the
-    curated metabolism that carries out the step, a fixed partner per branch
-    (O₂ for oxidations, H₂ for reductions), or −nFE against the SHE. Steps
-    the curated library lacks would be added there first.
+    Each arrow is labelled with its half reaction's potential $E$, in volts
+    at the sliders' conditions as on the redox tower, and with the number of
+    electrons it moves. There are no enzyme or gene names. There is a static
+    SVG/PNG version and an interactive one with sliders for pH, temperature,
+    activities and gas partial pressures. Decided 1 November 2026: a step on
+    a cycle is a half reaction, so it has a potential but no ΔG of its own,
+    since a ΔG needs a partner couple. Steps that are not yet tower couples
+    are added as couples first.
 - **#38 · Gas–headspace partitioning in a closed vessel.** The volume ratio
     alone is not enough. For a gas whose dissolved neutral form follows
     Henry's law, $c_\mathrm{aq} = K_H\,p$, the fraction of the gas that is
@@ -1675,8 +1675,14 @@ now exist.
     formation energies. At 25 °C, with equal volumes of gas and water, that
     gives 3.4 % of CH₄ dissolved. For CO₂ (p$K_{a1}$ 6.34 here) it gives
     47 % at pH 5, 82 % at pH 7 and 97.5 % at pH 8. pH is held fixed in those
-    numbers. If the CO₂ itself sets the pH, a charge balance is needed, which
-    is speciation modelling (see #16). Neutral species are ideal here, so
+    numbers. Equivalently, the total amount of gas, the headspace-to-water
+    ratio, $T$ and pH fix the partial pressure,
+    $p = n_\mathrm{total} / (V_\mathrm{gas}/RT + \alpha K_H m_\mathrm{water})$,
+    and with it the dissolved activity $K_H\,p$, which is what ΔG needs. At a
+    fixed pH that is the whole calculation, and nothing beyond this library is
+    needed. Once pH, alkalinity and several gases interact, for example when
+    the CO₂ itself sets the pH, a charge balance is needed. That is speciation
+    modelling, which is PHREEQC's job (its fixed-volume `GAS_PHASE`); see #16. Neutral species are ideal here, so
     there is no salting out, and N₂O(g) is in none of the databases. As a
     reaction runs, its gases accumulate in the headspace and shift ΔG through
     $Q$, so the natural figure is a sweep over the extent of reaction.
@@ -1688,7 +1694,15 @@ now exist.
     databases mostly do not carry uncertainties, so this likely needs
     user-supplied values.
 - **#16 · PHREEQC export**, emitting a reaction set as PHREEQC input so students can
-    move from hand calculation to full speciation modelling.
+    move from hand calculation to full speciation modelling. *Not started.*
+    `RESEARCH.md` concluded that generating input is safe but importing
+    results is not, because PHREEQC's own databases are a second dataset that
+    disagrees invisibly with ours. One thing could change that: pyGCC has a
+    `write_database` class that can write PHREEQC format, with log K values
+    computed from the same direct-access data this library uses. A PHREEQC
+    run on such a database should then rest on the same numbers. This is
+    untested here. James has a separate PHREEQC speciation project
+    (1 November 2026), which is the natural place to try it.
 - **#17 · Pressure beyond near-surface**, opening up the hydrothermal and deep
     subsurface range pyGCC is actually built for.
 - **#39 · Global element pools and fluxes as Sankey diagrams** — *parked*
