@@ -357,7 +357,7 @@ class TestTheExportedControls(unittest.TestCase):
 
     def test_the_minority_trace_exists_to_be_toggled(self):
         figure = plot_interactive_element("As", grid=self.grid)
-        self.assertEqual(figure.data[4].name, "other forms of the same state")
+        self.assertEqual(figure.data[4].name, "other species at the same state")
         self.assertTrue(len(figure.data[4].x) > 0)
 
     @unittest.skipIf(NODE is None, "node is not installed")

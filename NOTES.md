@@ -18,7 +18,7 @@ It must be **sourced**. `pygcc` comes from PyPI (not conda-forge) and is the one
 sanctioned `pip` in the project.
 
 ```bash
-python -m unittest discover -s tests     # full suite, 757 tests, ~235 s plugged in
+python -m unittest discover -s tests     # full suite, 766 tests, ~220 s plugged in
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # ~95 s
 python tests/test_balance.py             # one file, seconds — use this while iterating
 ruff format microbial_thermo tests && ruff check microbial_thermo tests
@@ -36,6 +36,14 @@ widget state (fresh random IDs every run), and stages the `.ipynb`, the `.py`
 and the page. A failed run blocks the commit. The hook adds ~25 s per commit.
 Do not pass `store_widget_state=False` to nbconvert instead: 02's Output
 widget makes nbclient raise `KeyError`.
+
+**Stage in one command, commit in another.** The hook blocks the *whole*
+Bash command, so in `git add ... && git commit` a blocked commit means the
+add never ran either. Retrying just `git commit` then commits only what the
+hook staged, which is notebook 02, under your message. This happened on
+1 November and needed an amend. The hook also has no stall watchdog: when
+02's kernel hangs (see "nbclient kernels hang intermittently") it waits the
+full 600 s cell timeout before it fails.
 
 ---
 
@@ -496,8 +504,19 @@ on a Latimer diagram, the forms that lost their rung at this pH -- under the
 axis with the reason. The note is an axis annotation rather than a
 `figure.text` so `tight_layout` makes room for it; the Latimer half-reaction
 block was moved the same way, since as a `figure.text` it ran into the
-"overall" arc. When every species is skipped, `element_series` now says why
-instead of "no usable species".
+"overall" arc. On a Frost diagram the arbitrary-zero warning was the last
+`figure.text`; since #34 (1 November 2026) it is a third paragraph of the
+same annotation as the omissions and the unverified notice, so none of the
+three can overlap another. When every species is skipped, `element_series`
+now says why instead of "no usable species".
+
+**The Frost key's grey squares are "other species at the same state", not
+"other forms".** `predominant` is the lowest point at each oxidation state.
+With acid-base pairs the rest are minority forms; with `species=` naming
+distinct compounds (notebook 13's C(-II) column) they are not forms of one
+another. Do not class them as "disproportionates" either: a higher polymorph
+at the same state (ferrihydrite over goethite) converts to the lower one,
+which is not a disproportionation.
 
 **A slow suite may be the laptop, not the code.** On battery the CPU governor
 drops to `powersave` and all cores sit near 0.8 GHz against a 5.2 GHz maximum;
@@ -606,16 +625,23 @@ the potential.
 ## Where this was left (1 November 2026)
 
 **Branches.** On 1 November, at James's request, `main` was fast-forwarded
-to `ai/claude/methyl-electrons` and pushed. That branch is stacked on
-`ai/claude/kernel-watchdog` and carries the watchdog, these notes and #30.
-Every local `ai/claude/*` branch is merged into main, so there is no
-unmerged work anywhere. One branch name misleads: `ai/claude/notebook-watchdog`
-holds notebook 13's interactive page and no watchdog.
+to `ai/claude/methyl-electrons` and pushed, and his `AGENTS.md` edit followed
+(`010914d`, pushed). Later that day `ai/claude/acetoclastic-note` was cut
+from it and holds four commits, **not merged and not pushed**: the
+acetoclastic ladder footnote, #31, #32 and #34. James asked for a commit
+after each item, not for a merge or push. One branch name misleads:
+`ai/claude/notebook-watchdog` holds notebook 13's interactive page and no
+watchdog.
 
-**Working tree.** The one-line `AGENTS.md` edit (section 8, "unless the user
-tells you to") and `TODO_JRHnote3s.md` are James's. Leave them uncommitted
-unless he asks. The TODO's content is now README Future work #35-#39.
-Notebook 06's partial-run outputs were reverted at his request.
+**Working tree.** Clean. `TODO_JRHnote3s.md` is committed and its content
+is README Future work #35-#39. Notebook 06 was fully re-run for #34; its
+widget state grew from one stored widget (James's 22 October save) to all
+three, about 540 KB.
+
+**Open question for James:** neither notebook 03 nor 13 gives methylamine or
+DMS a concentration, so both sit at 1 M on the ladders. At methanol's 1 uM
+in 03, methylamine's bar matches methanol's and DMS falls into the band.
+The prose now says so; whether to set real concentrations is his call.
 
 **Done this round.** #33's watchdog (see the trap "nbclient kernels hang
 intermittently"), with `psutil` declared as a dev dependency and the test
@@ -652,8 +678,8 @@ its committed output says 60, so that older handoff item is closed.
    sulfate for sulfate reducers). Jackson & McInerney 2002 is syntrophic
    cocultures stopping near dG' = 0 for the overall reaction, not a
    per-organism number. Feldewert 2020 (< 0.1 Pa H2), Cai 2018 and Leu 2020
-   (both ISME J) checked out as cited. Then **#34** (figure-text
-   collisions).
+   (both ISME J) checked out as cited. **#34** (figure-text collisions):
+   **done 1 November**, see "The Frost key's grey squares".
 4. Optionally, the other half of #33: run the notebooks in parallel.
 
 **Then the figures from James's TODO**, with his answers of 1 November:

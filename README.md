@@ -1200,8 +1200,8 @@ own. Ammonium lands at −0.823 V against the textbook −0.82 and sulfide at
 reference cancels; here it *is* the zero of the y axis. Drawing nitrogen
 against dissolved N₂ instead of N₂ gas puts every point 0.094 V low — which is
 how this was caught. Where no elemental form exists at all (chromium and
-uranium metal are in none of our databases) the figure says so: the slopes
-remain valid, the heights do not.
+uranium metal are in none of our databases) the figure says so, in the
+footnote under the axis: the slopes remain valid, the heights do not.
 
 **Two rules keep the ladders honest.** A species only earns a rung if its
 electron count really is an oxidation state, which means no auxiliary
@@ -1231,7 +1231,15 @@ of the same state wins at this pH (CO₂(aq) against bicarbonate at pH 7). The
 first two are in `.excluded` as `(species, reason)` pairs and the third in a
 Latimer diagram's `.alternatives`, and both figures print a note under the axis
 naming each one with its reason. `show_omitted=False` turns the note off; a
-panel drawn into an axis you supplied never gets one.
+panel drawn into an axis you supplied never gets one. On a Frost diagram the
+arbitrary-zero warning and the unverified-data notice share that footnote,
+so they cannot overlap it, and neither is switched off with the omissions.
+
+Points that are not the lowest at their oxidation state are drawn as open
+grey squares and keyed "other species at the same state". Usually they are
+acid–base forms (H₂AsO₄⁻ beside HAsO₄²⁻). With `species=` they can also be
+different compounds (methanol and DMS at C(−II)), and the key makes no claim
+about whether those are stable.
 
 ```python
 diagram = latimer_diagram("C", species=["HCO3-", "CO2(aq)", "Methanamine(aq)", "Methane(aq)"])
@@ -1447,7 +1455,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 757 tests, ~235 s plugged in
+python -m unittest discover -s tests     # 766 tests, ~220 s plugged in
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # skip the slow notebook runs
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
@@ -1505,8 +1513,8 @@ and nobody reading GitHub saw the numbers this repo cites. They are plain
 bullets with literal `#N` labels now, which render the same everywhere.
 
 **Next up:** corrections before new figures (agreed 1 November 2026). #30,
-#31 and #32 are done; next is **#29** (per-ion energy floors), which corrects
-claims the notebooks currently teach, then #34. #29–#34 are corrections
+#31, #32 and #34 are done; next is **#29** (per-ion energy floors), which
+corrects claims the notebooks currently teach. #29–#34 are corrections
 found while building notebook 13. The new figures come after them: #35 and
 #36 are small, #37 is the redox-cycle diagram. The older items are
 independent of each other, and **9** (two-dimensional contours) and **15**
@@ -1540,6 +1548,7 @@ now exist.
 | 28 | Per-element notebooks | `notebooks/05`–`12`, executed by `tests/test_notebooks.py` |
 | 33 (part) | Stalled-kernel watchdog for the notebook runs | `StallWatchdog` in `tests/test_notebooks.py` |
 | 30 | Methyl disproportionations count the electrons the methyls move | `reactions.yaml`, `tests/test_methanogenesis.py`, notebooks 03 and 13 |
+| 34 | Frost footnotes share one block; the key says "other species at the same state" | `figures/frost.py`, `figures/interactive_element.py`, `tests/test_frost.py`, notebook 13 |
 | 32 | Attributions checked: the S organism is not *Syntrophus*; notebook 13's sources verified | `reactions.yaml`, notebook 13 |
 | 31 | Methylammonium, and the di- and trimethylamines, from OBIGT's joule rows | `data/external/obigt_organic_aq_joule.csv`, `external.py`, `acid_base.yaml`, `tests/test_external.py`, `tests/test_methanogenesis.py`, notebooks 03 and 13 |
 
@@ -1611,12 +1620,6 @@ now exist.
    hang now costs about 30 s instead of 240. **Still open:** run the 13
    notebooks in parallel, which would cut their wall time to about that of
    the slowest one.
-- **#34 · Figure-text collisions and wording.** `plot_frost` puts the
-   "no elemental form" warning in a `figure.text` at the bottom and the new
-   omitted-species note in an axis annotation; when both apply they can
-   overlap (no shipped figure has both today). The Frost legend's "other forms
-   of the same state" is misleading when distinct compounds share a state, as
-   at C(−II) in notebook 13.
 - **#35 · Standalone pages and static files for the five cycle elements.**
    Only arsenic has an exported interactive page
    (`notebooks/arsenic_interactive.html`). Carbon, nitrogen and sulfur have

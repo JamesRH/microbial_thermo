@@ -513,7 +513,11 @@ def plot_frost(
     # Three classes, and the middle one is the reason this needs saying: a
     # minority form of an oxidation state is not unstable, it is just not the
     # form that dominates at this pH. Drawing it as "off the hull" -- which an
-    # earlier version did -- says something false about it.
+    # earlier version did -- says something false about it. The key says
+    # "species", not "forms": the class also holds distinct compounds that
+    # share a state (methanol and DMS at C(-II)), which are not forms of one
+    # another, and a higher polymorph converts to the lower one rather than
+    # disproportionating, so neither name fits all of them.
     predominant = {id(point) for point in diagram.predominant}
     seen_minor = seen_unstable = False
     for point in shown:
@@ -550,7 +554,7 @@ def plot_frost(
             markerfacecolor="white",
             markeredgecolor=PALETTE["muted"],
             markeredgewidth=1.2,
-            label="other forms of the same state",
+            label="other species at the same state",
         )
         if seen_unstable:
             ax.plot(
@@ -632,30 +636,27 @@ def plot_frost(
         title = f"{element} — Frost-Ebsworth diagram\n{subtitle}"
     ax.set_title(title, fontsize=SIZES["title"], pad=10)
 
-    if not diagram.reference_is_element and owns_figure:
-        figure.text(
-            0.5,
-            0.005,
-            f"No elemental form of {element} was available, so the zero of the "
-            f"y axis is arbitrary ({diagram.reference}). Slopes are still valid; "
-            "the heights are not.",
-            ha="center",
-            va="bottom",
-            fontsize=SIZES["annotation"] - 1,
-            color=PALETTE["endergonic"],
-            wrap=True,
-        )
-
     if owns_figure:
         # Below the x-axis label. Only on a figure this call owns: a panel in
         # someone else's figure leaves its footnotes to that figure.
-        # The unverified notice is not an omission and is not switched off
-        # with them. It goes in the same annotation so the two cannot overlap.
+        # The arbitrary-zero warning and the unverified notice are not
+        # omissions and are not switched off with them. All three go in one
+        # annotation, so they cannot overlap and tight_layout makes room for
+        # them; the zero warning used to be a figure.text, which layout
+        # ignores.
         import textwrap
 
+        zero = None
+        if not diagram.reference_is_element:
+            zero = (
+                f"No elemental form of {element} was available, so the zero of the "
+                f"y axis is arbitrary ({diagram.reference}). Slopes are still valid; "
+                "the heights are not."
+            )
         warning = unverified_notice(point.backend for point in shown)
         notes = [
             omitted_footnote(diagram.excluded) if show_omitted else None,
+            textwrap.fill(zero, width=110) if zero else None,
             textwrap.fill(warning, width=110) if warning else None,
         ]
         notes = [note for note in notes if note]

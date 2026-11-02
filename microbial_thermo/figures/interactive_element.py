@@ -394,7 +394,7 @@ def plot_interactive_element(
     )
 
     # Trace 0: the predominant forms. Trace 1: the hull. Trace 2: the field.
-    # Trace 3: the pH line. Trace 4: the other forms of each state, which the
+    # Trace 3: the pH line. Trace 4: the other species at each state, which the
     # "show" control turns on and off. The JavaScript restyles them by index,
     # so the order here is load-bearing.
     figure.add_trace(
@@ -464,7 +464,7 @@ def plot_interactive_element(
                 "line": {"width": 1.5, "color": PALETTE["muted"]},
                 "color": PALETTE["muted"],
             },
-            name="other forms of the same state",
+            name="other species at the same state",
             textposition="middle right",
             hovertemplate="%{text}<br>state %{x}<br>%{y:.3f} V<extra></extra>",
             text=[plotly_label(p.backend) for p in others],

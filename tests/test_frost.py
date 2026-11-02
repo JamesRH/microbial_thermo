@@ -405,7 +405,7 @@ class TestShowAndLabelOptions(unittest.TestCase):
         figure, _ = plot_frost("As", diagram=self.diagram, show="all")
         try:
             entries = [text.get_text() for text in figure.axes[0].get_legend().get_texts()]
-            self.assertIn("other forms of the same state", entries)
+            self.assertIn("other species at the same state", entries)
             self.assertNotIn("disproportionates", entries)
         finally:
             plt.close(figure)
@@ -462,8 +462,37 @@ class TestFigure(unittest.TestCase):
 
         figure, _ = plot_frost("Cr", pH=0.0)
         try:
-            texts = " ".join(t.get_text() for t in figure.texts)
-            self.assertIn("zero of the", texts)
+            self.assertIn("zero of the", " ".join(_notes(figure)))
+        finally:
+            plt.close(figure)
+
+    def test_the_zero_warning_and_the_omissions_share_one_footnote(self):
+        """README #34: they were a figure.text and an axis annotation, both
+        at the bottom, and overlapped when a figure needed both. One block of
+        text cannot overlap itself, and no figure-level text is left for
+        tight_layout to ignore."""
+        import dataclasses
+
+        import matplotlib.pyplot as plt
+
+        diagram = frost_diagram("Cr", pH=0.0)
+        both = dataclasses.replace(diagram, excluded=(("Methanamine(aq)", "contains N"),))
+        figure, _ = plot_frost("Cr", diagram=both)
+        try:
+            footnotes = [note for note in _notes(figure) if "zero of the" in note]
+            self.assertEqual(len(footnotes), 1)
+            self.assertTrue(footnotes[0].startswith("Not drawn"))
+            self.assertIn("Methanamine(aq)", footnotes[0])
+            self.assertEqual(figure.texts, [])
+        finally:
+            plt.close(figure)
+
+    def test_the_zero_warning_stays_when_omissions_are_hidden(self):
+        import matplotlib.pyplot as plt
+
+        figure, _ = plot_frost("Cr", pH=0.0, show_omitted=False)
+        try:
+            self.assertIn("zero of the", " ".join(_notes(figure)))
         finally:
             plt.close(figure)
 

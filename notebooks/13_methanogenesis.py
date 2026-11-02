@@ -173,12 +173,12 @@ plt.show()
 #   hull, which needs electrons from somewhere else: H₂.
 #
 # A note on the legend. At C(−II) five different compounds share one
-# x position. The library treats points at the same oxidation state as
-# "forms of the same state" and colours only the lowest (DMS) as the
-# predominant one; methanol, the two methylammonium ions and methanethiol are
-# drawn as open grey squares. Here that does **not** mean they are stable.
-# They are different compounds, not acid–base forms of one compound, and all
-# four sit above the CH₄–HCO₃⁻ line too.
+# x position. The library colours only the lowest of them (DMS) as the
+# predominant point of that state; methanol, the two methylammonium ions and
+# methanethiol are open grey squares, "other species at the same state". That
+# key says nothing about whether they are stable. They are different
+# compounds, not acid–base forms of one another, and all four sit above the
+# CH₄–HCO₃⁻ line too.
 #
 # On this diagram the **vertical height of a substrate above the chord**,
 # times the Faraday constant, is the energy released per carbon when it
