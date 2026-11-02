@@ -18,14 +18,14 @@ It must be **sourced**. `pygcc` comes from PyPI (not conda-forge) and is the one
 sanctioned `pip` in the project.
 
 ```bash
-python -m unittest discover -s tests     # full suite, 465 tests, ~165 s
-MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # ~130 s
+python -m unittest discover -s tests     # full suite, 755 tests, ~225 s plugged in
+MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # ~95 s
 python tests/test_balance.py             # one file, seconds — use this while iterating
 ruff format microbial_thermo tests && ruff check microbial_thermo tests
 ```
 
 The suite now executes the numbered teaching notebooks, which is the slowest
-part (~25 s) and the part most likely to catch a rename you did not expect.
+part (about two minutes plugged in) and the part most likely to catch a rename you did not expect.
 
 **Notebook 02 is re-run before every commit** (James's standing request), so
 `notebooks/tower_interactive.html` always matches the committed tower. A
@@ -232,11 +232,23 @@ temperature will not cancel against R — it needs `kelvin * ureg.kelvin`.
 Seen three times: a kernel starts, goes idle mid-notebook, and the client waits
 forever on unchanged notebooks that pass on the next run. Once was a laptop
 suspend; twice was not, so do not write it off as sleep the way I first did.
-`tests/test_notebooks.py` now retries once on `CellTimeoutError` or
-`DeadKernelError` and caps cell time at 240 s -- a `CellExecutionError` is a
-real notebook bug and is never retried. When a run seems slow, check `ps` for a
-live `ipykernel_launcher` at ~1% CPU before assuming the suite got heavier; the
-giveaway is wall time far above the usual ~165 s with no new output.
+`tests/test_notebooks.py` retries once on `CellTimeoutError` or
+`DeadKernelError` -- a `CellExecutionError` is a real notebook bug and is
+never retried. Since 1 November 2026 a `StallWatchdog` catches the hang
+itself: a thread samples the kernel tree's CPU time, and a cell that has
+used under 5 % of a CPU for 30 s gets its kernel killed, which nbclient
+reports as `DeadKernelError` within a second. The final error then says
+"Kernel stalled", not "Kernel died". An idle kernel was measured at about
+1 ms of CPU per second, so the margin is wide. The 240 s cell timeout stays
+as the backstop for a kernel that is busy forever.
+
+Two nbclient 0.11 traps the watchdog depends on. `on_cell_complete` fires
+right after the execute request is *sent*, not when the cell finishes
+(`client.py` ~line 987), so "a cell is running" is `on_cell_execute` ->
+`on_cell_executed`. And a hung client may never reach `on_cell_executed`,
+so the stall clock starts at `on_cell_execute` rather than waiting on any
+reply.
+The kernel pid is `client.km.provisioner.process.pid`.
 
 **Plotly's native sliders cannot express independent dimensions.** A slider's
 steps cannot read the other sliders' positions, so two sliders cannot select a
@@ -567,74 +579,81 @@ the potential.
 
 ---
 
-## Where this was left (6 October 2026)
+## Where this was left (1 November 2026)
 
-**Everything is merged and pushed** (7 October): the skipped-species fix, the
-per-ion floors and low-H2 table, the database-test speed fix, notebook 13's
-interactive substrate page (`methanogenesis_interactive.html`, linked from
-the README and `index.html`), and the exported element page now naming
-species it dropped for temperature. Full suite **729 tests, ~205 s
-plugged in**, all passing. Corrections found along the way are README
-Future work **#29-#34**.
+**Branches.** `main` = `origin/main` = `99dee0c`, the tower work James had
+pushed on 29 October. Every local `ai/claude/*` branch is merged into main,
+so there is no unmerged work anywhere. One branch name misleads:
+`ai/claude/notebook-watchdog` holds notebook 13's interactive page and no
+watchdog. The watchdog was built on `ai/claude/kernel-watchdog`.
 
-**Next, the watchdog James asked for** (#33, `tests/test_notebooks.py`). The hang
-looks like: kernel alive at ~1% CPU, client waiting, passes on retry. Today
-only `CELL_TIMEOUT_S = 240` plus one retry catches it. Design agreed: a
-thread samples the kernel's CPU time (psutil 7.2.2 is installed; include
-children) every ~5 s; if a cell is executing and CPU has not advanced in
-~30 s, kill the kernel process tree. nbclient's `_async_poll_kernel_alive`
-then cancels the wait and raises `DeadKernelError`, which `execute()`
-already retries. Record that the watchdog fired so the final error says
-"stalled", not "died". Kernel pid: `client.km.provisioner.process.pid`
-(LocalProvisioner has both `process` and `pid`).
+**Working tree.** The one-line `AGENTS.md` edit (section 8, "unless the user
+tells you to") and `TODO_JRHnote3s.md` are James's. Leave them uncommitted
+unless he asks. The TODO's content is now README Future work #35-#39.
+Notebook 06's partial-run outputs were reverted at his request.
 
-**Trap found while reading nbclient 0.11** (`client.py` ~line 981):
-`on_cell_complete` fires immediately after the execute request is *sent*,
-not when the cell finishes. "Cell is running" is therefore
-`on_cell_execute` -> `on_cell_executed` (which fires after the reply), not
-`on_cell_execute` -> `on_cell_complete`. Getting this wrong makes the
-watchdog think no cell is ever running. Also: a hung client may never reach
-`on_cell_executed`, which is exactly the case to catch, so the stall clock
-must run from `on_cell_execute` regardless.
+**Done this round.** #33's watchdog (see the trap "nbclient kernels hang
+intermittently"), with `psutil` declared as a dev dependency and the test
+counts refreshed. Notebook 03 *was* re-run after the seven new metabolisms:
+its committed output says 60, so that older handoff item is closed.
 
-Test it with a throwaway notebook: a `time.sleep(600)` cell must be killed
-in about stall + startup seconds; a pure-CPU loop longer than the stall
-window must not be. Make the stall window a parameter so the test can use
-~5 s. Also update the module docstring ("roughly 20 seconds" is stale: the
-notebooks take ~240 s on battery, ~100 s plugged in, notebook 13 the
-largest).
+**Agreed order (1 November): corrections before new figures.**
 
-**Queued after the watchdog**, in James's order of interest:
+1. **#30**, methyl electron accounting. Rewrite `methylotrophic_methanogenesis`,
+   `methylamine_methanogenesis` and `dms_methanogenesis` with CH3X/CH4
+   acceptor couples instead of routing them through CO2. Then re-run 03 and
+   13, whose ladders and prose depend on it.
+2. **#29**, per-ion floors. Add a `turnover:` species to each curated
+   metabolism in `reactions.yaml`, and move notebook 13's helpers
+   (`turnovers`, `floors_for`, `draw_floors`, `draw_floors_plotly`, around
+   line 680) into the library. Then **recompute, not reword**, these claims:
+   - 02's propionate window ("neither partner is guaranteed one quantum").
+     Per ion, the methanogen clears about 1.1 ions per CH4 and the
+     propionate oxidiser gets only about 0.8 per propionate.
+   - 02's H2 sweep.
+   - 07's sulfur disproportionation ("inside the quantum until 5e-6"),
+     which compares -20 against ΔG per mol S.
+   - 13's section 5 floor plot and toy model.
+   - The affinity ladders, as per-bar ticks.
+3. **#31** (methylammonium), **#32** (attributions; `reactions.yaml` line
+   332 still says *Syntrophus*), and **#34** (figure-text collisions).
+4. Optionally, the other half of #33: run the notebooks in parallel.
 
-- *Parallel notebook execution*: the 13 are independent; a thread pool in
-  `setUpClass` with per-notebook result lookups would cut wall time to about
-  the slowest notebook. Optional: skip a notebook whose `.py`, library source
-  and package versions hash the same as its last pass.
-- *A `turnover:` field per curated metabolism* in `reactions.yaml`, and the
-  floor helpers (`turnovers`, `floors_for`, `draw_floors`,
-  `draw_floors_plotly`) moved from notebook 13 into the library, so floors
-  appear automatically wherever the metabolism is known. Then apply to:
-  02's propionate window (per ion the methanogen clears one ion per CH4, 1.1,
-  and the propionate oxidiser gets only ~0.8 per propionate -- the current
-  text says "neither partner is guaranteed one quantum"), 02's H2 sweep,
-  07's sulfur-disproportionation plot (its "inside the quantum until 5e-6"
-  claim compares -20 against per-mol-S; recompute before rewriting), 13's
-  section 5 floor plot and toy model, and the affinity ladders as per-bar
-  ticks.
-- Notebook 03 has not been re-run since the seven new metabolisms; its
-  committed outputs say 53 metabolisms, the library has 60.
+**Then the figures from James's TODO**, with his answers of 1 November:
 
-**README Future-work items still open** -- #2, #8, #9, #12, #15, #16, #17,
-independent of each other. If asked to pick, #9 (two-dimensional contours)
-and #15 (uncertainty propagation) add most; #2 is blocked on hydroxylamine.
-Item numbers are literal `#N` bullets on purpose; never make them an
-ordered list (see "Where the planned work is recorded").
+- **#35**: standalone pages plus SVG and PNG files for C, N, S, Fe and Mn.
+  Cheap, since it is mostly existing calls.
+- **#36**: Bjerrum plots, as a separate static figure.
+- **#37**: the redox-cycle diagram, with oxidation state on y and the
+  oxidative and reductive branches separated on x. Arrows carry ΔG and
+  possibly the electron count, but no enzyme or gene names. **Ask James
+  before building:** ΔG of *which* reaction? A cycle step is a half
+  reaction and needs a partner couple (see the README entry for the
+  options).
+- **#38**: gas-headspace partitioning, as future work. The formula and the
+  worked CH4 and CO2 numbers are in the README entry; recompute them if the
+  data change.
+- **#39**: the global Sankey diagram, parked because it needs sourced flux
+  data.
+- "Gas solubility" sliders mean partial-pressure sliders (James confirmed).
+
+**Carried from the 29 October handoff, not re-checked:** the tower draws
+each named species at every pH, so at the ends of the -1 to 14 slider some
+couples are drawn for their minority form.
+
+**README Future-work items still open from before:** #2, #8, #9, #12, #15,
+#16 and #17, independent of each other. If asked to pick, #9
+(two-dimensional contours) and #15 (uncertainty propagation) add the most;
+#2 is blocked on hydroxylamine. Item numbers are literal `#N` bullets on
+purpose; never make them an ordered list (see "Where the planned work is
+recorded").
 
 **Before timing anything, check the power state.** See the trap above:
 on battery the suite runs 2.4x slower and it looks like a regression.
 
 **Kernels:** James runs JupyterLab; never kill a kernel that is not yours.
-Kill your own nbconvert and its kernel by PID only.
+Kill your own nbconvert and its kernel by PID only. The watchdog kills only
+the kernel tree it started, by the pid nbclient gave it.
 
 **The best single demonstration in the notebooks** is still `07_sulfur`
 (sulfur leaves the hull below ~1.7e-2 activity), now joined by 13's

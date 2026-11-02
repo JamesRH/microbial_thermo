@@ -1430,7 +1430,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 729 tests, ~205 s plugged in
+python -m unittest discover -s tests     # 755 tests, ~225 s plugged in
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # skip the slow notebook runs
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
@@ -1487,12 +1487,15 @@ the digits written, so a file saying 24, 25, 26, 27 rendered as 18, 19, 20, 21
 and nobody reading GitHub saw the numbers this repo cites. They are plain
 bullets with literal `#N` labels now, which render the same everywhere.
 
-**Next up:** **#33** (the notebook-run watchdog, designed in `NOTES.md`) and
-then **#29** (per-ion energy floors), which corrects claims in notebooks 02
-and 07. #29–#34 are corrections found while building notebook 13; the older
-items are independent of each other, and **9** (two-dimensional contours) and
-**15** (uncertainty propagation) are the two that would add most to the
-figures that now exist.
+**Next up:** corrections before new figures (agreed 1 November 2026). First
+**#30** (methyl electron accounting, a factor of four on three ladder
+positions) and **#29** (per-ion energy floors), which correct claims the
+notebooks currently teach, then #31, #32 and #34. #29–#34 are corrections
+found while building notebook 13. The new figures come after them: #35 and
+#36 are small, #37 is the redox-cycle diagram. The older items are
+independent of each other, and **9** (two-dimensional contours) and **15**
+(uncertainty propagation) are the two that would add most to the figures that
+now exist.
 
 ### Completed
 
@@ -1519,6 +1522,7 @@ figures that now exist.
 | 25 | Frost–Ebsworth diagrams | `figures/frost.py`, `tests/test_frost.py` |
 | 26 | Interactive Latimer, Frost and Eh–pH | `figures/interactive_element.py`, `tests/test_interactive_element.py` |
 | 28 | Per-element notebooks | `notebooks/05`–`12`, executed by `tests/test_notebooks.py` |
+| 33 (part) | Stalled-kernel watchdog for the notebook runs | `StallWatchdog` in `tests/test_notebooks.py` |
 
 ### Tier 1 — small, and builds directly on what exists
 
@@ -1603,18 +1607,32 @@ figures that now exist.
    and Jackson & McInerney 2002 from memory, and the last two are summarised
    ("methanogens near −10 kJ/mol", "single-digit kJ/mol") without the papers
    checked. Verify each against the source.
-- **#33 · Notebook-run watchdog and faster notebook tests.** Kernels hang
-   intermittently (alive, ~1 % CPU); today only a 240 s cell timeout catches
-   it. Detect it by stalled kernel CPU time and kill for the existing retry;
-   design and an nbclient hook trap are in `NOTES.md`. Then run the 13
-   notebooks in parallel. Also refresh `tests/test_notebooks.py`'s docstring
-   ("roughly 20 seconds" is long stale).
+- **#33 · Notebook-run watchdog and faster notebook tests** — *partly done*.
+   The watchdog is in (see the Completed table). A kernel that is running a
+   cell but has used under 5 % of a CPU for 30 s is killed and retried, so a
+   hang now costs about 30 s instead of 240. **Still open:** run the 13
+   notebooks in parallel, which would cut their wall time to about that of
+   the slowest one.
 - **#34 · Figure-text collisions and wording.** `plot_frost` puts the
    "no elemental form" warning in a `figure.text` at the bottom and the new
    omitted-species note in an axis annotation; when both apply they can
    overlap (no shipped figure has both today). The Frost legend's "other forms
    of the same state" is misleading when distinct compounds share a state, as
    at C(−II) in notebook 13.
+- **#35 · Standalone pages and static files for the five cycle elements.**
+   Only arsenic has an exported interactive page
+   (`notebooks/arsenic_interactive.html`). Carbon, nitrogen and sulfur have
+   sliders only in a live kernel, and iron and manganese have static figures
+   only. Export a `plot_interactive_element` page for each of C, N, S, Fe and
+   Mn, save SVG and PNG copies of each static Latimer, Frost and Eh–pH
+   diagram, and link the pages from `index.html`. Hydroxylamine and the
+   25 °C-only minerals drop out at any other temperature, and the exported
+   page already says so.
+- **#36 · Bjerrum plots.** The fraction of each form against pH for every
+   acid–base family of an element (`speciation.default_families()`), as a
+   separate static figure beside its Eh–pH diagram. Each vertical boundary
+   between two dissolved forms on an Eh–pH diagram is where two of these
+   curves cross. Static only, by choice.
 
 ### Tier 2 — moderate, mostly new figures over existing machinery
 
@@ -1625,6 +1643,43 @@ figures that now exist.
    T × pH) with the $\Delta G = 0$ and energy-quantum contours drawn.
 - **#12 · Problem generator and grader**: randomised conditions with worked
     solutions, built on show-your-work.
+- **#37 · Redox-cycle diagrams** for carbon, nitrogen, sulfur, iron and
+    manganese. Formal oxidation state goes on the y axis, and the x axis
+    separates the oxidative branch from the reductive one, after the
+    Wikipedia nitrogen-cycle figure and Fig. 2 of
+    [doi:10.1186/s40168-021-01213-8](https://doi.org/10.1186/s40168-021-01213-8).
+    Each arrow is labelled with ΔG and the number of electrons moved, but
+    with no enzyme or gene names. There is a static SVG/PNG version and an
+    interactive one with sliders for pH, temperature, activities and gas
+    partial pressures. **One decision is still open:** each step on the cycle
+    is a half reaction, so its ΔG needs a partner couple. Options are the
+    curated metabolism that carries out the step, a fixed partner per branch
+    (O₂ for oxidations, H₂ for reductions), or −nFE against the SHE. Steps
+    the curated library lacks would be added there first.
+- **#38 · Gas–headspace partitioning in a closed vessel.** The volume ratio
+    alone is not enough. For a gas whose dissolved neutral form follows
+    Henry's law, $c_\mathrm{aq} = K_H\,p$, the fraction of the gas that is
+    dissolved at equilibrium is
+
+    $$f_\mathrm{dissolved} = \frac{1}{1 + \dfrac{V_\mathrm{gas}}{\alpha\,K_H\,R\,T\,m_\mathrm{water}}}$$
+
+    with $K_H$ in mol kg⁻¹ bar⁻¹, $V_\mathrm{gas}$ in L,
+    $R$ in L bar mol⁻¹ K⁻¹ and $m_\mathrm{water}$ in kg. Here $\alpha$ is
+    total dissolved over neutral dissolved, which is
+    $1 + 10^{\,\mathrm{pH}-\mathrm{p}K_{a1}}$ for CO₂ below about pH 9, and 1
+    for CH₄ or H₂. (At pH 9, carbonate, with p$K_{a2}$ 10.33, is 4.7 % of the
+    bicarbonate; above that, add its term.) So the calculation needs the temperature, the headspace volume,
+    the mass of water and the total amount of each gas, plus $K_H$ and the
+    p$K_a$, both of which this library can already compute from pyGCC. $K_H$
+    is $\exp(-\Delta G^\circ_\mathrm{solv}/RT)$, from the gas and aqueous
+    formation energies. At 25 °C, with equal volumes of gas and water, that
+    gives 3.4 % of CH₄ dissolved. For CO₂ (p$K_{a1}$ 6.34 here) it gives
+    47 % at pH 5, 82 % at pH 7 and 97.5 % at pH 8. pH is held fixed in those
+    numbers. If the CO₂ itself sets the pH, a charge balance is needed, which
+    is speciation modelling (see #16). Neutral species are ideal here, so
+    there is no salting out, and N₂O(g) is in none of the databases. As a
+    reaction runs, its gases accumulate in the headspace and shift ΔG through
+    $Q$, so the natural figure is a sweep over the extent of reaction.
 
 ### Tier 3 — larger, or needing data the current backend lacks
 
@@ -1636,6 +1691,11 @@ figures that now exist.
     move from hand calculation to full speciation modelling.
 - **#17 · Pressure beyond near-surface**, opening up the hydrothermal and deep
     subsurface range pyGCC is actually built for.
+- **#39 · Global element pools and fluxes as Sankey diagrams** — *parked*
+    (1 November 2026). This needs a sourced dataset of pools and fluxes, with
+    a citation for every number, and this library has none. Thermodynamic
+    sliders do not apply to a global budget, so it is a data project rather
+    than a figure over existing machinery.
 
 ---
 

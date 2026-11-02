@@ -27,8 +27,10 @@ dependencies:
   - streamlit>=1.38
   - ipykernel
   - ipywidgets
-  # nbclient executes the teaching notebooks in the test suite.
+  # nbclient executes the teaching notebooks in the test suite; psutil lets
+  # the suite see when a kernel has stalled, and kill it.
   - nbclient>=0.9
+  - psutil>=5.9
   # Test-only: cross-checks mineral oxidation states independently.
   - pymatgen
   - ruff
