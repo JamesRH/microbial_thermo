@@ -131,13 +131,11 @@ class TestTheLibraryEntries(unittest.TestCase):
 
     def test_disproportionations_agree_per_methane_however_written(self):
         """Through CO2 or through the CH3OH/CH4 couple: same energy per CH4."""
+        direct = _quiet(reaction, "methylotrophic_methanogenesis", STANDARD, normalize_to="methane")
         through_co2 = _quiet(
-            reaction, "methylotrophic_methanogenesis", STANDARD, normalize_to="methane"
-        )
-        direct = _quiet(
             mt.Reaction.from_couples,
             donor=Couple.make("methanol", "CO2(aq)", key_element="C"),
-            acceptor=Couple.make("methane", "methanol", key_element="C"),
+            acceptor=Couple.make("methane", "CO2(aq)", key_element="C"),
             conditions=STANDARD,
             normalize_to="methane",
         )
@@ -147,6 +145,44 @@ class TestTheLibraryEntries(unittest.TestCase):
             places=6,
         )
         self.assertEqual(direct.n_electrons * 4, through_co2.n_electrons)
+
+    def test_methyl_disproportionations_count_the_electrons_the_methyls_move(self):
+        """4 CH3X -> 3 CH4 + CO2 moves 6 e-, which is 2 per CH4 (README #30).
+
+        Counted here from the balanced reaction and oxidation states written
+        out by hand, not from the library's own electron bookkeeping. Every
+        methyl carbon is C(-II). The one that ends as CO2 (C(+IV)) gives up
+        6 e-, and each one that ends as CH4 (C(-IV)) takes 2. Written through
+        CO2, as these entries were until November 2026, the library counted
+        8 per CH4.
+        """
+        methyl, carbon_dioxide, methane = -2, 4, -4
+        for name in (
+            "methylotrophic_methanogenesis",
+            "methylamine_methanogenesis",
+            "dms_methanogenesis",
+        ):
+            with self.subTest(metabolism=name):
+                built = _quiet(reaction, name, STANDARD, normalize_to="methane")
+                made = {species.formula: nu for species, nu in built.coefficients.items()}
+                given_up = made["CO2"] * (carbon_dioxide - methyl)
+                taken = made["CH4"] * (methyl - methane)
+                self.assertEqual(given_up, taken)
+                self.assertEqual(built.n_electrons, given_up)
+                self.assertEqual(built.n_electrons, 2)
+
+    def test_the_rewrite_kept_the_energy_per_methane(self):
+        """Only the electron count changed. These are the per-CH4 values the
+        through-CO2 entries gave before the rewrite (notebook 13, section 3)."""
+        before = {
+            "methylotrophic_methanogenesis": -86.6,
+            "methylamine_methanogenesis": -85.8,
+            "dms_methanogenesis": -29.3,
+        }
+        for name, per_ch4 in before.items():
+            with self.subTest(metabolism=name):
+                built = _quiet(reaction, name, STANDARD, normalize_to="methane")
+                self.assertAlmostEqual(built.delta_G_standard_prime.magnitude, per_ch4, delta=0.06)
 
 
 if __name__ == "__main__":

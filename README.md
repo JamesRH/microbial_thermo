@@ -1430,7 +1430,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 755 tests, ~225 s plugged in
+python -m unittest discover -s tests     # 757 tests, ~235 s plugged in
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # skip the slow notebook runs
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests
@@ -1487,9 +1487,8 @@ the digits written, so a file saying 24, 25, 26, 27 rendered as 18, 19, 20, 21
 and nobody reading GitHub saw the numbers this repo cites. They are plain
 bullets with literal `#N` labels now, which render the same everywhere.
 
-**Next up:** corrections before new figures (agreed 1 November 2026). First
-**#30** (methyl electron accounting, a factor of four on three ladder
-positions) and **#29** (per-ion energy floors), which correct claims the
+**Next up:** corrections before new figures (agreed 1 November 2026). #30 is
+done; next is **#29** (per-ion energy floors), which corrects claims the
 notebooks currently teach, then #31, #32 and #34. #29–#34 are corrections
 found while building notebook 13. The new figures come after them: #35 and
 #36 are small, #37 is the redox-cycle diagram. The older items are
@@ -1523,6 +1522,7 @@ now exist.
 | 26 | Interactive Latimer, Frost and Eh–pH | `figures/interactive_element.py`, `tests/test_interactive_element.py` |
 | 28 | Per-element notebooks | `notebooks/05`–`12`, executed by `tests/test_notebooks.py` |
 | 33 (part) | Stalled-kernel watchdog for the notebook runs | `StallWatchdog` in `tests/test_notebooks.py` |
+| 30 | Methyl disproportionations count the electrons the methyls move | `reactions.yaml`, `tests/test_methanogenesis.py`, notebooks 03 and 13 |
 
 ### Tier 1 — small, and builds directly on what exists
 
@@ -1574,7 +1574,9 @@ now exist.
    per turnover of its own substrate. The library draws it at −20 per reaction
    *as written* (per 2 e⁻), which matches no organism: per 2 e⁻ it should be
    −10 for an ethanol oxidiser and −5 for a methanogen. Notebook 13 draws
-   per-organism floors by hand. Add a `turnover:` species to each curated
+   per-organism floors by hand. The affinity ladder is further off still: it
+   draws the band from 0 to −20 on a *per-electron* axis, which is −40 per
+   2 e⁻. Add a `turnover:` species to each curated
    metabolism in `reactions.yaml`, move notebook 13's helpers (`turnovers`,
    `floors_for`, `draw_floors`, `draw_floors_plotly`) into the library, and let
    the syntrophy window, explorer and affinity ladder draw them. **Two
@@ -1584,14 +1586,6 @@ now exist.
    propionate oxidiser gets ~0.8 per propionate), and 07's sulfur
    disproportionation ("inside the quantum until about 5 × 10⁻⁶", which
    compares −20 against ΔG per mol S).
-- **#30 · Electron accounting for methyl disproportionations.**
-   `methylotrophic_methanogenesis`, `methylamine_methanogenesis` and
-   `dms_methanogenesis` are written through CO₂ (substrate → CO₂, CO₂ → CH₄),
-   which counts 24 e⁻ for 4 CH₃X → 3 CH₄ + CO₂ where the chemistry moves 6.
-   Energy per CH₄ is exact; per-electron values, and so their places on every
-   affinity ladder, are a factor of four too small. Rewrite with CH₃X/CH₄
-   acceptor couples, and re-run 03 and 13, whose ladders and prose depend on
-   it.
 - **#31 · Methylammonium and the missing methyl compounds.** speq23 has only
    neutral `Methanamine(aq)`; at pH 7 the substrate is >99.9 % CH₃NH₃⁺
    (p*K*a ≈ 10.6), so every methylamine reaction is ~20.5 kJ per methylamine

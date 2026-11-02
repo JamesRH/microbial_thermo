@@ -107,9 +107,15 @@ plt.show()
 # %% [markdown]
 # Notice what has happened. At standard state the aerobic metabolisms win by a
 # wide margin and sulfate reduction is comfortably exergonic. Under this
-# porewater — oxygen nearly gone, hydrogen at 5 nM — the sulfate and methane
-# metabolisms have collapsed into the energy-quantum band, which is exactly the
-# regime where syntrophy and very low product concentrations become necessary.
+# porewater — oxygen nearly gone, hydrogen at 5 nM — the sulfate reducers and
+# most of the methanogens have collapsed into the energy-quantum band, and
+# hydrogenotrophic methanogenesis is endergonic. That is exactly the regime
+# where syntrophy and very low product concentrations become necessary.
+#
+# The methanogens that escape are the three methyl disproportionations
+# (methylamine, DMS and methanol). They use no H₂, so scarce hydrogen costs
+# them nothing. (Methylamine's bar is too long: the database has only neutral
+# methylamine, and at this pH the substrate is methylammonium.)
 #
 # ### Exercise
 #

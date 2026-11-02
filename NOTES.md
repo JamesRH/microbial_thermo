@@ -18,7 +18,7 @@ It must be **sourced**. `pygcc` comes from PyPI (not conda-forge) and is the one
 sanctioned `pip` in the project.
 
 ```bash
-python -m unittest discover -s tests     # full suite, 755 tests, ~225 s plugged in
+python -m unittest discover -s tests     # full suite, 757 tests, ~235 s plugged in
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # ~95 s
 python tests/test_balance.py             # one file, seconds — use this while iterating
 ruff format microbial_thermo tests && ruff check microbial_thermo tests
@@ -426,14 +426,20 @@ than five -- a competition over what is limiting, not over yield. The ladder
 ranks yield; organisms compete over the scarce thing.
 
 **A disproportionation's per-electron energy depends on how it is written.**
-`methylotrophic_methanogenesis` routes methanol through CO2 (donor
-CH3OH -> CO2, acceptor CO2 -> CH4) and so counts 24 e- for
-4 CH3OH -> 3 CH4 + CO2; the CH3OH/CH4 couple counts the 6 the methyl
-chemistry actually moves. Same net reaction, same energy per CH4 (-86.6
-kJ/mol), per-electron values a factor of four apart. The new methyl entries
-(methylamine, DMS) follow the through-CO2 form so the ladder stays
-internally consistent. Compare methanogenic pathways per CH4. The
-H2-consuming entries are exact per electron, since per 2 e- is per H2.
+Routed through CO2 (donor CH3OH -> CO2, acceptor CO2 -> CH4), methanol
+disproportionation counts 24 e- for 4 CH3OH -> 3 CH4 + CO2. The CH3OH/CH4
+couple counts the 6 the methyl chemistry actually moves. Same net reaction,
+same energy per CH4 (-86.6 kJ/mol), per-electron values a factor of four
+apart. Since 1 November 2026 (#30) the methanol, methylamine and DMS
+entries use the methyl couple, so they count 2 e- per CH4, like methyl
+reduction. On every ladder they moved up fourfold: in notebook 03's
+porewater they left the energy-quantum band, and in 13's section 5 they top
+the ladder at every H2 level. Formate stays through CO2, correctly, since
+it is a two-electron donor. **Acetoclastic is still through CO2 (8 e- per
+CH4) and is an open question for James:** by formal oxidation states its
+methyl and carboxyl carbons exchange 1 e-; biochemically CO dehydrogenase
+moves 2. The library cannot express either as a couple today. Compare
+methanogens per CH4 when they are written differently.
 
 **A multi-species side needs explicit proportions when they are not 1:1.**
 `donor: [DMS, ["CO2(aq)", "HS-"]]` balances with one CO2 per HS- and fails
@@ -581,11 +587,12 @@ the potential.
 
 ## Where this was left (1 November 2026)
 
-**Branches.** `main` = `origin/main` = `99dee0c`, the tower work James had
-pushed on 29 October. Every local `ai/claude/*` branch is merged into main,
-so there is no unmerged work anywhere. One branch name misleads:
-`ai/claude/notebook-watchdog` holds notebook 13's interactive page and no
-watchdog. The watchdog was built on `ai/claude/kernel-watchdog`.
+**Branches.** On 1 November, at James's request, `main` was fast-forwarded
+to `ai/claude/methyl-electrons` and pushed. That branch is stacked on
+`ai/claude/kernel-watchdog` and carries the watchdog, these notes and #30.
+Every local `ai/claude/*` branch is merged into main, so there is no
+unmerged work anywhere. One branch name misleads: `ai/claude/notebook-watchdog`
+holds notebook 13's interactive page and no watchdog.
 
 **Working tree.** The one-line `AGENTS.md` edit (section 8, "unless the user
 tells you to") and `TODO_JRHnote3s.md` are James's. Leave them uncommitted
@@ -599,11 +606,12 @@ its committed output says 60, so that older handoff item is closed.
 
 **Agreed order (1 November): corrections before new figures.**
 
-1. **#30**, methyl electron accounting. Rewrite `methylotrophic_methanogenesis`,
-   `methylamine_methanogenesis` and `dms_methanogenesis` with CH3X/CH4
-   acceptor couples instead of routing them through CO2. Then re-run 03 and
-   13, whose ladders and prose depend on it.
-2. **#29**, per-ion floors. Add a `turnover:` species to each curated
+1. **#30**, methyl electron accounting: **done 1 November**, see the trap
+   "A disproportionation's per-electron energy depends on how it is
+   written". One question is left for James: acetoclastic methanogenesis.
+2. **#29**, per-ion floors, **next**. The affinity ladder draws its band
+   from 0 to -20 on a per-electron axis (`figures/ladder.py`), which is -40
+   per 2 e-, so it is further off than the per-2 e- band elsewhere. Add a `turnover:` species to each curated
    metabolism in `reactions.yaml`, and move notebook 13's helpers
    (`turnovers`, `floors_for`, `draw_floors`, `draw_floors_plotly`, around
    line 680) into the library. Then **recompute, not reword**, these claims:

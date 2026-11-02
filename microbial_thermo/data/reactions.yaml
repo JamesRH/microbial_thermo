@@ -199,7 +199,7 @@ metabolisms:
     label: Methylotrophic methanogenesis from methanol
     group: methanogenesis
     donor: [methanol, "CO2(aq)"]
-    acceptor: [methane, "CO2(aq)"]
+    acceptor: [methane, methanol]
     key_element: C
 
   # The rest of the methanogenic substrates. The methyl compounds are
@@ -207,12 +207,17 @@ metabolisms:
   # electrons that reduce the other three -- except by the obligate methyl
   # reducers, which take those electrons from H2 instead.
   #
-  # The disproportionations are written like methylotrophic_methanogenesis
-  # above, through CO2: donor substrate -> CO2, acceptor CO2 -> CH4. The net
-  # reaction and its energy per CH4 are exact, but that accounting counts
-  # 24 e- per 4 CH3X where the methyl chemistry moves 6, so their per-electron
-  # values are a quarter of what a CH3X/CH4 couple would give. Compare these
-  # per mole of CH4, not per electron.
+  # The disproportionations put the methyl compound on both sides, as sulfur
+  # disproportionation does: donor CH3X -> CO2, acceptor CH3X -> CH4. That
+  # counts the 6 e- that 4 CH3X -> 3 CH4 + CO2 actually moves: one methyl
+  # gives 6 e-, three take 2 e- each. Until November 2026 they were written
+  # through CO2 (acceptor CO2 -> CH4). The net reaction and the energy per CH4
+  # were the same, but that counted 24 e-, so every per-electron value, and
+  # each one's place on the affinity ladders, was a quarter of the real one.
+  # README Future work #30.
+  #
+  # Formate is not a disproportionation and stays written through CO2. It is
+  # a two-electron donor, and CO2 really is what its electrons reduce.
   - name: formate_methanogenesis
     label: Methanogenesis from formate
     group: methanogenesis
@@ -237,7 +242,7 @@ metabolisms:
     label: Methylamine disproportionation
     group: methanogenesis
     donor: [methylamine, ["CO2(aq)", "NH4+"]]
-    acceptor: [methane, "CO2(aq)"]
+    acceptor: [[methane, "NH4+"], methylamine]
     key_element: C
     organisms: Methanosarcina, Methanococcoides
     note: >-
@@ -249,7 +254,7 @@ metabolisms:
     label: Dimethyl sulfide disproportionation
     group: methanogenesis
     donor: [DMS, [["CO2(aq)", 2], ["HS-", 1]]]
-    acceptor: [methane, "CO2(aq)"]
+    acceptor: [[[methane, 2], ["HS-", 1]], DMS]
     key_element: C
     organisms: Methanolobus, Methanomethylovorans
     note: DMS from the OBIGT import (Schulte 2010).

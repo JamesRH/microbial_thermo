@@ -378,22 +378,28 @@ plt.show()
 # %% [markdown]
 # ### A note on counting electrons in a disproportionation
 #
-# The library writes methanol, methylamine and DMS disproportionation
-# **through CO₂**: substrate → CO₂ on the donor side and CO₂ → CH₄ on the
-# acceptor side. The net reaction is exact. But this way of writing it counts
-# 24 electrons for 4 CH₃OH → 3 CH₄ + CO₂, whereas the methyl chemistry
-# actually moves 6 (one methyl gives 6 e⁻ to reduce three others by 2 e⁻
-# each). Both give the same energy per CH₄; only the per-electron number
-# changes:
+# A disproportionation can be written two ways, and they count electrons
+# differently.
+#
+# * **Through the methyl couple**, which is how the library writes methanol,
+#   methylamine and DMS. The substrate is the donor (CH₃X → CO₂) and also the
+#   acceptor (CH₃X → CH₄). This counts the 6 electrons that
+#   4 CH₃OH → 3 CH₄ + CO₂ actually moves: one methyl gives 6 e⁻, and three
+#   others take 2 e⁻ each.
+# * **Through CO₂**, with CO₂ → CH₄ as the acceptor. The net reaction is the
+#   same, but this counts 24 electrons, as if every methyl were oxidised to
+#   CO₂ and three of them then reduced back to CH₄.
+#
+# Both give the same energy per CH₄; only the per-electron number changes:
 
 # %%
-direct = mt.Reaction.from_couples(
+direct = reaction("methylotrophic_methanogenesis", standard, normalize_to="methane")
+through_co2 = mt.Reaction.from_couples(
     donor=Couple.make("methanol", "CO2(aq)", key_element="C"),
-    acceptor=Couple.make("methane", "methanol", key_element="C"),
+    acceptor=Couple.make("methane", "CO2(aq)", key_element="C"),
     conditions=standard,
     normalize_to="methane",
 )
-through_co2 = reaction("methylotrophic_methanogenesis", standard, normalize_to="methane")
 for label, built in (("CH3OH/CH4 couple", direct), ("through CO2", through_co2)):
     per_ch4 = built.delta_G_standard_prime.magnitude
     per_e = built.delta_G_standard_prime.magnitude / built.n_electrons
@@ -402,9 +408,13 @@ for label, built in (("CH3OH/CH4 couple", direct), ("through CO2", through_co2))
     )
 
 # %% [markdown]
-# So **compare methanogenic pathways per mole of CH₄, not per electron**. Per
-# CH₄ is a fixed quantity. Per electron depends on how you choose to write the
-# reaction, and for a disproportionation there is no single right way.
+# So **compare methanogenic pathways per mole of CH₄** whenever they are
+# written differently. Per CH₄ is a fixed quantity, while per electron depends
+# on how the reaction is written. The methyl couple is the count that matches
+# the chemistry. It also means the two methyl pathways can be compared per
+# electron: methyl reduction (CH₃OH + H₂ → CH₄ + H₂O) moves 2 e⁻ per CH₄ as
+# well. Acetoclastic methanogenesis is still written through CO₂, so its bar
+# on the ladders uses the 8 e⁻ count.
 
 # %% [markdown]
 # ## 3. ΔG°′ for each pathway
@@ -869,9 +879,12 @@ for h2_bar in (1e-3, 1e-5, 1e-7):
 # Watch which bars move.
 #
 # * **Formate, acetate and the methyl disproportionations do not move at
-#   all.** No H₂ in the reaction, so H₂ cannot affect them. (The methyl
-#   disproportionation bars are short partly because of the per-electron
-#   counting described in section 2.)
+#   all.** No H₂ in the reaction, so H₂ cannot affect them. The three methyl
+#   disproportionations are the best-paid bars at every H₂ level. Each moves
+#   2 e⁻ per CH₄, the same as methyl reduction, so between those four bars
+#   per electron is also per CH₄. (Methylamine's bar is too long: the
+#   database has only neutral methylamine, and at pH 7 the substrate is
+#   methylammonium. Section 3 shows the size of that correction.)
 # * **Everything that eats H₂ shrinks as H₂ falls**, but not equally.
 #   Homoacetogenesis goes first, then hydrogenotrophic methanogenesis, then
 #   sulfate reduction. At 10⁻⁷ bar the hydrogenotroph is endergonic.
