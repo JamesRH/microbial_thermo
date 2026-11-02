@@ -84,7 +84,7 @@ Before proposing a commit or finalizing a task, you MUST complete this checklist
 ## 8. Version Control & Git Flow
 
 * **Branch Naming:** All AI-generated work must be done on an isolated branch following the exact format: `ai/<model>/<ticket-or-feature>` (e.g., `ai/gemini/refactor-data-loader`).
-* **Workflow Constraints:** Always verify the current branch (`git branch --show-current`) before executing edits. If on `main` or a non-compliant branch, immediately create and checkout the appropriate `ai/` branch. NEVER commit directly to `main`.
+* **Workflow Constraints:** Always verify the current branch (`git branch --show-current`) before executing edits. If on `main` or a non-compliant branch, immediately create and checkout the appropriate `ai/` branch. NEVER commit directly to `main` unless the user tells you to.
 
 ## 9. Multimodal Ingestion
 * **Leverage Vision Context:** When generating or debugging data visualizations or plots, proactively request the user to provide screenshot outputs so you can visually verify correctness.
