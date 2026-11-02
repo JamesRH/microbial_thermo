@@ -627,9 +627,10 @@ the potential.
 **Branches.** On 1 November, at James's request, `main` was fast-forwarded
 to `ai/claude/methyl-electrons` and pushed, and his `AGENTS.md` edit followed
 (`010914d`, pushed). Later that day `ai/claude/acetoclastic-note` was cut
-from it and holds four commits, **not merged and not pushed**: the
-acetoclastic ladder footnote, #31, #32 and #34. James asked for a commit
-after each item, not for a merge or push. One branch name misleads:
+from it for four commits: the acetoclastic ladder footnote, #31, #32 and
+#34. At James's request main was fast-forwarded to it (`541cd7f`) and
+pushed, so again every local `ai/claude/*` branch is merged and nothing is
+unmerged anywhere. One branch name misleads:
 `ai/claude/notebook-watchdog` holds notebook 13's interactive page and no
 watchdog.
 
