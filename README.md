@@ -1504,9 +1504,9 @@ the digits written, so a file saying 24, 25, 26, 27 rendered as 18, 19, 20, 21
 and nobody reading GitHub saw the numbers this repo cites. They are plain
 bullets with literal `#N` labels now, which render the same everywhere.
 
-**Next up:** corrections before new figures (agreed 1 November 2026). #30
-and #31 are done; next is **#29** (per-ion energy floors), which corrects
-claims the notebooks currently teach, then #32 and #34. #29–#34 are corrections
+**Next up:** corrections before new figures (agreed 1 November 2026). #30,
+#31 and #32 are done; next is **#29** (per-ion energy floors), which corrects
+claims the notebooks currently teach, then #34. #29–#34 are corrections
 found while building notebook 13. The new figures come after them: #35 and
 #36 are small, #37 is the redox-cycle diagram. The older items are
 independent of each other, and **9** (two-dimensional contours) and **15**
@@ -1540,6 +1540,7 @@ now exist.
 | 28 | Per-element notebooks | `notebooks/05`–`12`, executed by `tests/test_notebooks.py` |
 | 33 (part) | Stalled-kernel watchdog for the notebook runs | `StallWatchdog` in `tests/test_notebooks.py` |
 | 30 | Methyl disproportionations count the electrons the methyls move | `reactions.yaml`, `tests/test_methanogenesis.py`, notebooks 03 and 13 |
+| 32 | Attributions checked: the S organism is not *Syntrophus*; notebook 13's sources verified | `reactions.yaml`, notebook 13 |
 | 31 | Methylammonium, and the di- and trimethylamines, from OBIGT's joule rows | `data/external/obigt_organic_aq_joule.csv`, `external.py`, `acid_base.yaml`, `tests/test_external.py`, `tests/test_methanogenesis.py`, notebooks 03 and 13 |
 
 ### Tier 1 — small, and builds directly on what exists
@@ -1604,14 +1605,6 @@ now exist.
    propionate oxidiser gets ~0.8 per propionate), and 07's sulfur
    disproportionation ("inside the quantum until about 5 × 10⁻⁶", which
    compares −20 against ΔG per mol S).
-- **#32 · Check unverified attributions.** `reactions.yaml` lists
-   `syntrophic_ethanol_oxidation` organisms as "Syntrophus, the classic S
-   organism"; the S organism of *Methanobacillus omelianskii* was never
-   assigned to *Syntrophus* — confirm and correct. Notebook 13 cites Feldewert
-   *et al.* 2020, Cai *et al.* 2018, Leu *et al.* 2020, Hoehler *et al.* 2001
-   and Jackson & McInerney 2002 from memory, and the last two are summarised
-   ("methanogens near −10 kJ/mol", "single-digit kJ/mol") without the papers
-   checked. Verify each against the source.
 - **#33 · Notebook-run watchdog and faster notebook tests** — *partly done*.
    The watchdog is in (see the Completed table). A kernel that is running a
    cell but has used under 5 % of a CPU for 30 s is killed and retried, so a

@@ -353,7 +353,14 @@ metabolisms:
     donor: ["Ethanol(aq)", ["Acetate"]]
     acceptor: ["H2(g)", "H+"]
     key_element: C
-    organisms: "Syntrophus, the classic S organism"
+    organisms: the S organism of Methanobacillus omelianskii, Syntrophotalea (formerly Pelobacter) carbinolica
+    note: >-
+      The S organism (Bryant et al. 1967) was never formally named; Reddy,
+      Bryant and Wolin (1972) thought it a new genus but left naming it until
+      more strains were isolated. Syntrophotalea carbinolica (Schink 1984, as
+      Pelobacter carbinolicus) grows on ethanol only with an H2-consuming
+      partner. Syntrophus, known for benzoate and fatty-acid degradation, was
+      listed here in error until November 2026 (README Future work #32).
 
   # --- arsenic ---
   #

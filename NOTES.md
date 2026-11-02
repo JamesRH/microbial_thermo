@@ -643,8 +643,17 @@ its committed output says 60, so that older handoff item is closed.
    - 13's section 5 floor plot and toy model.
    - The affinity ladders, as per-bar ticks.
 3. **#31** (methylammonium): **done 1 November**, see "Methylamine is
-   written as methylammonium". Then **#32** (attributions; `reactions.yaml`
-   still says *Syntrophus*) and **#34** (figure-text collisions).
+   written as methylammonium". **#32** (attributions): **done 1 November**.
+   The S organism was never named, so `syntrophic_ethanol_oxidation` now
+   lists it and *Syntrophotalea* (formerly *Pelobacter*) *carbinolica*.
+   Notebook 13 said neither partner could grow on ethanol alone; Reddy,
+   Bryant & Wolin (1972) say the S organism grew poorly, inhibited by H2.
+   Hoehler 2001 is about -10 kJ/mol CH4 for methanogens (and about -18 per
+   sulfate for sulfate reducers). Jackson & McInerney 2002 is syntrophic
+   cocultures stopping near dG' = 0 for the overall reaction, not a
+   per-organism number. Feldewert 2020 (< 0.1 Pa H2), Cai 2018 and Leu 2020
+   (both ISME J) checked out as cited. Then **#34** (figure-text
+   collisions).
 4. Optionally, the other half of #33: run the notebooks in parallel.
 
 **Then the figures from James's TODO**, with his answers of 1 November:

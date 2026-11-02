@@ -664,7 +664,10 @@ print(f"4/3 x 2.303 RT (pKa - 7):          {(4 / 3) * deprotonation:+.1f}")
 # culture thought to turn ethanol into methane on its own, was actually **two
 # organisms** (Bryant *et al.* 1967, *Arch. Mikrobiol.*). The "S organism"
 # oxidised ethanol to acetate and H₂. A hydrogenotrophic methanogen ate the
-# H₂. Neither could grow on ethanol alone.
+# H₂. On its own the S organism grew only poorly on ethanol, and H₂ inhibited
+# it (Reddy, Bryant & Wolin 1972, *J. Bacteriol.*). It was never formally
+# named. *Syntrophotalea* (formerly *Pelobacter*) *carbinolica* is a named
+# organism that does the same.
 #
 # Thermodynamics says why. Ethanol oxidation releases H₂ and is held back by
 # it. The methanogen consumes H₂ and needs enough of it. The conditions below
@@ -862,11 +865,13 @@ for name, substrate, organism in (
 # At the crossing each partner has about enough for one to three ions per
 # turnover: the S organism a little over one per ethanol, the methanogen a
 # little under three per CH₄. That is tight but workable, which is what
-# syntrophs are. Measured in sediments, methanogens and syntrophs have been
-# found running at energies below one 20-kJ ion per turnover (Hoehler *et
-# al.* 2001; Jackson & McInerney 2002), which suggests the real cost of an ion
-# can be lower than 20 kJ — for example in organisms whose ATP synthase uses
-# more ions per ATP.
+# syntrophs are. Measured energies are often below one 20-kJ ion per
+# turnover. In Cape Lookout Bight sediment, methanogens were active down to
+# about −10 kJ/mol CH₄ (Hoehler *et al.* 2001, *FEMS Microbiol. Ecol.*), and
+# syntrophic cocultures degraded their substrates until the overall reaction
+# was close to equilibrium, ΔG′ ≈ 0 (Jackson & McInerney 2002, *Nature*).
+# That suggests the real cost of an ion can be lower than 20 kJ, for example
+# in organisms whose ATP synthase uses more ions per ATP.
 
 # %% [markdown]
 # The three pages are written next to this notebook as
@@ -1287,7 +1292,8 @@ plt.show()
 # * **Nitrate, alone.** *Ca.* Methanoperedens nitroreducens (ANME-2d)
 #   reduces nitrate to nitrite itself (Haroon *et al.* 2013, *Nature*).
 # * **Fe(III) and Mn(IV) oxides, alone.** Methanoperedens relatives do this
-#   too (Ettwig *et al.* 2016, *PNAS*; Cai *et al.* 2018; Leu *et al.* 2020).
+#   too (Ettwig *et al.* 2016, *PNAS*; Cai *et al.* 2018 and Leu *et al.*
+#   2020, both *ISME J.*).
 #   Note how much the mineral matters: Mn(IV) pays about twice as much as
 #   ferrihydrite per electron.
 # * **Nitrite, but not by an archaeon.** *Ca.* Methylomirabilis oxyfera
