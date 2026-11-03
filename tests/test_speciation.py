@@ -42,7 +42,9 @@ class TestPkaValues(unittest.TestCase):
         "formate": [3.75],
         "propanoate": [4.87],
         "butanoate": [4.82],
-        "sulfite": [7.20],
+        # CRC Handbook: sulfurous acid 1.86, 7.20; thiosulfuric acid 0.6, 1.74.
+        "sulfite": [1.86, 7.20],
+        "thiosulfate": [0.6, 1.74],
         "nitrite": [3.25],
         "sulfate": [1.99],
         "arsenate": [2.24, 6.96, 11.50],

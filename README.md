@@ -110,7 +110,7 @@ figures included — no clone, no kernel, no install. Browse them all at
 | [`04_when_the_library_refuses_to_guess`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/04_when_the_library_refuses_to_guess.ipynb) | the three places the library asks instead of guessing: contested names, underdetermined equations, and averaged oxidation states |
 | [`05_carbon`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/05_carbon.ipynb) | the template for the element series: the ladder, the Frost curve, the Eh–pH field, and why formate is thermodynamically doomed and completely ordinary |
 | [`06_nitrogen`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/06_nitrogen.ipynb) | the widest ladder in biology, the honest gap where NO and N₂O should be, why nitrite falls apart, and why DNRA survives despite paying less |
-| [`07_sulfur`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/07_sulfur.ipynb) | elemental sulfur disproportionation: on the hull at unit activity, off it at 10 µM, and a living organism in the gap |
+| [`07_sulfur`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/07_sulfur.ipynb) | elemental sulfur disproportionation: on the hull at unit activity, off it at 10 µM, and a living organism in the gap; thiosulfate and sulfite, which disproportionate everywhere; and why sulfide oxidisers store S⁰ globules, read off the step potentials |
 | [`08_iron`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/08_iron.ipynb) | mixed-valence rungs, why pyrite is refused one, and the three diagrams answering three different questions |
 | [`09_manganese`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/09_manganese.ipynb) | Mn(III) disproportionating in acid and surviving at pH 7, plus two documented flaws in the manganese data |
 | [`10_arsenic`](https://github.com/JamesRH/microbial_thermo/blob/main/notebooks/10_arsenic.ipynb) | why reducing an aquifer mobilises arsenic: no insoluble sink, and a neutral arsenite that will not sorb |
@@ -420,10 +420,11 @@ literature: carbonate 6.34 / 10.33, ammonium 9.24, phosphate 2.17 / 7.21 /
 The carbonate step is balanced with water — CO₂(aq) + H₂O ⇌ HCO₃⁻ + H⁺ — which
 a proton-only treatment gets wrong by tens of p*K* units.
 
-Nineteen families ship: sulfide, carbonate, ammonia, methylamine,
+Twenty families ship: sulfide, carbonate, ammonia, methylamine,
 dimethylamine, trimethylamine, phosphate, acetate, lactate, formate,
-propanoate, butanoate, sulfite, nitrite, hydroxylamine, hydrazine, sulfate,
-arsenate and arsenite.
+propanoate, butanoate, sulfite, thiosulfate, nitrite, hydroxylamine,
+hydrazine, sulfate, arsenate and arsenite. Sulfite's first step, like
+carbonate's, is balanced with water: SO₂(aq) + H₂O ⇌ HSO₃⁻ + H⁺.
 
 ### Where the numbers come from
 
@@ -1455,7 +1456,7 @@ textbook's conventions as truth.
 ## Development
 
 ```bash
-python -m unittest discover -s tests     # 766 tests, ~220 s plugged in
+python -m unittest discover -s tests     # 776 tests, ~230 s plugged in
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # skip the slow notebook runs
 ruff format microbial_thermo tests
 ruff check microbial_thermo tests

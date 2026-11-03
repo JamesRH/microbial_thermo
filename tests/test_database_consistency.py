@@ -70,6 +70,12 @@ KNOWN_DISAGREEMENTS = {
     # phosphate saturation state computed with it only with that caveat
     # attached; for anything quantitative, check both routes first.
     "Hydroxyapatite": 10.0,
+    # 3.8 kJ/mol. Registered (3 Nov 2026) so the sulfur pH slider has the
+    # thiosulfate form that exists below pH 1.7. We use the speq23 value: its
+    # pKa against S2O3-- (which agrees between the databases) is 1.69, inside
+    # the published 1.6-1.74, where GWB's log K implies 2.36. It decides only
+    # which thiosulfate form the diagrams draw between pH 1.7 and 2.4.
+    "HS2O3-": 0.75,
 }
 
 #: Everything else must agree this closely, in log K units (~0.17 kJ/mol).

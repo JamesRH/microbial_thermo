@@ -18,7 +18,7 @@ It must be **sourced**. `pygcc` comes from PyPI (not conda-forge) and is the one
 sanctioned `pip` in the project.
 
 ```bash
-python -m unittest discover -s tests     # full suite, 766 tests, ~220 s plugged in
+python -m unittest discover -s tests     # full suite, 776 tests, ~220 s plugged in
 MT_SKIP_NOTEBOOKS=1 python -m unittest discover -s tests   # ~95 s
 python tests/test_balance.py             # one file, seconds — use this while iterating
 ruff format microbial_thermo tests && ruff check microbial_thermo tests
@@ -724,6 +724,22 @@ on battery the suite runs 2.4x slower and it looks like a regression.
 **Kernels:** James runs JupyterLab; never kill a kernel that is not yours.
 Kill your own nbconvert and its kernel by PID only. The watchdog kills only
 the kernel tree it started, by the pid nbclient gave it.
+
+**Thiosulfate and its acid forms are on the default sulfur diagram** (3 Nov
+2026, for notebook 07), with SO2(aq) for sulfite below pH 1.86. Adding them
+moves no hull and no Eh-pH field anywhere the slider reaches; that is
+tested, because the 1.7e-2 sulfur result lives on the hull. Notebook 07's
+globule section compares step potentials at stated *totals* (sulfite and
+thiosulfate families), and its claims are signs of differences pinned in
+`TestSulfurOxidationSteps`. James's framing was "the step to S gains more
+than later steps"; measured, it beats only the next step (S0 -> sulfite, by
+38 mV at pH 7, and only below pH 7.8). Sulfite -> sulfate beats both, and
+S0 -> sulfate as a whole beats HS- -> S0 above pH 4.6 -- the stored sulfur is
+a reserve, not the poor remainder. Note also that sulfite
+disproportionation's energy per S does not change with dilution once S0 is
+off the hull: four dissolved sulfites make four dissolved products. HS2O3- is a declared
+database disagreement (3.8 kJ/mol): speq23's pKa of 1.69 matches the
+literature, GWB's implies 2.36.
 
 **The best single demonstration in the notebooks** is still `07_sulfur`
 (sulfur leaves the hull below ~1.7e-2 activity), now joined by 13's

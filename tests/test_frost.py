@@ -767,5 +767,121 @@ class TestDerivedProtonationPartners(unittest.TestCase):
         self.assertAlmostEqual(gap(14.0), 0.017, delta=0.001)
 
 
+class TestSulfurIntermediates(unittest.TestCase):
+    """Thiosulfate and sulfite on the sulfur diagrams (notebook 07).
+
+    Both are on the default sulfur diagram with every acid-base form, so the
+    pH slider draws the form that exists down to pH 0. Neither is ever stable:
+    the notebook says they disproportionate everywhere the slider reaches.
+    """
+
+    def test_thiosulfate_is_drawn_at_its_mean_state(self):
+        diagram = frost_diagram("S", pH=7.0, activity=1e-5)
+        thiosulfate = [p for p in diagram.points if p.backend == "S2O3--"]
+        self.assertEqual(len(thiosulfate), 1)
+        self.assertAlmostEqual(thiosulfate[0].oxidation_state, 2.0, places=9)
+
+    def test_the_acid_forms_take_over_at_low_pH(self):
+        chosen = {p.oxidation_state: p.backend for p in frost_diagram("S", pH=0.0).predominant}
+        self.assertEqual(chosen[2.0], "H2S2O3(aq)")
+        self.assertEqual(chosen[4.0], "SO2(aq)")
+
+    def test_neither_is_ever_on_the_hull(self):
+        from microbial_thermo.figures.basis import element_grid
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            grid = element_grid("S")
+        for temperature in grid.temperatures:
+            for pH in range(0, 15):
+                for log_activity in range(-9, 1):
+                    series = grid.at(temperature, pH=float(pH), activity=10.0**log_activity)
+                    stable = frost_diagram("S", series=series).stable
+                    middle = [p.backend for p in stable if 0 < p.oxidation_state < 6]
+                    self.assertEqual(middle, [], (temperature, pH, log_activity))
+
+    def test_adding_them_moves_no_hull_and_no_field(self):
+        """The hull is where the 1.7e-2 sulfur result lives; it must not move."""
+        from microbial_thermo.figures.basis import DEFAULT_SPECIES
+
+        old = ["Sulfur(s)", "H2S(aq)", "HS-", "SO4--", "HSO4-", "SO3--", "HSO3-"]
+        self.assertTrue(set(old) < set(DEFAULT_SPECIES["S"]))
+        for pH in (0.0, 4.0, 7.0, 10.0, 14.0):
+            for activity in (1.0, 1e-2, 1e-5):
+                with self.subTest(pH=pH, activity=activity):
+                    new = frost_diagram("S", pH=pH, activity=activity)
+                    before = frost_diagram("S", pH=pH, activity=activity, species=old)
+                    self.assertEqual(
+                        [p.backend for p in new.stable], [p.backend for p in before.stable]
+                    )
+
+
+class TestSulfurOxidationSteps(unittest.TestCase):
+    """The step-potential claims in notebook 07's S0-globule section.
+
+    25 C, total sulfide and sulfate 1 mM, sulfite and thiosulfate 1 uM. Each
+    claim is a sign of a potential difference, so the tolerance is the margin.
+    """
+
+    TOTALS = {"sulfide": 1e-3, "sulfate": 1e-3, "sulfite": 1e-6, "thiosulfate": 1e-6}
+
+    def potential(self, reduced, oxidized, pH, **totals):
+        import microbial_thermo as mt
+
+        conditions = mt.Conditions(
+            temperature_c=25.0, pH=pH, total_concentrations={**self.TOTALS, **totals}
+        )
+        return mt.half_reaction(reduced, oxidized, conditions).E.to("V").magnitude
+
+    def step_in_minus_step_out(self, pH, **totals):
+        return self.potential("HS-", "Sulfur(s)", pH, **totals) - self.potential(
+            "Sulfur(s)", "HSO3-", pH, **totals
+        )
+
+    def test_standard_potentials_match_thauer(self):
+        """Thauer, Jungermann & Decker (1977): -0.270 and -0.516 V at pH 7."""
+        import microbial_thermo as mt
+
+        sulfur = mt.half_reaction("HS-", "Sulfur(s)").E_standard_prime.to("V").magnitude
+        sulfite = mt.half_reaction("HSO3-", "SO4-2").E_standard_prime.to("V").magnitude
+        self.assertAlmostEqual(sulfur, -0.270, delta=0.005)
+        self.assertAlmostEqual(sulfite, -0.516, delta=0.005)
+
+    def test_step_in_beats_step_out_at_pH_7_by_38_mV(self):
+        self.assertAlmostEqual(self.step_in_minus_step_out(7.0), -0.038, delta=0.001)
+
+    def test_the_order_reverses_near_pH_7_8(self):
+        self.assertLess(self.step_in_minus_step_out(7.75), 0.0)
+        self.assertGreater(self.step_in_minus_step_out(7.95), 0.0)
+        # ...and near 7.2 with sulfite at 10 nM.
+        self.assertLess(self.step_in_minus_step_out(7.15, sulfite=1e-8), 0.0)
+        self.assertGreater(self.step_in_minus_step_out(7.3, sulfite=1e-8), 0.0)
+
+    def test_sulfite_to_sulfate_is_the_best_step_at_every_pH(self):
+        for pH in range(0, 15):
+            with self.subTest(pH=pH):
+                best = self.potential("HSO3-", "SO4-2", float(pH))
+                self.assertLess(best, self.potential("HS-", "Sulfur(s)", float(pH)))
+                self.assertLess(best, self.potential("Sulfur(s)", "HSO3-", float(pH)))
+
+    def test_the_rest_of_the_way_beats_the_step_in_above_pH_4_6(self):
+        def rest_minus_in(pH):
+            return self.potential("Sulfur(s)", "SO4-2", pH) - self.potential("HS-", "Sulfur(s)", pH)
+
+        self.assertGreater(rest_minus_in(4.5), 0.0)
+        self.assertLess(rest_minus_in(4.6), 0.0)
+
+    def test_the_sox_step_in_beats_the_rest_below_about_7_9(self):
+        def sox_minus_rest(pH, thiosulfate):
+            return self.potential(
+                ["S2O3-2"], ["Sulfur(s)", "SO4-2"], pH, thiosulfate=thiosulfate
+            ) - self.potential("Sulfur(s)", "SO4-2", pH, thiosulfate=thiosulfate)
+
+        self.assertLess(sox_minus_rest(7.8, 1e-6), 0.0)
+        self.assertGreater(sox_minus_rest(8.0, 1e-6), 0.0)
+        self.assertLess(sox_minus_rest(12.3, 1e-3), 0.0)
+        self.assertGreater(sox_minus_rest(12.5, 1e-3), 0.0)
+
+
 if __name__ == "__main__":
     unittest.main()
